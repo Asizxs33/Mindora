@@ -197,9 +197,10 @@ export function sidePage(view, state) {
   }
   return `${pageBanner('Профиль', 'Твой прогресс хранится в этом браузере.')}
     <section class="game-card simple-panel">
-      <h2>${badge(icon, 'user', 'purple')}Гостевой профиль</h2>
+      <h2>${badge(icon, 'user', 'purple')}Настройки обучения</h2>
       <p><strong>${stats.xp} XP</strong> · Уровень ${stats.level}</p>
       <label for="profile-minutes">Цель по времени на день</label>
       <select class="profile-select" id="profile-minutes">${[5, 10, 20].map(minutes => `<option value="${minutes}" ${minutes === state.minutes ? 'selected' : ''}>${minutes} мин</option>`).join('')}</select>
-    </section>`;
+    </section>
+    <section class="game-card simple-panel" data-cloud-panel="profile"></section>`;
 }
