@@ -1,5 +1,7 @@
 # Mindora interface handoff
 
+> These are historical notes for the earlier two-course design. The current orange MVP, account requirements, ten templates, supplied GIF support and remaining backend configuration are documented in [MVP-FOUNDATION.md](MVP-FOUNDATION.md). The verification counts and guest-learning statements below describe that earlier version, not the current release.
+
 The redesign keeps the existing two-course controller intact and makes the learning journey easier to follow on a phone. The English interface follows the supplied Coursiv references: white surfaces, dark readable text, violet actions, soft illustration panels, and one clear next step. Mindora keeps its capybara glasses logo and its own mentor team.
 
 ## Ownership and integration
