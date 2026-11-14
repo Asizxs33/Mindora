@@ -83,7 +83,10 @@ try {
     assert.equal(bounds.width, bounds.vw);
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator('.landing-topic-grid [data-course="design"]').click();
+  await page.locator('.guided-footer [data-view="new-course"]').click();
+  await page.locator('.phone-course-nav [data-view="courses"]').click();
+  await page.locator('.phone-catalog > summary').click();
+  await page.locator('[data-course="design"][data-course-path]').click();
   await page.waitForSelector('.learning-hub');
   for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(viewport);
@@ -97,7 +100,7 @@ try {
     await page.screenshot({ path: join(tmpdir(), `mindora-clean-hub-${viewport.width}.png`), fullPage: true });
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator('.learning-hub-actions [data-action="resume-course"]').click();
+  await page.locator('.learning-hub-node[aria-current="step"]').click();
   await page.waitForSelector('#main[data-page="lesson"]');
   assert.equal(signupPayload, undefined, 'the first course requires no registration');
   assert.equal((await state(page)).minutes, 10);
@@ -156,7 +159,7 @@ try {
   await p.locator('[data-course-minutes="5"]').click();
   await p.locator('[data-starter-course="python-basics"]').click();
   await p.waitForSelector('.learning-hub').catch(async error => { console.log('Ready course failure:', JSON.stringify({ errors, state: await state(p), body: (await p.locator('#main').innerText()).slice(0,1800) })); throw error; });
-  await p.locator('.learning-hub-actions [data-view="learning-plan"]').click();
+  await p.locator('.learning-hub-node[aria-current="step"], .learning-hub-actions [data-view="learning-plan"]:visible').click();
   await p.waitForSelector('.ai-lesson-reader');
   await p.screenshot({ path: join(tmpdir(), 'mindora-clean-ready-lesson.png'), fullPage: true });
   await p.locator('[data-learning-page="next"]:visible').click();
@@ -178,20 +181,20 @@ try {
   assert.equal((await state(p)).learningPlan.completed, 2);
   assert.equal((await state(p)).progress.design, 0);
   await p.locator('.ai-lesson-exit').click();
-  await p.locator('.learning-hub-actions [data-view="courses"]').click();
+  await nav(p, 'courses').click();
   await p.locator('.phone-catalog summary').click();
   await p.locator('[data-starter-course="python-basics"]').click();
   await p.waitForSelector('.learning-hub');
   assert.equal((await state(p)).learningPlan.completed, 2);
   for (const minutes of [10, 20]) {
-    await p.locator('.learning-hub-actions [data-view="courses"]').click();
+    await nav(p, 'courses').click();
     await p.locator('.phone-catalog summary').click();
     await p.locator(`[data-course-minutes="${minutes}"]`).click();
     await p.locator('[data-starter-course="python-basics"]').click();
     await p.waitForSelector('.learning-hub');
     assert.equal((await state(p)).learningPlan.plan.minutes, minutes);
     assert.equal(await p.locator('.learning-hub-node').count(), minutes === 10 ? 3 : 4);
-    await p.locator('.learning-hub-actions [data-view="learning-plan"]').click();
+    await p.locator('.learning-hub-node[aria-current="step"], .learning-hub-actions [data-view="learning-plan"]:visible').click();
     await p.locator('[data-learning-page="next"]:visible').click();
     await p.locator('[data-learning-page="next"]:visible').click();
     await p.locator('[data-learning-gap]').fill('"Hello"');
@@ -212,7 +215,7 @@ try {
     await p.locator('.ai-lesson-exit').click();
   }
   // Switching duration never erases the completed 5-minute version.
-  await p.locator('.learning-hub-actions [data-view="courses"]').click();
+  await nav(p, 'courses').click();
   await p.locator('.phone-catalog summary').click();
   await p.locator('[data-course-minutes="5"]').click();
   await p.locator('[data-starter-course="python-basics"]').click();
@@ -222,12 +225,12 @@ try {
   // Profile logout is directly reachable on the phone and returns to Mino.
   await p.locator('#mobile-navigation [data-view="profile"]').click();
   await p.locator('[data-account-signout]').click();
-  await p.waitForSelector('.mindora-landing');
+  await p.waitForSelector('.guided-greeting');
   assert.equal(await p.locator('#mindora-account[open]').count(), 0);
-  assert.equal(await p.locator('#landing-title').isVisible(), true);
+  assert.equal(await p.locator('#guided-prompt').isVisible(), true);
   await p.reload();
-  await p.waitForSelector('.mindora-landing');
-  await p.locator('.header-account').click();
+  await p.waitForSelector('.guided-greeting');
+  await p.locator('.guided-signin').click();
   await p.locator('#account-email').fill(user.email);
   await p.locator('#account-password').fill('Browser-fixture-8');
   await p.locator('.account-primary').click();
@@ -316,5 +319,5 @@ try {
   assert.equal(lessonRequests.length, generated, 'opening an archived lesson loads its saved copy');
   await journey.ctx.close();
   assert.deepEqual(errors, []);
-  console.log('PASS: responsive greeting/path, guest landing → lesson, interrupted recall, low-score repair, saved cursor/drafts, 5/10/20-minute courses, mobile signout → greeting → signin, personalized roadmap → completion → unlock → reload → next lesson. API mocked explicitly.');
+  console.log('PASS: responsive greeting/path, guest greeting → lesson, interrupted recall, low-score repair, saved cursor/drafts, 5/10/20-minute courses, mobile signout → greeting → signin, personalized roadmap → completion → unlock → reload → next lesson. API mocked explicitly.');
 } finally { await browser.close(); }

@@ -1,3 +1,4 @@
+import { mobileProfileView } from './mobile-profile.js';
 import { COURSES, escapeHtml } from '../core/engine.js';
 import { resumeCursor } from '../core/resume.js';
 import { learningStats } from '../core/progress.js';
@@ -53,9 +54,9 @@ export function brandNav(icon, view, place, signedIn = false) {
 /** A quiet entry to courses. Action attributes come from the controller. */
 export function phoneCourseNav(selected) {
   const tabs = [
-    ['my-path', 'path', t('My path', 'Мой путь', 'Оқу жолым')],
-    ['courses', 'book', t('My courses', 'Мои курсы', 'Курстарым')],
-    ['new-course', 'plus', t('Create', 'Создать', 'Курс құру')],
+    ['my-path', 'path', t('Path', 'Путь', 'Жолым')],
+    ['courses', 'book', t('Saved', 'Мои курсы', 'Курстарым')],
+    ['new-course', 'plus', t('Create', 'Создать', 'Жаңа курс')],
   ];
   return `<nav class="phone-course-nav" aria-label="${t('Courses', 'Курсы', 'Курстар')}">${tabs.map(([view, symbol, label]) =>
     `<button type="button" data-view="${view}"${selected === view ? ' aria-current="page"' : ''}>${icon(symbol, 17)}<span>${label}</span></button>`).join('')}</nav>`;
@@ -238,6 +239,9 @@ export function sidePage(view, state, rewardProfile = '') {
   }
   if (view === 'achievements') return `${pageBanner(t("Milestones", "Достижения", "Жетістіктер"), t("See what you’ve achieved.", "Посмотри на свои достижения.", "Жетістіктеріңді көр."), 'cheer')}${achievementsCard(state, stats, icon, true)}`;
   if (view === 'community') return `${pageBanner(t("Learning, together.", "Сообщество", "Қауымдастық"), t("A little space for curious people.", "Место для общения учеников.", "Оқушылардың араласатын орны."))}<section class="game-card community-preview"><span class="course-symbol">${icon('users', 28)}</span><h2>${t("Our community is still growing.", "Сообщество в разработке.", "Қауымдастық әзірленіп жатыр.")}</h2><p>${t("Sharing and discussions aren’t available yet. For now, keep your projects in My work.", "Готовые проекты доступны в разделе «Мои работы».", "Дайын жобалар «Жұмыстарым» бөлімінде.")}</p><button class="secondary" data-view="work">${t("See my work", "Мои работы", "Жұмыстарым")} ${icon('arrow', 18)}</button></section>`;
+  if (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 920px)').matches) {
+    return mobileProfileView(state, stats);
+  }
   return `<div class="simple-profile"><header class="simple-profile-heading"><h1>${t('Profile', 'Профиль', 'Профиль')}</h1><span>${t('Your learning, your pace.', 'Учись в своём темпе.', 'Өз қарқыныңмен үйрен.')}</span></header>
     <section class="account-profile-card" data-account-summary><span class="profile-avatar" aria-hidden="true">${icon('user', 25)}</span><h2 data-account-name>${t("Make yourself at home", "Добро пожаловать", "Қош келдің")}</h2><p data-account-description>${t("Create your profile and choose what you enjoy.", "Создай профиль и выбери, что тебе интересно.", "Профиль жасап, қызығушылығыңды таңда.")}</p><button class="secondary" data-account-open="signup">${t("Create account", "Создать аккаунт", "Аккаунт жасау")}</button><button class="text-link" data-account-secondary data-account-open="signin">${t("Already a member? Sign in", "Уже есть аккаунт? Войти", "Аккаунтың бар ма? Кіру")}</button><button type="button" class="secondary profile-signout" data-account-signout hidden>${icon('logout', 18)}<span>${t("Sign out", "Выйти", "Шығу")}</span></button></section>
     <section class="profile-overview" aria-label="${t("Your progress", "Твой прогресс", "Оқу барысың")}"><div class="profile-stats"><div><span class="profile-stat-icon">${icon('check', 22)}</span><strong>${stats.total}</strong><span>${t("Steps completed", "Пройдено этапов", "Аяқталған кезеңдер")}</span></div><div><span class="profile-stat-icon">${icon('work', 22)}</span><strong>${Object.keys(state.works).length}</strong><span>${t("Projects saved", "Сохранено работ", "Сақталған жұмыстар")}</span></div></div></section>

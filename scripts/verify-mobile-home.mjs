@@ -190,9 +190,9 @@ try {
 
   await nav(page, 'profile').click();
   await page.locator('.profile-signout').click();
-  await page.waitForSelector('.mindora-landing');
+  await page.waitForSelector('.guided-greeting');
   await page.reload();
-  await page.waitForSelector('.mindora-landing');
+  await page.waitForSelector('.guided-greeting');
   checks.push('Phone logout returns to greeting and stays signed out on reload');
   await delayed.context.close();
   assert.deepEqual(errors, [], 'No browser exceptions');

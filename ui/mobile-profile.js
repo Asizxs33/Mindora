@@ -1,0 +1,41 @@
+import { icon } from './icons.js';
+import { t } from './language.js';
+import { timeOptions } from './budget-session.js';
+
+export function mobileProfileView(state, stats) {
+  const tools = [
+    ['work', 'work', t('My work', 'Мои работы', 'Жұмыстарым')],
+    ['practice', 'edit', t('Practice', 'Практика', 'Жаттығу')],
+    ['achievements', 'trophy', t('Milestones', 'Достижения', 'Жетістіктер')],
+    ['quests', 'gift', t('Rewards', 'Награды', 'Марапаттар')],
+  ];
+  return `<section class="simple-profile mobile-profile" aria-labelledby="mobile-profile-title">
+    <header class="simple-profile-heading"><h1 id="mobile-profile-title">${t('Profile', 'Профиль', 'Профиль')}</h1></header>
+    <section class="account-profile-card" data-account-summary>
+      <span class="profile-avatar" aria-hidden="true">${icon('user', 24)}</span>
+      <h2 data-account-name>${t('Guest', 'Гость', 'Қонақ')}</h2>
+      <p data-account-description>${t('Saved on this device', 'Сохраняется на этом устройстве', 'Осы құрылғыда сақталады')}</p>
+      <div class="profile-account-actions">
+        <button type="button" class="secondary" data-account-open="signup">${t('Create account', 'Создать аккаунт', 'Аккаунт ашу')}</button>
+        <button type="button" class="text-link" data-account-secondary data-account-open="signin">${t('Sign in', 'Войти', 'Кіру')}</button>
+        <button type="button" class="text-link profile-signout" data-account-signout hidden>${icon('logout', 17)}<span>${t('Sign out', 'Выйти', 'Шығу')}</span></button>
+      </div>
+    </section>
+    <section class="mobile-profile-preferences" aria-label="${t('Learning settings', 'Настройки обучения', 'Оқу баптаулары')}">
+      <label class="mobile-preference-row" for="profile-minutes"><span class="mobile-preference-icon" aria-hidden="true">${icon('clock', 21)}</span><span>${t('Lesson time', 'Время на урок', 'Сабақ уақыты')}</span>
+        <select class="profile-select" id="profile-minutes">${timeOptions(state.minutes)}</select>
+      </label>
+      <div class="mobile-preference-row"><span class="mobile-preference-icon" aria-hidden="true">${icon('play', 21)}</span><span>${t('Animations', 'Анимация', 'Анимация')}</span>
+        <button type="button" class="motion-switch" role="switch" data-character-motion aria-label="${t('Character animations', 'Анимация персонажей', 'Кейіпкерлер анимациясы')}"><span>${t('Animations', 'Анимация', 'Анимация')}</span></button>
+      </div>
+    </section>
+    <details class="profile-more">
+      <summary>${icon('book', 21)}<span>${t('Learning & progress', 'Обучение и прогресс', 'Оқу және үлгерім')}</span>${icon('chevron', 18)}</summary>
+      <div class="mobile-profile-stats"><span><strong>${stats.total}</strong> ${t('steps done', 'этапов пройдено', 'кезең аяқталды')}</span><span><strong>${Object.keys(state.works).length}</strong> ${t('works saved', 'работ сохранено', 'жұмыс сақталды')}</span></div>
+      <nav class="mobile-profile-tools" aria-label="${t('Learning tools', 'Учебные инструменты', 'Оқу құралдары')}">
+        ${tools.map(([view, symbol, title]) => `<button type="button" data-view="${view}">${icon(symbol, 20)}<span>${title}</span>${icon('arrow', 17)}</button>`).join('')}
+        <button type="button" data-action="about">${icon('leaf', 20)}<span>${t('About Mindora', 'О Mindora', 'Mindora туралы')}</span>${icon('arrow', 17)}</button>
+      </nav>
+    </details>
+  </section>`;
+}
