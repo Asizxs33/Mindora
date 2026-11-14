@@ -17,6 +17,27 @@ export function visualContrastRatio(foreground, background) {
 // Structured examples only: no model-authored HTML, SVG, CSS or executable code.
 export function normalizeLessonVisual(raw) {
   if (!raw || typeof raw !== 'object') return null;
+  if (raw.type === 'dialogue') {
+    const title = label(raw.label, 120);
+    if (!title || !Array.isArray(raw.turns) || raw.turns.length < 2 || raw.turns.length > 4) return null;
+    const turns = [];
+    for (const turn of raw.turns) {
+      const speaker = label(turn?.speaker, 40), text = label(turn?.text, 180);
+      if (!speaker || !text) return null;
+      const normalized = { speaker, text };
+      if (turn.translation !== undefined) {
+        normalized.translation = label(turn.translation, 180);
+        if (!normalized.translation) return null;
+      }
+      turns.push(normalized);
+    }
+    return { type: 'dialogue', label: title, turns };
+  }
+  if (raw.type === 'social-post') {
+    const audience = label(raw.audience, 80), hook = label(raw.hook, 160);
+    const body = label(raw.body, 400), cta = label(raw.cta, 120);
+    return audience && hook && body && cta ? { type: 'social-post', audience, hook, body, cta } : null;
+  }
   if (raw.type === 'palette') {
     const background = color(raw.background), foreground = color(raw.foreground), accent = color(raw.accent);
     const headline = label(raw.headline, 100);

@@ -39,7 +39,7 @@ export function matchesLearningAccount(request, user) {
 }
 
 export async function readBody(request, maxBytes = 16_384) {
-  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 98_304) return null;
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 1_048_576) return null;
   if (!request.headers.get('content-type')?.startsWith('application/json') || !request.body) return null;
   const reader = request.body.getReader();
   const decoder = new TextDecoder();

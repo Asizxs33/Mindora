@@ -8,6 +8,7 @@ const illustratedPages = new Set([
   'https://en.wikibooks.org/wiki/Primary_Mathematics/Percentages',
   'https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Colors/Color_values',
   'https://www.adobe.com/creativecloud/design/discover/secondary-colors.html',
+  'https://buffer.com/resources/social-media-calendar/',
 ]);
 
 /** Open one relevant illustrated page when research returned text without images. */

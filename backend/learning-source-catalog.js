@@ -14,6 +14,9 @@ const SOURCE = {
   sumif: ['https://support.google.com/docs/answer/3093583?hl=en', 'Google Sheets: SUMIF'],
   writing: ['https://developers.google.com/tech-writing/one/clear-sentences', 'Google: Clear Sentences'],
   email: ['https://mailchimp.com/en/help/best-practices-for-email-subject-lines/', 'Mailchimp: Best Practices for Email Subject Lines'],
+  englishIntro: ['https://learnenglish.britishcouncil.org/free-resources/speaking/a1/meeting-new-people', 'British Council: A1 Meeting New People'],
+  socialPost: ['https://buffer.com/resources/copywriting-formulas/', 'Buffer: Copywriting Formulas for Social Posts'],
+  socialCalendar: ['https://buffer.com/resources/social-media-calendar/', 'Buffer: Create a Social Media Content Calendar'],
   chatgpt: ['https://help.openai.com/en/articles/10032626-prompt-engineering-best-practices-for-chatgpt', 'OpenAI: Prompt Engineering Best Practices for ChatGPT'],
   prompts: ['https://github.com/microsoft/generative-ai-for-beginners/blob/main/04-prompt-engineering-fundamentals/README.md', 'Microsoft: Prompt Engineering Fundamentals'],
 };
@@ -39,6 +42,17 @@ export function sourceSuggestions(topic) {
   if (/\bsumif\b|суммесли/u.test(text)) return suggestions('sumif');
   if (/google\s*sheets|гугл.{0,10}таблиц/u.test(text)) {
     return /\bsum\b|сумм|қосынды|total/u.test(text) ? suggestions('sum') : [];
+  }
+  // A language lesson about colors or an advertising post about a discount
+  // needs its own subject's sources, not a design or mathematics lesson.
+  if (/\bsmm\b|\bsocial\s+media\b|\binstagram\b|соцсет|социальн.{0,15}сет|инстаграм|әлеуметтік.{0,15}желі/u.test(text)) {
+    if (/\bcalendars?\b|\bcontent\s+plans?\b|контент[\s-]*план|календар|контент.{0,15}жоспар|жарияланым.{0,15}жоспар/u.test(text)) return suggestions('socialCalendar');
+    if (/\b(?:posts?|captions?|hooks?|copywriting|cta)\b|(?:^|[^\p{L}])пост(?:а|ы|ов|у|ом|е)?(?=$|[^\p{L}])|подпис.{0,15}(?:фото|публикац)|текст.{0,15}публикац|копирайт|жарияланым|жазба|мәтін/u.test(text)) return suggestions('socialPost');
+    return [];
+  }
+  if (/\benglish\b|английск|ағылшын/u.test(text)) {
+    return /\b(?:introduc\w*|greetings?|hello)\b|\bmeet(?:ing)?\s+new\s+people\b|знаком|представ|приветств|рассказ.{0,15}себ|таныс|таныстыр|сәлем|өзі.{0,15}туралы/u.test(text)
+      ? suggestions('englishIntro') : [];
   }
   if (/\b(?:chatgpt|chat\s*gpt)\b/u.test(text)) {
     // Tool-specific instructions need a fresh targeted search, not a prompting guide.

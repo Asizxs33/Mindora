@@ -97,3 +97,23 @@ test('deadline and caller cancellation preserve existing materials', async () =>
   assert.equal(result, materials);
   assert.equal(readSignal.aborted, true);
 });
+
+test('SMM calendar illustration is fetched only for a calendar lesson', async () => {
+  const url = 'https://buffer.com/resources/social-media-calendar/';
+  const calls = [];
+  const result = await enrichLearningVisualSources(existing(), 'SMM: контент-план для кофейни', {
+    readPage: async source => {
+      calls.push(source);
+      return article(source, '# Content calendar\nA social media content calendar organizes upcoming posts by date and channel.\n\n![Scheduled posts in a weekly calendar](https://example.org/calendar.png)');
+    },
+  });
+  assert.deepEqual(calls, [url]);
+  assert.equal(result.at(-1).imageSourceUrl, url);
+  assert.equal(result.at(-1).images[0].alt, 'Scheduled posts in a weekly calendar');
+  for (const topic of ['SMM: пост про скидку 20%', 'English: introduce yourself and favorite colors', 'SMM analytics']) {
+    const materials = existing();
+    assert.equal(await enrichLearningVisualSources(materials, topic, {
+      readPage: async () => assert.fail('unrelated illustration must not be fetched'),
+    }), materials);
+  }
+});

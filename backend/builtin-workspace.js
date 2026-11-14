@@ -2,7 +2,7 @@ import { budgetDraftKey, SESSION_MINUTES } from '../core/budget-session.js';
 import { restoreRoadmap, restoreRoadmapArchive } from '../core/roadmap-model.js';
 import { normalizeRewards } from '../core/roadmap-rewards.js';
 
-export const WORKSPACE_MAX_BYTES = 98_304;
+export const WORKSPACE_MAX_BYTES = 1_048_576;
 const courses = ['design', 'budget'];
 const budgetKeys = SESSION_MINUTES.flatMap(minutes => [2, 3].map(step => budgetDraftKey(step, minutes)));
 const plain = value => Boolean(value && typeof value === 'object' && !Array.isArray(value)

@@ -908,7 +908,7 @@ function submitRoadmap(form) {
     try {
       response = await fetch('/api/learning-roadmap', {
         method: 'POST', headers: { 'Content-Type': 'application/json', ...learningHeaders(owner) },
-        body: JSON.stringify(input), signal: AbortSignal.timeout(38000),
+        body: JSON.stringify(input), signal: AbortSignal.timeout(57000),
       });
     } catch {
       throw new Error(roadmapErrorText('roadmap'));
@@ -944,7 +944,7 @@ function startRoadmapStage(index) {
       const { title, objective } = roadmap.stages[index];
       const { goal, originalGoal, level, levelReason } = roadmap;
       const stageGoal = `${title} — ${goal}`.slice(0, 180);
-      const previousStages = roadmap.stages.slice(0, index).map(({ title, objective }) => ({ title, objective }));
+      const previousStages = roadmap.stages.slice(Math.max(0, index - 3), index).map(({ title, objective }) => ({ title, objective }));
       const generated = await plans.generate(stageGoal, roadmap.minutes, {
         language: roadmap.language, roadmapStage: { goal, ...(originalGoal ? { originalGoal } : {}), title, objective, level, levelReason, previousStages },
       });
@@ -992,11 +992,7 @@ function beginIntroductionCourse() {
   const start = () => {
     startingNew = false;
     changeMinutes(minutes);
-    if (['design', 'budget'].includes(selected.id)) {
-      selectCourse(selected.id, goal);
-      go('builtin-path');
-    } else if (selected.id === 'english') { void startReadyCourse('everyday-english', minutes); }
-    else beginRoadmap(goal, minutes);
+    beginRoadmap(goal, minutes);
   };
   if (ensureLearning(start)) start();
 }
@@ -1152,7 +1148,7 @@ document.addEventListener('click', event => {
       }
       roadmapError = '';
       go('roadmap');
-    } else if (roadmapAction === 'start' && /^[0-3]$/.test(roadmapStage)) {
+    } else if (roadmapAction === 'start' && /^(?:0|[1-9][0-9]?)$/.test(roadmapStage) && Number(roadmapStage) < (state.learningRoadmap?.stages.length ?? 0)) {
       startRoadmapStage(Number(roadmapStage));
     } else if (roadmapBuy || roadmapClaim) {
       state.learningRewards = roadmapBuy ? buyRewardItem(state.learningRewards, roadmapBuy)

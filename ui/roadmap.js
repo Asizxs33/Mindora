@@ -161,20 +161,22 @@ function questRow(quest) {
   </div>`;
 }
 
-function stageRows(roadmap, active, busy) {
+function stageRows(roadmap, active, busy, startIndex = 0, count = roadmap.stages.length) {
   const statusLabels = {
     completed: t('View result', 'Результат', 'Нәтиже'),
     active: t('Continue lesson', 'Продолжить', 'Жалғастыру'),
     ready: t('Start lesson', 'Начать', 'Бастау'),
     locked: t('Locked', 'Закрыто', 'Құлыптаулы'),
   };
-  return roadmap.stages.map((stage, index) => {
+  const stages = roadmap.stages.slice(startIndex, startIndex + count);
+  return stages.map((stage, localIndex) => {
+    const index = startIndex + localIndex;
     const status = active[index]?.status || (index === 0 ? 'ready' : 'locked');
     const locked = status === 'locked';
     const current = status === 'ready' || status === 'active';
     const symbol = { completed: 'check', active: 'play', ready: index === roadmap.stages.length - 1 ? 'flag' : 'play', locked: 'lock' }[status];
     return `<li class="roadmap-stage is-${status}"${current ? ' aria-current="step"' : ''}>
-      ${index < roadmap.stages.length - 1 ? `<svg class="roadmap-stage-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${index % 2 ? 'M75 0 H38 Q25 0 25 18 V100' : 'M25 0 H62 Q75 0 75 18 V100'}"/></svg>` : ''}
+      ${localIndex < stages.length - 1 ? `<svg class="roadmap-stage-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${localIndex % 2 ? 'M75 0 H38 Q25 0 25 18 V100' : 'M25 0 H62 Q75 0 75 18 V100'}"/></svg>` : ''}
       <div class="roadmap-stage-stop">
         ${current ? `<span class="roadmap-start-bubble" aria-hidden="true">${status === 'active' ? t('Continue', 'Продолжить', 'Жалғастыру') : t('Start here', 'Начать', 'Бастау')}</span>` : ''}
         <button type="button" class="roadmap-stage-marker roadmap-stage-node" data-roadmap-action="start" data-roadmap-stage="${index}" aria-label="${escape(`${statusLabels[status]}: ${stage.title}`)}" aria-describedby="roadmap-stage-detail-${index}"${busy || locked ? ' disabled' : ''}>${icon(symbol, 34)}</button>
@@ -182,6 +184,27 @@ function stageRows(roadmap, active, busy) {
       </div>
     </li>`;
   }).join('');
+}
+
+function syllabusSources(roadmap) {
+  if (roadmap.curriculumVersion !== 2) return '';
+  if (roadmap.sourceStatus !== 'verified') return `<p class="roadmap-source-notice">${t('Course sources could not be confirmed yet. This outline is provisional; lesson materials are checked when each lesson is prepared.', 'Источники программы пока не удалось подтвердить. Это предварительный план; материалы проверяются при подготовке каждого занятия.', 'Курс көздері әзірге расталмады. Бұл алдын ала жоспар; әр сабақ дайындалғанда материалдар тексеріледі.')}</p>`;
+  return `<section class="roadmap-sources"><h3>${t('Sources behind this course', 'Источники программы', 'Курс бағдарламасының көздері')}</h3><ul>${roadmap.sources.map(source => `<li><a href="${escape(source.url)}" target="_blank" rel="noopener noreferrer">${escape(source.title)} ${icon('arrow', 14)}</a></li>`).join('')}</ul></section>`;
+}
+
+function syllabusView(roadmap, active, busy) {
+  if (roadmap.curriculumVersion !== 2) return `<ol class="roadmap-stages" aria-label="${t('Lessons in order', 'Порядок занятий', 'Сабақтар реті')}">${stageRows(roadmap, active, busy)}</ol>`;
+  const next = active.findIndex(stage => stage.status === 'ready' || stage.status === 'active');
+  const allComplete = active.length === roadmap.stages.length && active.every(stage => stage.status === 'completed');
+  const focused = next >= 0 ? next : allComplete ? roadmap.stages.length - 1 : 0;
+  return `<div class="roadmap-modules" aria-label="${t('Full course outline', 'Полная программа курса', 'Курстың толық бағдарламасы')}">${roadmap.modules.map((module, index) => {
+    const current = focused >= module.startIndex && focused < module.startIndex + module.count;
+    const completed = active.slice(module.startIndex, module.startIndex + module.count).filter(stage => stage.status === 'completed').length;
+    return `<details class="roadmap-module${current ? ' is-current' : ''}${completed === module.count ? ' is-completed' : ''}" data-roadmap-module="${index}"${current ? ' open' : ''}>
+      <summary><span class="roadmap-module-number" aria-hidden="true">${completed === module.count ? icon('check', 19) : String(index + 1).padStart(2, '0')}</span><span class="roadmap-module-summary"><strong>${escape(module.title)}</strong><small>${t(`${module.count} lessons`, `Занятий: ${module.count}`, `${module.count} сабақ`)} <span aria-hidden="true">·</span> ${t(`${completed} complete`, `Пройдено: ${completed}`, `${completed} аяқталды`)}</small></span>${icon('chevron', 18)}</summary>
+      <div class="roadmap-module-content"><p class="roadmap-module-outcome">${escape(module.outcome)}</p><ol class="roadmap-stages" start="${module.startIndex + 1}" aria-label="${escape(module.title)}">${stageRows(roadmap, active, busy, module.startIndex, module.count)}</ol></div>
+    </details>`;
+  }).join('')}</div>`;
 }
 
 export function roadmapView({ roadmap, wizard, active = [], busy = false, error = '', notice = '', rewards, quests = rewards?.quests ?? [] } = {}) {
@@ -203,10 +226,12 @@ export function roadmapView({ roadmap, wizard, active = [], busy = false, error 
         <div><h1 id="roadmap-title" tabindex="-1">${escape(roadmap.title)}</h1></div>
         <div class="roadmap-heading-progress"><span aria-hidden="true">${finished}/${all}</span><progress value="${finished}" max="${Math.max(1, all)}" aria-label="${progressLabel}"></progress></div>
       </header>
-      <details class="roadmap-about"><summary>${icon('book', 17)} ${t('About this course', 'Об этом курсе', 'Курс туралы')}</summary><div><p>${escape(roadmap.outcome)}</p><div class="roadmap-level"><strong>${t('Estimated level', 'Стартовый уровень', 'Бастапқы деңгей бағасы')}<span>${levelName(roadmap.level)}</span></strong><p>${escape(roadmap.levelReason)}</p></div><ol>${roadmap.stages.map(stage => `<li><strong>${escape(stage.title)}</strong><p>${escape(stage.objective)}</p></li>`).join('')}</ol></div></details>
+      ${roadmap.curriculumVersion === 2 ? `<div class="roadmap-course-scale" aria-label="${t('Course pace', 'Объём и темп курса', 'Курс көлемі мен қарқыны')}"><span>${icon('book', 16)} ${t(`${all} daily lessons`, `Занятий в курсе: ${all}`, `Курста ${all} сабақ`)}</span><span>${icon('clock', 16)} ${t(`${roadmap.minutes} min a day`, `${roadmap.minutes} мин в день`, `Күніне ${roadmap.minutes} минут`)}</span><small>${t(`About ${Math.ceil(all / 7)} weeks at one lesson a day`, `Около ${Math.ceil(all / 7)} нед. при одном занятии в день`, `Күніне бір сабақпен шамамен ${Math.ceil(all / 7)} апта`)}</small></div>` : ''}
+      ${roadmap.curriculumVersion === 2 && roadmap.sourceStatus === 'unavailable' ? syllabusSources(roadmap) : ''}
+      <details class="roadmap-about"><summary>${icon('book', 17)} ${t('About this course', 'Об этом курсе', 'Курс туралы')}</summary><div><p>${escape(roadmap.outcome)}</p><div class="roadmap-level"><strong>${t('Estimated level', 'Стартовый уровень', 'Бастапқы деңгей бағасы')}<span>${levelName(roadmap.level)}</span></strong><p>${escape(roadmap.levelReason)}</p></div>${roadmap.curriculumVersion === 2 ? roadmap.sourceStatus === 'verified' ? syllabusSources(roadmap) : '' : `<ol>${roadmap.stages.map(stage => `<li><strong>${escape(stage.title)}</strong><p>${escape(stage.objective)}</p></li>`).join('')}</ol>`}</div></details>
       ${feedback(busy, error, notice)}
       <div class="roadmap-tutor">${character('mino', busy ? 'waiting' : complete ? 'trophy' : 'map', 'roadmap-guide')}<div class="roadmap-tutor-speech"><p>${complete ? t('Look how far you’ve come. You did it!', 'Посмотри, какой путь ты прошёл. Получилось!', 'Қаншама жол жүріп өттің. Жарайсың!') : (finished ? t('Ready for the next lesson?', 'Продолжим со следующего урока?', 'Келесі сабақты бастаймыз ба?') : t('Tap the orange step to open your lesson.', 'Нажми на оранжевый шаг, чтобы открыть урок.', 'Сабақты ашу үшін қызғылт сары қадамды бас.'))}</p></div></div>
-      <ol class="roadmap-stages" aria-label="${t('Lessons in order', 'Порядок занятий', 'Сабақтар реті')}">${stageRows(roadmap, active, busy)}</ol>
+      ${syllabusView(roadmap, active, busy)}
       <button type="button" class="text-link roadmap-new-goal" data-roadmap-action="setup"${busy ? ' disabled' : ''}>${icon('plus', 17)} ${t('Set another goal', 'Выбрать другую цель', 'Басқа мақсат таңдау')}</button>
     </div>
     ${rewards ? `<aside class="roadmap-aside">

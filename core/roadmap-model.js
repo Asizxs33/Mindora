@@ -1,6 +1,10 @@
-import { planInput } from './learning-plan.js';
+import { planInput, sourceUrl } from './learning-plan.js';
 
 export const ROADMAP_STAGE_COUNT = 4;
+export const ROADMAP_CURRICULUM_LIMITS = Object.freeze({
+  minStages: 24, maxStages: 48, minModules: 4, maxModules: 8,
+  minModuleLessons: 3, maxModuleLessons: 8, maxSources: 3,
+});
 export const ROADMAP_LIBRARY_LIMIT = 16;
 export const ROADMAP_LEVELS = Object.freeze(['beginner', 'intermediate', 'advanced']);
 export const ROADMAP_LIMITS = Object.freeze({
@@ -51,8 +55,13 @@ export function roadmapInput(raw) {
 
 export function normalizeRoadmap(raw, input = raw) {
   const context = planInput(input?.goal, input?.minutes, input?.language);
+  const curriculum = raw?.curriculumVersion === 2;
+  const bounds = ROADMAP_CURRICULUM_LIMITS;
   if (!context || !text(context.goal, ROADMAP_LIMITS.goal) || !ROADMAP_LEVELS.includes(raw?.level)
-    || !Array.isArray(raw.stages) || raw.stages.length !== ROADMAP_STAGE_COUNT) return null;
+    || (raw.curriculumVersion !== undefined && !curriculum)
+    || !Array.isArray(raw.stages) || (curriculum
+      ? raw.stages.length < bounds.minStages || raw.stages.length > bounds.maxStages
+      : raw.stages.length !== ROADMAP_STAGE_COUNT)) return null;
   if (input.originalGoal !== undefined) {
     const originalGoal = text(input.originalGoal, ROADMAP_LIMITS.goal);
     if (!originalGoal) return null;
@@ -67,8 +76,30 @@ export function normalizeRoadmap(raw, input = raw) {
     objective: text(stage?.objective, ROADMAP_LIMITS.objective),
   }));
   if (stages.some(stage => !stage.title || !stage.objective)
-    || new Set(stages.map(stage => stage.title.toLocaleLowerCase(context.language))).size !== ROADMAP_STAGE_COUNT) return null;
-  return { ...context, level: raw.level, levelReason, title, outcome, stages };
+    || new Set(stages.map(stage => stage.title.toLocaleLowerCase(context.language))).size !== stages.length) return null;
+  let syllabus = {};
+  if (curriculum) {
+    if (!Array.isArray(raw.modules) || raw.modules.length < bounds.minModules || raw.modules.length > bounds.maxModules
+      || !['verified', 'unavailable'].includes(raw.sourceStatus)) return null;
+    const modules = [];
+    let nextIndex = 0;
+    for (const module of raw.modules) {
+      const title = text(module?.title, ROADMAP_LIMITS.stageTitle);
+      const outcome = text(module?.outcome, ROADMAP_LIMITS.objective);
+      if (!title || !outcome || !Number.isInteger(module.startIndex) || module.startIndex !== nextIndex
+        || !Number.isInteger(module.count) || module.count < bounds.minModuleLessons || module.count > bounds.maxModuleLessons) return null;
+      modules.push({ title, outcome, startIndex: nextIndex, count: module.count });
+      nextIndex += module.count;
+    }
+    if (nextIndex !== stages.length || new Set(modules.map(module => module.title.toLocaleLowerCase(context.language))).size !== modules.length) return null;
+    const rawSources = raw.sources === undefined ? [] : raw.sources;
+    if (!Array.isArray(rawSources) || rawSources.length > bounds.maxSources) return null;
+    const sources = Array.from(rawSources, source => ({ title: text(source?.title, 160), url: sourceUrl(source?.url) }));
+    if (sources.some(source => !source.title || !source.url) || new Set(sources.map(source => source.url)).size !== sources.length
+      || (raw.sourceStatus === 'verified' ? sources.length === 0 : sources.length !== 0)) return null;
+    syllabus = { curriculumVersion: 2, modules, sourceStatus: raw.sourceStatus, sources };
+  } else if (raw.modules !== undefined || raw.sources !== undefined || raw.sourceStatus !== undefined) return null;
+  return { ...context, ...syllabus, level: raw.level, levelReason, title, outcome, stages };
 }
 
 export function roadmapCourseId(value) {
@@ -85,7 +116,7 @@ export function restoreRoadmap(raw) {
   const progress = [];
   const ids = new Set();
   let locked = false;
-  if (saved !== undefined && (!Array.isArray(saved) || saved.length !== ROADMAP_STAGE_COUNT)) return null;
+  if (saved !== undefined && (!Array.isArray(saved) || saved.length !== roadmap.stages.length)) return null;
   for (const index of roadmap.stages.keys()) {
     const entry = saved === undefined ? { courseId: null, completed: false } : saved[index];
     const courseId = roadmapCourseId(entry?.courseId);

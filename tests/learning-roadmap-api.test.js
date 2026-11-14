@@ -18,6 +18,12 @@ const providerRoadmap = {
     { title: 'Build a monthly budget', objective: 'Create and verify your budget using fresh examples.' },
   ],
 };
+const providerCurriculum = {
+  ...providerRoadmap, curriculumVersion: 2,
+  modules: Array.from({ length: 6 }, (_, index) => ({ title: `Budget module ${index + 1}`, outcome: `Apply budgeting skill group ${index + 1}.`, startIndex: index * 4, count: 4 })),
+  stages: Array.from({ length: 24 }, (_, index) => ({ title: `Budget skill ${index + 1}`, objective: `Create and check budgeting result ${index + 1}.` })),
+};
+const offlineCourseSources = { loadSources: async () => ({ sources: [], status: 'unavailable' }) };
 const settings = { databaseUrl: 'test-only', baseUrl: 'https://auth.example.org', cookieSecret: 'test-only' };
 const session = async () => ({ user: { id: 'account-a' }, cookies: ['session=verified'] });
 const create = (body = input, account = 'account-a', origin = 'https://mindora.test') => new Request('https://mindora.test/api/learning-roadmap', {
@@ -45,7 +51,7 @@ test('only a verified matching account with valid answers can invoke roadmap gen
   assert.equal(calls, 1);
 });
 
-test('the roadmap uses onboarding evidence and requires a valid four-stage provider result', async () => {
+test('the roadmap uses onboarding evidence and generates a complete course syllabus', async () => {
   let requests = 0;
   const dependencies = {
     apiKey: 'test-only', settings, session,
@@ -55,12 +61,14 @@ test('the roadmap uses onboarding evidence and requires a valid four-stage provi
       const { messages } = JSON.parse(init.body);
       assert.match(messages[0].content, /Return only a JSON object/);
       assert.match(messages[0].content, /in Kazakh/);
-      assert.match(messages[0].content, /exactly 4 distinct, ordered stages/);
+      assert.match(messages[0].content, /exactly 24 distinct, ordered stages/);
+      assert.match(messages[0].content, /exactly 6 modules of 4 stages/);
       assert.match(messages[0].content, /10-minute practice session/);
       assert.match(messages[0].content, /Concrete examples of past work matter more/);
       assert.deepEqual(JSON.parse(messages[1].content), input);
-      return Response.json({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(providerRoadmap) } }] });
-    }),
+      assert.deepEqual(JSON.parse(messages[2].content), { retrievedCourseOutlines: [], sourceStatus: 'unavailable' });
+      return Response.json({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(providerCurriculum) } }] });
+    }, offlineCourseSources),
   };
   assert.equal((await roadmapApi(create(), dependencies)).status, 200);
   assert.equal(requests, 1);
@@ -119,7 +127,7 @@ test('clarification prompts preserve concrete intent and require self-contained 
 
 test('both direction selection and path generation stay within the available practice editors', async () => {
   const data = { ...input, goal: 'Python: process CSV files and rename photos' };
-  for (const [generate, response] of [[generateDeepSeekClarification, clarification], [generateDeepSeekRoadmap, providerRoadmap]]) {
+  for (const [generate, response] of [[generateDeepSeekClarification, clarification], [generateDeepSeekRoadmap, providerCurriculum]]) {
     await generate(data, 'test-only', async (url, init) => {
       const { messages } = JSON.parse(init.body);
       const prompt = messages[0].content;
@@ -139,7 +147,7 @@ test('both direction selection and path generation stay within the available pra
       assert.match(prompt, /Writing and other subjects use a text response with a concrete deliverable/);
       assert.deepEqual(JSON.parse(messages[1].content), data);
       return Response.json({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(response) } }] });
-    });
+    }, offlineCourseSources);
   }
 });
 

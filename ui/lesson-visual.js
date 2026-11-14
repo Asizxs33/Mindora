@@ -2,11 +2,18 @@ import { escapeHtml as esc } from '../core/engine.js';
 import { languageCode } from '../core/language.js';
 import { normalizeLessonVisual, visualContrastRatio } from '../core/lesson-visual.js';
 import { currentLanguage } from './language.js';
+import { icon } from './icons.js';
 
 const copy = {
   en: { example: 'Visual example', palette: 'A palette in action', background: 'Background', text: 'Text', accent: 'Accent', action: 'Learn more', contrast: 'Text contrast', readable: 'At least 4.5:1 for normal text', lowContrast: 'Below 4.5:1: increase text contrast', percent: 'Percent means out of 100', square: 'Each square is 1%', shaded: 'Shaded', remaining: 'Remaining', of: 'of', equals: 'equals', approximately: 'approximately', calculation: 'From the picture to the calculation' },
   ru: { example: 'Наглядный пример', palette: 'Палитра в действии', background: 'Фон', text: 'Текст', accent: 'Акцент', action: 'Узнать больше', contrast: 'Контраст текста', readable: 'Не менее 4,5:1 для обычного текста', lowContrast: 'Меньше 4,5:1: повысь контраст текста', percent: 'Процент — это доля из 100', square: 'Каждый квадрат — 1%', shaded: 'Закрашено', remaining: 'Осталось', of: 'от', equals: 'равно', approximately: 'примерно', calculation: 'От картинки к вычислению' },
   kk: { example: 'Көрнекі мысал', palette: 'Іс жүзіндегі түстер', background: 'Фон', text: 'Мәтін', accent: 'Акцент', action: 'Толығырақ', contrast: 'Мәтін контрасты', readable: 'Қалыпты мәтін үшін кемінде 4,5:1', lowContrast: '4,5:1-ден төмен: мәтін контрастын арттыр', percent: 'Пайыз — 100-ден бір үлес', square: 'Әр шаршы — 1%', shaded: 'Боялған', remaining: 'Қалғаны', of: 'санының', equals: 'тең', approximately: 'шамамен', calculation: 'Суреттен есепке' },
+};
+
+const writingCopy = {
+  en: { dialogue: 'An English conversation', translation: 'Translation', exchange: 'Follow the exchange', post: 'A post, piece by piece', mock: 'Example publication', audience: 'Who it is for', hook: 'Hook', benefit: 'Value for the reader', cta: 'Call to action', postNote: 'One reader. One useful idea. One next step.' },
+  ru: { dialogue: 'Диалог на английском', translation: 'Перевод', exchange: 'Проследи за разговором', post: 'Публикация по частям', mock: 'Пример публикации', audience: 'Для кого', hook: 'Первая строка', benefit: 'Польза для читателя', cta: 'Призыв к действию', postNote: 'Один читатель. Одна полезная мысль. Один следующий шаг.' },
+  kk: { dialogue: 'Ағылшынша диалог', translation: 'Аударма', exchange: 'Әңгімені бақыла', post: 'Жарияланымның бөліктері', mock: 'Жарияланым үлгісі', audience: 'Кімге арналған', hook: 'Назар аударатын бастама', benefit: 'Оқырманға пайдасы', cta: 'Әрекетке шақыру', postNote: 'Бір оқырман. Бір пайдалы ой. Бір келесі қадам.' },
 };
 
 function number(value, language) {
@@ -56,9 +63,34 @@ function percentView(visual, language, words) {
   </figure>`;
 }
 
+function dialogueView(visual, language, words) {
+  const text = writingCopy[language];
+  const firstSpeaker = visual.turns[0].speaker;
+  return `<figure class="instructional-visual instructional-visual--dialogue" data-lesson-visual="dialogue" role="group" lang="${language}" aria-label="${esc(`${text.dialogue}: ${visual.label}`)}">
+    <figcaption class="instructional-visual-caption"><span>${words.example}</span><strong>${esc(visual.label)}</strong></figcaption>
+    <div class="instructional-dialogue-heading">${icon('users', 18)}<span>${text.exchange}</span><span class="instructional-language-tag" lang="en">EN</span></div>
+    <ol class="instructional-dialogue-turns">${visual.turns.map(turn => `<li class="instructional-dialogue-turn${turn.speaker !== firstSpeaker ? ' is-response' : ''}" data-dialogue-turn>
+      <span class="instructional-dialogue-avatar" aria-hidden="true">${icon('user', 17)}</span><div class="instructional-dialogue-message"><strong class="instructional-dialogue-speaker">${esc(turn.speaker)}</strong><p data-dialogue-text lang="en">${esc(turn.text)}</p>${turn.translation ? `<p class="instructional-dialogue-translation" data-dialogue-translation lang="${language}"><span class="visually-hidden">${text.translation}: </span>${esc(turn.translation)}</p>` : ''}</div>
+    </li>`).join('')}</ol>
+  </figure>`;
+}
+
+function socialPostView(visual, language, words) {
+  const text = writingCopy[language];
+  const parts = [['hook', text.hook, visual.hook], ['body', text.benefit, visual.body], ['cta', text.cta, visual.cta]];
+  return `<figure class="instructional-visual instructional-visual--social" data-lesson-visual="social-post" role="group" lang="${language}" aria-label="${text.post}">
+    <figcaption class="instructional-visual-caption"><span>${words.example}</span><strong>${text.post}</strong></figcaption>
+    <p class="instructional-post-audience">${icon('users', 17)}<span><strong>${text.audience}</strong>${esc(visual.audience)}</span></p>
+    <div class="instructional-post-card"><div class="instructional-post-header"><span class="instructional-post-avatar" aria-hidden="true">${icon('edit', 20)}</span><strong>${text.mock}</strong><span class="instructional-post-mark" aria-hidden="true">SMM</span></div>
+      <ol class="instructional-post-parts">${parts.map(([key, title, value], index) => `<li class="instructional-post-part instructional-post-part--${key}"><span class="instructional-post-annotation"><b aria-hidden="true">${index + 1}</b>${title}</span><p data-post-${key}>${esc(value)}</p></li>`).join('')}</ol>
+    </div><p class="instructional-post-note">${text.postNote}</p>
+  </figure>`;
+}
+
 export function renderLessonVisual(raw, language = currentLanguage()) {
   const visual = normalizeLessonVisual(raw);
   if (!visual) return '';
   const locale = languageCode(language);
-  return visual.type === 'palette' ? paletteView(visual, locale, copy[locale]) : percentView(visual, locale, copy[locale]);
+  const render = { palette: paletteView, percent: percentView, dialogue: dialogueView, 'social-post': socialPostView }[visual.type];
+  return render(visual, locale, copy[locale]);
 }
