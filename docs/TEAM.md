@@ -25,6 +25,7 @@
 | Контейнер приложения | `#app` в `index.html`, `#main` с `tabindex="-1"`, `#navigation`, `#top-navigation`, `#mobile-navigation`, `#top-actions`, `#toast`, `dialog#modal`, `#modal-content`, `#modal-title` |
 | Логотип, переходы и курсы | `data-home`, `data-view` со старым значением, `data-course="design"` или `data-course="budget"`, `data-start` для немедленного старта |
 | Поиск по цели и настройки | `form#goal-form`, `#goal-input`, `#time-select`, `#profile-minutes` |
+| ИИ-маршрут | `form#learning-plan-form` с полями `goal`, `minutes`. `form#learning-step-form` с полем `answer`. Кнопки `data-learning-step="edit"` и `data-learning-step="continue"`. Сохрани `#learning-review-status` и `#learning-plan-complete` с `tabindex="-1"` для перехода фокуса. |
 | Урок, квиз, практика | `data-step` для этапов 0–3, `data-choice` для ответа, `data-action` и `data-id` для соответствующих кнопок. Сохрани `disabled` у заблокированных этапов и состояние проверки. |
 | Постер | `#poster-form` и исходные имена полей `title`, `subtitle`, `cta`, `titleSize`, `subtitleSize`, `textColor`, `data-color`, `data-poster-stage`, `data-poster-preview`, `#title-size`, `#subtitle-size` |
 | Таблица и сохранённые работы | `#budget-formula`, `#budget-answer`, `data-expense`, `data-budget-total`, `#checks-container`, `data-note`, кнопки скачивания с `data-action="download"` и `data-id` |

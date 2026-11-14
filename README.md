@@ -34,7 +34,7 @@ Open the printed local URL, normally `http://127.0.0.1:4173`.
 
 ## Product vision and limits
 
-The larger vision is goal-based learning across many fields: source-backed routes, adaptive practice, personal feedback, and useful independent work. Live AI, automatic research, real-time community features, accounts, cloud sync, and payments are **not implemented** in this prototype. The time selector records a preference; it does not yet adapt the sample curriculum length. Static official resource links are supplied rather than claiming to search the web.
+The prototype includes two curated courses, signed-in budget draft sync, and a DeepSeek learning-plan integration that needs a server API key. The budget course and generated lessons adapt to 5, 10 or 20 minutes. Community discussions, payments, and cloud sync for generated plans are outside this slice.
 
 Browser storage is local to a device and origin. Clearing site data removes progress. Export creations to keep separate copies. A completed path records practice, not an accredited qualification or an expert assessment.
 
@@ -59,10 +59,14 @@ Checks cover unsupported goals, contrast, incomplete and malformed work, strict 
 
 ## Deploy
 
-Use the **Other** preset. `vercel.json` installs the locked dependencies and builds the browser files into `dist`. Vercel handles the two API routes separately. The production branch is `main`.
+Use the **Other** preset. `vercel.json` installs the locked dependencies and builds the browser files into `dist`. Vercel handles the API routes separately. The production branch is `main`.
 
 The draft sync preview uses a Neon Postgres database with Neon Auth. Connect the database to the intended Vercel environment and set a sensitive `NEON_AUTH_COOKIE_SECRET` (at least 32 random characters). The integration sets `DATABASE_URL` and `NEON_AUTH_BASE_URL`. Preview and Production can use separate Neon databases. The first authenticated draft request creates the table. Draft reads and writes are scoped to the verified session ID, and version checks prevent an unnoticed overwrite.
 
 On the site, open **Профиль** to create an account or sign in. In the budget editor click **Сохранить в аккаунте**. On another device, sign in at the same site and click **Открыть из аккаунта** in the profile. This transfers budget drafts and the open stage. Finished projects, poster work and notes remain local.
+
+For AI learning plans, add `DEEPSEEK_API_KEY` as a **Sensitive** server environment variable on the intended Vercel environment, then redeploy the branch. Set the branch filter to `feat/deepseek-learning-path` if supported. `DATABASE_URL` is required for the shared quota (10 requests per IP and 100 total per UTC day for that database). The first request creates the quota table. Never add the secret to a frontend file. Without a key, the page shows the unavailable state and offers ready-made courses.
+
+The route calls [DeepSeek Flash with web search](https://api-docs.deepseek.com/guides/web_tools/) and builds links only from returned search results. Durations are estimates for one session. Each step has a self-check criterion and asks the learner to record a result. On submission, DeepSeek [uses thinking mode](https://api-docs.deepseek.com/guides/thinking_mode/) to review the answer against that criterion and suggest one follow-up action. The learner can revise, continue, or skip the review if the service fails. Plan generation and reviews share the same quota. Generation sends the goal and duration, and review sends the goal, task, criterion, and submitted text. The route, answers, and feedback are saved in the browser.
 
 Google Fonts supplies Nunito when available; a system-font fallback is provided. No analytics or tracking scripts are included.

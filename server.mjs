@@ -10,15 +10,23 @@ http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = decodeURIComponent(url.pathname);
-    if (pathname === '/api/account' || pathname === '/api/budget-draft') {
+    if (['/api/account', '/api/budget-draft', '/api/learning-plan', '/api/task-review'].includes(pathname)) {
       const { accountApi, budgetDraftApi } = await import('./backend/cloud-api.js');
+      const { planApi } = await import('./backend/plan-api.js');
+      const { taskReviewApi } = await import('./backend/task-review-api.js');
+      const handlers = {
+        '/api/account': accountApi,
+        '/api/budget-draft': budgetDraftApi,
+        '/api/learning-plan': planApi,
+        '/api/task-review': taskReviewApi,
+      };
       const request = new Request(url, {
         method: req.method,
         headers: req.headers,
         body: ['GET', 'HEAD'].includes(req.method) ? undefined : req,
         duplex: 'half',
       });
-      const response = await (pathname === '/api/account' ? accountApi : budgetDraftApi)(request);
+      const response = await handlers[pathname](request);
       const headers = Object.fromEntries(response.headers);
       const cookies = response.headers.getSetCookie();
       if (cookies.length) headers['set-cookie'] = cookies;
