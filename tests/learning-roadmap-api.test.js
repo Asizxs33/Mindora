@@ -21,7 +21,7 @@ const providerRoadmap = {
 const providerCurriculum = {
   ...providerRoadmap, curriculumVersion: 2,
   modules: Array.from({ length: 6 }, (_, index) => ({ title: `Budget module ${index + 1}`, outcome: `Apply budgeting skill group ${index + 1}.`, startIndex: index * 4, count: 4 })),
-  stages: Array.from({ length: 24 }, (_, index) => ({ title: `Budget skill ${index + 1}`, objective: `Create and check budgeting result ${index + 1}.` })),
+  stages: Array.from({ length: 24 }, (_, index) => ({ title: `Budget skill ${index + 1}`, objective: `Create and check budgeting result ${index + 1}.`, kind: ['lesson', 'practice', 'review', 'mini-project'][index % 4] })),
 };
 const offlineCourseSources = { loadSources: async () => ({ sources: [], status: 'unavailable' }) };
 const settings = { databaseUrl: 'test-only', baseUrl: 'https://auth.example.org', cookieSecret: 'test-only' };

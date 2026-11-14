@@ -105,8 +105,17 @@
 .roadmap-stage-connector { position:absolute; z-index:0; top:calc(var(--roadmap-node)/2 + var(--roadmap-stage-head)); left:0; width:100%; height:calc(100% - var(--roadmap-stage-head) + var(--roadmap-next-head)); overflow:visible; pointer-events:none; }
 .roadmap-stage-connector path { fill:none; stroke:#eadfd5; stroke-width:7px; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
 .roadmap-stage.is-completed .roadmap-stage-connector path { stroke:#c7ddba; }
-.roadmap-stage .roadmap-stage-node { display:grid; place-items:center; flex:none; width:var(--roadmap-node); height:var(--roadmap-node); min-height:0; padding:0; border:2px solid #e6d8cb; border-bottom:8px solid #d6c6b8; border-radius:25px; background:#f7f0e9; color:#af9b89; box-shadow:inset 0 2px 0 #fff; cursor:pointer; touch-action:manipulation; transition:transform .15s,box-shadow .15s; }
+.roadmap-stage { --roadmap-kind-ink:#927254; --roadmap-kind-bg:#f7f0e9; --roadmap-kind-edge:#e6d8cb; --roadmap-kind-base:#d6c6b8; }
+.roadmap-stage.kind-practice { --roadmap-kind-ink:#52765c; --roadmap-kind-bg:#edf5ef; --roadmap-kind-edge:#cddfcf; --roadmap-kind-base:#aac4af; }
+.roadmap-stage.kind-review { --roadmap-kind-ink:#7e6898; --roadmap-kind-bg:#f3eff8; --roadmap-kind-edge:#ded3e9; --roadmap-kind-base:#c5b4d6; }
+.roadmap-stage.kind-mini-project { --roadmap-kind-ink:#997122; --roadmap-kind-bg:#fff5dc; --roadmap-kind-edge:#eddaa4; --roadmap-kind-base:#d8bd7f; }
+.roadmap-stage .roadmap-stage-node { position:relative; display:grid; place-items:center; flex:none; width:var(--roadmap-node); height:var(--roadmap-node); min-height:0; padding:0; border:2px solid var(--roadmap-kind-edge); border-bottom:8px solid var(--roadmap-kind-base); border-radius:25px; background:var(--roadmap-kind-bg); color:var(--roadmap-kind-ink); box-shadow:inset 0 2px 0 #fff; cursor:pointer; touch-action:manipulation; transition:transform .15s,box-shadow .15s; }
 .roadmap-stage-node .icon { width:34px; height:34px; }
+.roadmap-stage-kind-icon { display:grid; place-items:center; }
+.roadmap-stage-status { position:absolute; right:-7px; bottom:-10px; display:grid; place-items:center; width:28px; height:28px; border:3px solid #fff; border-radius:50%; background:#eadfd3; color:#856e59; }
+.roadmap-stage-status svg { width:14px; height:14px; }
+.roadmap-stage.is-ready .roadmap-stage-status,.roadmap-stage.is-active .roadmap-stage-status { background:#fff5e9; color:#b64c0a; }
+.roadmap-stage.is-completed .roadmap-stage-status { background:#648a4b; color:#fff; }
 .roadmap-stage .roadmap-stage-node:disabled { opacity:1; cursor:default; }
 .roadmap-stage.is-ready .roadmap-stage-node,.roadmap-stage.is-active .roadmap-stage-node { border-color:#ce570b; border-bottom-color:#8e3600; background:#cf5407; color:#fff; box-shadow:inset 0 3px 0 #e47d35,0 0 0 5px #ffebda,0 0 0 8px #fff; }
 .roadmap-stage.is-completed .roadmap-stage-node { border-color:#acd393; border-bottom-color:#6d9b58; background:#deefcf; color:#456f32; box-shadow:inset 0 3px 0 #edf8e5; }
@@ -114,6 +123,7 @@
 .roadmap-stage-node:active:not(:disabled) { transform:translateY(3px); }
 .roadmap-stage-node:focus-visible { outline:3px dashed #963900; outline-offset:10px; }
 .roadmap-stage-text { min-width:0; width:100%; max-width:190px; padding:2px 3px; border-radius:8px; background:#fff; }
+.roadmap-stage-kind-label { display:block; margin-bottom:5px; color:var(--roadmap-kind-ink); font-size:10px; line-height:1.3; font-weight:750; letter-spacing:.04em; text-transform:uppercase; }
 .roadmap-stage-text :is(h2,h3) { margin:0; font-size:16px; font-weight:650; line-height:1.4; color:#7c6859; overflow-wrap:anywhere; text-wrap:balance; }
 .roadmap-stage.is-ready .roadmap-stage-text :is(h2,h3),.roadmap-stage.is-active .roadmap-stage-text :is(h2,h3) { color:#a33e00; font-weight:800; }
 .roadmap-stage.is-completed .roadmap-stage-text :is(h2,h3) { color:#52733d; }

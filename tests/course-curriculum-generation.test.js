@@ -12,7 +12,7 @@ const curriculum = () => ({
   curriculumVersion: 2, level: 'beginner', levelReason: 'The learner knows lists but needs supported practice.',
   title: 'Build practical Python skills', outcome: 'Create and explain a small useful program.',
   modules: Array.from({ length: 6 }, (_, index) => ({ title: `Module ${index + 1}`, outcome: `Apply skill group ${index + 1}.`, startIndex: index * 4, count: 4 })),
-  stages: Array.from({ length: 24 }, (_, index) => ({ title: `Skill ${index + 1}`, objective: `Produce and verify practical result ${index + 1}.` })),
+  stages: Array.from({ length: 24 }, (_, index) => ({ title: `Skill ${index + 1}`, objective: `Produce and verify practical result ${index + 1}.`, kind: ['lesson', 'practice', 'review', 'mini-project'][index % 4] })),
 });
 const completion = value => Response.json({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(value) } }] });
 

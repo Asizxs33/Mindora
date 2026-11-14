@@ -7,6 +7,7 @@ export const ROADMAP_CURRICULUM_LIMITS = Object.freeze({
 });
 export const ROADMAP_LIBRARY_LIMIT = 16;
 export const ROADMAP_LEVELS = Object.freeze(['beginner', 'intermediate', 'advanced']);
+export const ROADMAP_STAGE_KINDS = Object.freeze(['lesson', 'practice', 'review', 'mini-project']);
 export const ROADMAP_LIMITS = Object.freeze({
   goal: 180, evidence: 360, title: 90, outcome: 300,
   stageTitle: 75, objective: 240, levelReason: 220, diagnosticQuestion: 320, diagnosticAnswer: 600,
@@ -14,6 +15,18 @@ export const ROADMAP_LIMITS = Object.freeze({
 
 const boundedString = (value, max) => typeof value === 'string' && value.length <= max && !/[\u0000\u000b\u000c\u007f]/u.test(value);
 const text = (value, max) => boundedString(value, max) ? value.trim() || null : null;
+
+// Old saved paths have no kind. Infer only from the lesson's own title, never
+// from its topic or objective, so an incidental project example stays a lesson.
+export function roadmapStageKind(stage) {
+  if (ROADMAP_STAGE_KINDS.includes(stage?.kind)) return stage.kind;
+  const title = typeof stage?.title === 'string' ? stage.title : '';
+  if ((!/\bproject\s+(?:management|planning)\b|проектирован/iu.test(title)
+    && /\bproject\b|(?:^|[^\p{L}])(?:проект|итог)\p{L}*|(?:^|[^\p{L}])жоба(?:$|[^\p{L}])/iu.test(title))) return 'mini-project';
+  if (/\breview\b|(?:^|[^\p{L}])(?:повтор|самопров)\p{L}*|(?:^|[^\p{L}])қайталау(?:$|[^\p{L}])/iu.test(title)) return 'review';
+  if (/\bpractice\b|(?:^|[^\p{L}])(?:практик|примен)\p{L}*|(?:^|[^\p{L}])жаттығу(?:$|[^\p{L}])/iu.test(title)) return 'practice';
+  return 'lesson';
+}
 
 export function clarificationInput(raw) {
   const input = planInput(raw?.goal, raw?.minutes, raw?.language);
@@ -74,8 +87,9 @@ export function normalizeRoadmap(raw, input = raw) {
   const stages = Array.from(raw.stages, stage => ({
     title: text(stage?.title, ROADMAP_LIMITS.stageTitle),
     objective: text(stage?.objective, ROADMAP_LIMITS.objective),
+    ...(stage?.kind !== undefined ? { kind: stage.kind } : {}),
   }));
-  if (stages.some(stage => !stage.title || !stage.objective)
+  if (stages.some(stage => !stage.title || !stage.objective || (stage.kind !== undefined && !ROADMAP_STAGE_KINDS.includes(stage.kind)))
     || new Set(stages.map(stage => stage.title.toLocaleLowerCase(context.language))).size !== stages.length) return null;
   let syllabus = {};
   if (curriculum) {

@@ -1,4 +1,5 @@
 import { escapeHtml as escape } from '../core/engine.js';
+import { roadmapStageKind } from '../core/roadmap-model.js';
 import { character } from './characters.js';
 import { icon } from './icons.js';
 import { t } from './language.js';
@@ -170,6 +171,12 @@ function stageRows(roadmap, active, busy) {
   };
   const milestones = new Map(roadmap.curriculumVersion === 2
     ? roadmap.modules.map((module, index) => [module.startIndex, { ...module, index }]) : []);
+  const kindLabels = {
+    lesson: t('Lesson', 'Урок', 'Сабақ'),
+    practice: t('Practice', 'Практика', 'Жаттығу'),
+    review: t('Review', 'Повторение', 'Қайталау'),
+    'mini-project': t('Mini-project', 'Мини-проект', 'Шағын жоба'),
+  };
   return roadmap.stages.map((stage, index) => {
     const status = active[index]?.status || (index === 0 ? 'ready' : 'locked');
     const locked = status === 'locked';
@@ -178,14 +185,16 @@ function stageRows(roadmap, active, busy) {
     const milestoneComplete = milestone && active.slice(index, index + milestone.count).filter(item => item.status === 'completed').length === milestone.count;
     const milestoneCurrent = milestone && active.slice(index, index + milestone.count).some(item => item.status === 'ready' || item.status === 'active');
     const titleTag = roadmap.curriculumVersion === 2 ? 'h3' : 'h2';
-    const symbol = { completed: 'check', active: 'play', ready: index === roadmap.stages.length - 1 ? 'flag' : 'play', locked: 'lock' }[status];
-    return `<li class="roadmap-stage is-${status}${milestone ? ' has-milestone' : ''}${milestones.has(index + 1) ? ' before-milestone' : ''}"${current ? ' aria-current="step"' : ''}>
+    const kind = roadmapStageKind(stage);
+    const symbol = { lesson: 'book', practice: 'edit', review: 'target', 'mini-project': index === roadmap.stages.length - 1 ? 'trophy' : 'work' }[kind];
+    const statusSymbol = locked ? 'lock' : status === 'completed' ? 'check' : 'play';
+    return `<li class="roadmap-stage kind-${kind} is-${status}${milestone ? ' has-milestone' : ''}${milestones.has(index + 1) ? ' before-milestone' : ''}" data-roadmap-kind="${kind}"${current ? ' aria-current="step"' : ''}>
       ${milestone ? `<header class="roadmap-milestone${milestoneComplete ? ' is-completed' : milestoneCurrent ? ' is-current' : ''}" data-roadmap-milestone="${milestone.index}"><span class="roadmap-milestone-label">${milestoneComplete ? icon('check', 13) : icon('flag', 13)} ${t(`Milestone ${milestone.index + 1}`, `Цель ${milestone.index + 1}`, `${milestone.index + 1}-мақсат`)}</span><h2>${escape(milestone.title)}</h2><p class="visually-hidden">${escape(milestone.outcome)}</p></header>` : ''}
       ${index < roadmap.stages.length - 1 ? `<svg class="roadmap-stage-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${index % 2 ? 'M75 0 H38 Q25 0 25 18 V100' : 'M25 0 H62 Q75 0 75 18 V100'}"/></svg>` : ''}
       <div class="roadmap-stage-stop">
         ${current ? `<span class="roadmap-start-bubble" aria-hidden="true">${status === 'active' ? t('Continue', 'Продолжить', 'Жалғастыру') : t('Start here', 'Начать', 'Бастау')}</span>` : ''}
-        <button type="button" class="roadmap-stage-marker roadmap-stage-node" data-roadmap-action="start" data-roadmap-stage="${index}" aria-label="${escape(`${statusLabels[status]}: ${stage.title}`)}" aria-describedby="roadmap-stage-detail-${index}"${busy || locked ? ' disabled' : ''}>${icon(symbol, 34)}</button>
-        <div class="roadmap-stage-text"><${titleTag}>${escape(stage.title)}</${titleTag}><p class="visually-hidden" id="roadmap-stage-detail-${index}">${escape(stage.objective)}${locked ? ` — ${statusLabels.locked}` : ''}</p></div>
+        <button type="button" class="roadmap-stage-marker roadmap-stage-node" data-roadmap-action="start" data-roadmap-stage="${index}" aria-label="${escape(`${kindLabels[kind]}. ${statusLabels[status]}: ${stage.title}`)}" aria-describedby="roadmap-stage-detail-${index}"${busy || locked ? ' disabled' : ''}><span class="roadmap-stage-kind-icon" aria-hidden="true">${icon(symbol, 34)}</span><span class="roadmap-stage-status" aria-hidden="true">${icon(statusSymbol, 14)}</span></button>
+        <div class="roadmap-stage-text"><span class="roadmap-stage-kind-label">${kindLabels[kind]}</span><${titleTag}>${escape(stage.title)}</${titleTag}><p class="visually-hidden" id="roadmap-stage-detail-${index}">${escape(stage.objective)}${locked ? ` — ${statusLabels.locked}` : ''}</p></div>
       </div>
     </li>`;
   }).join('');
