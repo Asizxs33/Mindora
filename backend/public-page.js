@@ -50,6 +50,20 @@ function untilAbort(promise, signal) {
   });
 }
 
+// Callers must supply their request deadline signal. Returning the vetted DNS
+// records lets the direct reader pin the connection without another lookup.
+export async function validatePublicUrl(value, { signal, resolver = lookupAddress } = {}) {
+  const url = sourceUrl(value);
+  if (!url || signal?.aborted) return null;
+  try {
+    const pending = resolver(new URL(url).hostname, { all: true, verbatim: true });
+    const addresses = await (signal ? untilAbort(pending, signal) : pending);
+    if (!Array.isArray(addresses) || !addresses.length
+      || addresses.some(item => !item || !publicAddress(item.address) || isIP(item.address) !== item.family)) return null;
+    return { url, addresses };
+  } catch { return null; }
+}
+
 function readResponse(url, address, { request, signal, maxBytes }) {
   return new Promise(resolve => {
     let outgoing;
@@ -141,9 +155,9 @@ export async function readPublicPage(value, {
   const timer = setTimeout(onAbort, Math.min(timeoutMs, TIMEOUT_MS));
   try {
     for (let redirects = 0; redirects <= 2; redirects++) {
-      const addresses = await untilAbort(resolver(new URL(url).hostname, { all: true, verbatim: true }), controller.signal);
-      if (!Array.isArray(addresses) || !addresses.length
-        || addresses.some(item => !item || !publicAddress(item.address) || isIP(item.address) !== item.family)) return null;
+      const validated = await validatePublicUrl(url, { signal: controller.signal, resolver });
+      if (!validated) return null;
+      const { addresses } = validated;
       // Prefer IPv4 when available; both families must have passed validation.
       const address = addresses.find(item => item.family === 4) ?? addresses[0];
       const response = await readResponse(url, address, { request, signal: controller.signal, maxBytes });

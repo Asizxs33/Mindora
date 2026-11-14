@@ -114,7 +114,7 @@ export function extractLearningMaterial(body, url, contentType = 'text/markdown'
   return { title, content, images: illustrations(parsed, url), links: lessonLinks(parsed, url) };
 }
 
-export async function enrichLearningMaterials(materials, { signal, query = '', readPage = readPublicPage } = {}) {
+export async function enrichLearningMaterials(materials, { signal, query = '', readPage = readPublicPage, readRenderedPage } = {}) {
   // A small bounded fan-out fits the existing serverless deadline. Failed reads
   // retain DeepSeek's retrieved text; no unrelated fallback lesson is fabricated.
   const bounded = materials.slice(0, 8);
@@ -145,6 +145,23 @@ export async function enrichLearningMaterials(materials, { signal, query = '', r
       imageSourceUrl: opened ? page.url : material.url,
     };
   }));
+  // The search provider can omit image markup, and some public help centers
+  // require rendered HTML. At most two image-less non-GitHub pages use Reader.
+  if (readRenderedPage) {
+    const missingImages = enriched.filter(item => !item.images.length && !repository(item.url)).slice(0, 2);
+    await Promise.all(missingImages.map(async material => {
+      try {
+        const page = await readRenderedPage(material.url, { signal });
+        if (!page) return;
+        const extracted = extractLearningMaterial(page.body, page.url, page.contentType);
+        if (!extracted) return;
+        material.content ||= extracted.content;
+        material.images = extracted.images;
+        material.imageSourceUrl = page.url;
+        material.links = [...material.links, ...extracted.links].slice(0, MAX_LINKS);
+      } catch { /* No Reader quota/access must never prevent a text lesson. */ }
+    }));
+  }
   const seen = new Set(enriched.flatMap(item => [imageBase(item.url), imageBase(item.imageSourceUrl)]));
   const keywords = [...new Set(String(query).toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || [])];
   const score = link => keywords.reduce((total, word) => total + Number((link.title + ' ' + link.url).toLowerCase().includes(word)), 0);

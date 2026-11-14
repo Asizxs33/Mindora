@@ -14,6 +14,27 @@ const html = `<html><head><title>Learn a useful calculation</title></head><body>
     <script>UNTRUSTED_SCRIPT()</script><form>ENTER PASSWORD</form>
   </article><footer>UNRELATED FOOTER</footer></body></html>`;
 
+test('rendered fallback recovers real images for at most two public sources', async () => {
+  let calls = 0;
+  const result = await enrichLearningMaterials(Array.from({ length: 4 }, (_, id) => ({
+    url: `https://docs.python.org/lesson-${id}`, title: 'Lesson', content: explanation,
+  })), {
+    readPage: async () => null,
+    readRenderedPage: async url => {
+      calls++;
+      return { url, contentType: 'text/markdown', body: `${explanation}\n\n![Example screenshot](https://docs.python.org/screenshots/example.png)` };
+    },
+  });
+  assert.equal(calls, 2);
+  assert.equal(result[0].images[0].url, 'https://docs.python.org/screenshots/example.png');
+  assert.equal(result[0].imageSourceUrl, result[0].url);
+  assert.deepEqual(result[2].images, []);
+  const fallback = await enrichLearningMaterials([{url, title:'Lesson', content:explanation}], {
+    readPage: async () => null, readRenderedPage: async () => { throw new Error('Quota'); },
+  });
+  assert.match(fallback[0].content, /monthly expenses/);
+});
+
 test('Readability preserves lesson/code content and resolves only useful article images', () => {
   const result = extractLearningMaterial(html, url, 'text/html');
   assert.ok(result);

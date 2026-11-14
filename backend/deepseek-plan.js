@@ -2,6 +2,7 @@ import { normalizePlan, PLAN_DURATIONS, sourceUrl } from '../core/learning-plan.
 import { LANGUAGES, languageCode } from '../core/language.js';
 import { enrichLearningMaterials } from './learning-materials.js';
 import { COURSE_SKILLS } from './course-skills.js';
+import { readRenderedPage as readWithJina } from './rendered-page.js';
 
 async function callDeepSeek(path, body, apiKey, fetcher, signal) {
   const response = await fetcher('https://api.deepseek.com' + path, {
@@ -45,7 +46,7 @@ async function completeJson(messages, maxTokens, apiKey, fetcher, signal) {
   return JSON.parse(output);
 }
 
-async function research(input, apiKey, fetcher, signal, readPage) {
+async function research(input, apiKey, fetcher, signal, readPage, readRenderedPage) {
   const { query, githubQuery } = await completeJson([
     { role: 'system', content: [
       'Plan two targeted searches for public beginner learning materials. Return JSON with query and githubQuery, each 90 characters or fewer.',
@@ -85,12 +86,12 @@ async function research(input, apiKey, fetcher, signal, readPage) {
     const page = await callDeepSeek('/v1/tools/fetch', { url: item.url }, apiKey, fetcher, signal);
     if (typeof page.content === 'string') item.content = page.content.trim().slice(0, 50000);
   }));
-  return (await enrichLearningMaterials(materials, { signal, readPage, query })).filter(item => item.content);
+  return (await enrichLearningMaterials(materials, { signal, readPage, readRenderedPage, query })).filter(item => item.content);
 }
 
-export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { readPage } = {}) {
+export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { readPage, readRenderedPage = readWithJina } = {}) {
   const signal = AbortSignal.timeout(50000);
-  const materials = await research(input, apiKey, fetcher, signal, readPage);
+  const materials = await research(input, apiKey, fetcher, signal, readPage, readRenderedPage);
   if (!materials.length) throw Object.assign(new Error('No readable learning materials'), { name: 'NoOpenedLessonSources' });
 
   const durations = PLAN_DURATIONS[input.minutes];

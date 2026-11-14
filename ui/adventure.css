@@ -20,7 +20,7 @@
 .learning-task-list p, .learning-result p { margin-block: 8px; overflow-wrap: anywhere; }
 .learning-answer { white-space: pre-wrap; }
 .lesson-source-figure { margin: 12px 0; }
-.lesson-source-figure img { display: block; max-width: 100%; height: auto; border-radius: 10px; }
+.lesson-source-figure img { display: block; width: 100%; max-width: 100%; max-height: 460px; height: auto; object-fit: contain; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
 .lesson-source-figure figcaption { margin-top: 6px; color: var(--muted); font-size: .85rem; }
 .learning-plan form .field { margin-block-end: 12px; }
 .learning-plan .lesson-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-block: 12px; }

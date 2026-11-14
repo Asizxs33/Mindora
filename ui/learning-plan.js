@@ -30,6 +30,8 @@ function currentTask(step, answer, review, busy, reviewError, last) {
   const disabled = busy ? ' disabled' : '';
   return `
     ${last ? '' : `<p class="learning-answer">${esc(step.instruction)}</p>`}
+    ${step.resource ? sourceIllustration(step.resource) : ''}
+    ${step.resource && !step.resource.images?.length ? `<p class="small-note"><a class="source-link" href="${esc(step.resource.url)}" target="_blank" rel="noopener noreferrer">${esc(step.resource.title)} ${icon('arrow', 14)}</a></p>` : ''}
     <p><strong>${t('Task', 'Задание', 'Тапсырма')}</strong><br>${esc(step.task)}</p>
     ${last ? '' : `<p><strong>${t('Self-check', 'Самопроверка', 'Өзін-өзі тексеру')}</strong><br>${esc(step.criterion)}</p>`}
     ${review ? `
@@ -51,7 +53,7 @@ function currentTask(step, answer, review, busy, reviewError, last) {
 }
 
 function sourceIllustration(resource) {
-  return (resource.images ?? []).map(image => `<figure class="lesson-source-figure"><img src="${esc(image.url)}" alt="${esc(image.alt)}" loading="lazy" referrerpolicy="no-referrer"><figcaption>${esc(image.alt)} · <a href="${esc(resource.imageSourceUrl || resource.url)}" target="_blank" rel="noopener noreferrer">${t('View original illustration', 'Иллюстрация в источнике', 'Дереккөздегі сурет')}</a></figcaption></figure>`).join('');
+  return (resource.images ?? []).map(image => `<figure class="lesson-source-figure"><img src="${esc(image.url)}" alt="${esc(image.alt)}" loading="lazy" referrerpolicy="no-referrer"><figcaption>${esc(image.alt)} · <a href="${esc(resource.imageSourceUrl || resource.url)}" target="_blank" rel="noopener noreferrer">${t('Source', 'Источник', 'Дереккөз')}: ${esc(resource.title)}</a></figcaption></figure>`).join('');
 }
 
 function stepsView({ plan, answers, reviews, completed }, busy, reviewError) {
@@ -63,8 +65,7 @@ function stepsView({ plan, answers, reviews, completed }, busy, reviewError) {
     return `<li class="game-card simple-panel">
       <h3>${last ? t('Independent task', 'Самостоятельная работа', 'Өздік жұмыс') : esc(step.title)} <span class="tag">${t(`${step.minutes} min`, `${step.minutes} мин`, `${step.minutes} мин`)}</span></h3>
       ${done ? `<details><summary>${t('View my answer', 'Посмотреть ответ', 'Жауапты көру')}</summary><p class="learning-answer">${esc(answers[index])}</p>${review ? reviewView(review) : ''}</details>` : ''}
-      ${(current || done) && step.resource ? `<p><a class="source-link" href="${esc(step.resource.url)}" target="_blank" rel="noopener noreferrer">${esc(step.resource.title)} ${icon('arrow', 14)}</a></p>` : ''}
-      ${current && step.resource ? sourceIllustration(step.resource) : ''}
+      ${done && step.resource ? `<p><a class="source-link" href="${esc(step.resource.url)}" target="_blank" rel="noopener noreferrer">${esc(step.resource.title)} ${icon('arrow', 14)}</a></p>` : ''}
       ${current ? currentTask(step, answers[index], review, busy, reviewError, last) : ''}
       ${!done && !current ? `<p>${t('Opens after the previous task.', 'Откроется после предыдущего задания.', 'Алдыңғы тапсырмадан кейін ашылады.')}</p>` : ''}
     </li>`;

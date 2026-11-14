@@ -4,9 +4,10 @@ import { generateDeepSeekPlan } from '../backend/deepseek-plan.js';
 import { planApi } from '../backend/plan-api.js';
 import { reviewWithDeepSeek, taskReviewApi } from '../backend/task-review-api.js';
 import { restorePlan, taskReviewInput, normalizePlan } from '../core/learning-plan.js';
+import { learningPlanView } from '../ui/learning-plan.js';
 
 // Provider fixtures remain offline; public-page integration is tested separately.
-const offlineReader = { readPage: async () => null };
+const offlineReader = { readPage: async () => null, readRenderedPage: async () => null };
 
 const source = 'https://docs.python.org/3/tutorial/controlflow.html';
 const draft = {
@@ -171,6 +172,11 @@ test('illustrations bind to retrieved sources and survive reload without crossin
   const unsafe = structuredClone(plan);
   unsafe.steps[0].resource.images.push({ url: 'javascript:alert(1)', alt: 'Unsafe' });
   assert.deepEqual(restorePlan({ plan: unsafe }).plan.steps[0].resource.images, [first]);
+  const rendered = learningPlanView({ goal: plan.goal, minutes: plan.minutes, saved: restorePlan({ plan }) });
+  assert.match(rendered, /<img src="https:\/\/docs\.python\.org\/first\.png" alt="First example"/);
+  assert.ok(rendered.indexOf(steps[0].instruction) < rendered.indexOf('<figure'));
+  assert.ok(rendered.indexOf('<figure') < rendered.indexOf(steps[0].task));
+  assert.match(rendered, /referrerpolicy="no-referrer"/);
 });
 
 test('the agent selects a discovered illustration by ID and cannot invent its URL', async () => {
@@ -182,7 +188,7 @@ test('the agent selects a discovered illustration by ID and cannot invent its UR
       assert.equal(input.materials[0].images[0].caption, 'Loop diagram');
       assert.equal(input.materials[0].images[0].id, 0);
     },
-  }), { readPage: async url => url === source ? {
+  }), { ...offlineReader, readPage: async url => url === source ? {
     url, contentType: 'text/markdown',
     body: 'A for loop iterates over a sequence. Write the loop and check every item.\n\n![Loop diagram](./loop.png)',
   } : null });
