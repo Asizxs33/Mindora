@@ -42,12 +42,12 @@ function radioOptions(name, options, selected) {
 }
 
 function feedback(busy, error, notice) {
-  return `${busy ? `<p class="roadmap-feedback reading" role="status">${icon('spark', 20)}${busy === 'stage'
-    ? t('Preparing this lesson…', 'Готовим занятие…', 'Сабақ дайындалып жатыр…')
-    : busy === 'clarify' ? t('Finding useful directions for your goal…', 'Подбираем направления под твою цель…', 'Мақсатыңа сай бағыттар дайындалып жатыр…')
-    : t('Building your learning path…', 'Строим твой путь обучения…', 'Оқу жолың құрылып жатыр…')}</p>` : ''}
-    ${error ? `<p class="roadmap-feedback has-error" role="alert">${escape(error)}</p>` : ''}
-    ${notice ? `<p class="roadmap-feedback" role="status">${escape(notice)}</p>` : ''}`;
+  return `${busy ? `<p class="roadmap-feedback reading" role="status">${icon('clock', 18)}<span>${busy === 'stage'
+    ? t('Preparing this lesson…', 'Готовим материалы и задания…', 'Материалдар мен тапсырмалар дайындалып жатыр…')
+    : busy === 'clarify' ? t('Preparing questions about your goal…', 'Готовим вопросы о твоей цели…', 'Мақсатың туралы сұрақтар дайындалып жатыр…')
+    : t('Putting your lessons in order…', 'Составляем план занятий…', 'Сабақ жоспары жасалып жатыр…')}</span></p>` : ''}
+    ${error ? `<p class="roadmap-feedback has-error" role="alert">${icon('alert', 18)}<span>${escape(error)}</span></p>` : ''}
+    ${notice ? `<p class="roadmap-feedback" role="status">${icon('info', 18)}<span>${escape(notice)}</span></p>` : ''}`;
 }
 
 function wizardView(wizard, busy, error) {
@@ -203,7 +203,7 @@ function stageRows(roadmap, active, busy) {
 
 function syllabusSources(roadmap) {
   if (roadmap.curriculumVersion !== 2) return '';
-  if (roadmap.sourceStatus !== 'verified') return `<p class="roadmap-source-notice">${t('Course sources could not be confirmed yet. This outline is provisional; lesson materials are checked when each lesson is prepared.', 'Источники программы пока не удалось подтвердить. Это предварительный план; материалы проверяются при подготовке каждого занятия.', 'Курс көздері әзірге расталмады. Бұл алдын ала жоспар; әр сабақ дайындалғанда материалдар тексеріледі.')}</p>`;
+  if (roadmap.sourceStatus !== 'verified') return `<p class="roadmap-source-notice">${icon('info', 18)}<span><strong>${t('Draft course outline', 'Предварительный план', 'Алдын ала жоспар')}</strong> ${t('We couldn’t verify sources for the full course. Materials are checked when each lesson is prepared.', 'Источники для всего курса пока не подтверждены. Материалы проверяются при подготовке каждого занятия.', 'Бүкіл курстың дереккөздері әзірге расталмады. Әр сабақ дайындалғанда материалдар тексеріледі.')}</span></p>`;
   return `<section class="roadmap-sources"><h3>${t('Sources behind this course', 'Источники программы', 'Курс бағдарламасының көздері')}</h3><ul>${roadmap.sources.map(source => `<li><a href="${escape(source.url)}" target="_blank" rel="noopener noreferrer">${escape(source.title)} ${icon('arrow', 14)}</a></li>`).join('')}</ul></section>`;
 }
 

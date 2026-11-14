@@ -1,5 +1,7 @@
 // Lucide Static 1.73.0. See ui/assets/LUCIDE-LICENSE.txt.
 const icons = {
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>',
+  alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5m0 3.5h.01"/>',
   globe: '<circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4" ry="10"/><path d="M2 12h20M4 6h16M4 18h16"/>',
   gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13"/><path d="M12 8H7.5A2.5 2.5 0 1 1 10 5.5L12 8Zm0 0h4.5A2.5 2.5 0 1 0 14 5.5L12 8Z"/>',
   message: '<path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H3l2.5-4.5a8.5 8.5 0 1 1 15.5-4Z"/><path d="M8 8h7M8 12h5"/>',

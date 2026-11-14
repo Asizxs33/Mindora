@@ -72,8 +72,29 @@ button,a { transition: background-color .15s,color .15s,border-color .15s; }
 .game-icon.blue { background: #fff1de; color: #98612e; }
 .game-icon.orange { background: #fff0df; color: #bf7e2f; }
 .game-card h2,.simple-panel h2 { display: flex; align-items: center; gap: 12px; }
-#toast { position: fixed; bottom: 26px; left: calc(50% + var(--sidebar)/2); transform: translate(-50%,12px); opacity: 0; pointer-events: none; z-index: 150; color: #fff; background: #24232c; border-radius: 14px; padding: 15px 20px; max-width: min(480px,calc(100% - 32px)); font-size: 15px; box-shadow: 0 8px 30px #20202c18; transition: opacity .2s,transform .2s; }
+#toast {
+  position: fixed;
+  bottom: 26px;
+  left: calc(50% + var(--sidebar)/2);
+  z-index: 150;
+  max-width: min(480px, calc(100% - 32px));
+  padding: 12px 16px;
+  border-inline-start: 3px solid #d8ab72;
+  border-radius: 6px;
+  background: #292724;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: 0 4px 18px #211d1826;
+  transform: translate(-50%, 8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s, transform .16s;
+}
 #toast.visible { opacity: 1; transform: translate(-50%,0); }
+@media (prefers-reduced-motion: reduce) {
+  #toast { transition: none; }
+}
 dialog { border: 0; border-radius: 24px; padding: 36px; background: #fff; color: var(--ink); width: min(540px,calc(100% - 32px)); max-height: calc(100dvh - 40px); overflow: auto; box-shadow: 0 24px 100px #25233535; }
 dialog::backdrop { background: #20202880; }
 .modal-close { position: absolute; top: 14px; right: 14px; font-size: 25px; z-index: 1; }
