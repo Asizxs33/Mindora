@@ -545,7 +545,7 @@ function render() {
       break;
     case 'new-course': html = courseHomeView(state, { composerOnly: true }); break;
     case 'courses':
-      html = accountOwner && phoneLayout?.matches
+      html = accountOwner
         ? phoneCourseLibrary(courseLibraryHtml(), readyCoursesView(starterCourses(state.language, state.minutes), state.minutes))
         : homeScreen();
       break;

@@ -154,6 +154,35 @@
   .roadmap-layout { grid-template-columns: 1fr; }
   .roadmap-aside { position: static; }
 }
+
+.roadmap-rewards { max-width:680px; }
+.roadmap-rewards-heading { grid-template-columns:minmax(0,1fr) 60px; gap:20px; margin-bottom:24px; }
+.roadmap-rewards-heading h1 { font-size:clamp(28px,4vw,36px); line-height:1.2; }
+.roadmap-rewards-heading p { font-size:15px; line-height:1.6; max-width:440px; color:#78695c; }
+.rewards-emblem { display:grid; place-items:center; width:60px; height:60px; border-radius:18px; color:#b65b16; background:#fff0dd; }
+.roadmap-rewards>.roadmap-metrics { border-radius:18px; background:#fcfaf7; padding:12px; border-color:#e7dfd7; }
+.roadmap-rewards .roadmap-metric { padding:10px; }
+.reward-tabs { display:flex; gap:6px; border-bottom:1px solid #e9dfd5; padding:0; margin:25px 0 16px; }
+.reward-tabs button { display:flex; justify-content:center; align-items:center; gap:8px; flex:1; min-height:50px; padding:10px 8px; border:0; border-bottom:3px solid transparent; border-radius:0; background:transparent; color:#7d7065; font:inherit; font-size:15px; font-weight:650; box-shadow:none; }
+.reward-tabs button[aria-current] { color:#a54408; border-bottom-color:#ba4b00; }
+.reward-tabs button:hover { background:#fff8f1; }
+.roadmap-rewards-list { display:grid; gap:12px; margin-block:18px 22px; }
+.roadmap-rewards-list>.roadmap-quest, .roadmap-rewards-list>.roadmap-shop-item { border:1px solid #e7dfd7; border-radius:16px; padding:20px; margin:0; background:white; }
+.roadmap-rewards-list .roadmap-symbol { width:46px; height:46px; border-radius:14px; background:#fff1df; color:#a45520; }
+.roadmap-rewards-list h3, .roadmap-rewards-list h2 { font-size:17px; line-height:1.4; }
+.roadmap-rewards-list .roadmap-quest progress { height:8px; margin-block:10px 8px; }
+.roadmap-rewards-list p { line-height:1.6; margin-top:5px; }
+.roadmap-rewards-list .roadmap-heart { color:#b14f59; background:#fcf0f1; }
+.roadmap-rewards-list .roadmap-shield { color:#37735e; background:#edf6ef; }
+.roadmap-rewards-list .roadmap-shop-item small { justify-self:start; }
+.roadmap-rewards-list button { min-height:44px; flex-shrink:0; }
+@media(max-width:450px) {
+  .roadmap-rewards-heading { grid-template-columns:minmax(0,1fr) 48px; gap:12px; }
+  .rewards-emblem { width:48px; height:48px; border-radius:15px; }
+  .roadmap-rewards-list>.roadmap-quest, .roadmap-rewards-list>.roadmap-shop-item { padding:15px; gap:10px; }
+  .reward-tabs button { font-size:13px; gap:6px; }
+}
+
 @media (max-width: 760px) {
   .mobile-navigation.has-roadmap { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .mobile-navigation.has-roadmap .nav-item span { width: 100%; overflow-wrap: anywhere; }

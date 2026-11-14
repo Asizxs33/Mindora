@@ -192,7 +192,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
         ? { dataset: { index: presentation.get(`mindora.reading.${state.active}.v1`) || '0' } } : null;
       if (view === 'certificate') elements.get('#certificate-name').value = html.args[0].name;
     },
-    courseHomeView: screen('course-home'), readyCoursesView: () => '', coursesPage: screen('courses'), sidePage: screen('side'),
+    phoneCourseLibrary: screen('course-library'), courseHomeView: screen('course-home'), readyCoursesView: () => '', coursesPage: screen('courses'), sidePage: screen('side'),
     guidedStartView: screen('guided-start'), quietHomeView: screen('quiet-home'), returnReviewView: screen('return-review'),
     pathView: screen('path'), lesson: screen('lesson'), result: screen('result'), workView: screen('work'),
     recapView: screen('recap'), certificateView: screen('certificate'),
@@ -834,6 +834,8 @@ test('home goal draft survives navigation and reload and stays separate between 
   run.input('goal-input', 'Learn video editing');
   run.click({ view: 'profile' });
   run.click({ view: 'courses' });
+  assert.equal(run.current.html.kind, 'course-library');
+  run.click({ view: 'discover' });
   assert.equal(run.current.html.args[0].homeGoal, 'Learn video editing');
   const reloaded = app(null, { storage: run.storage });
   assert.equal(reloaded.current.html.args[0].homeGoal, 'Learn video editing');

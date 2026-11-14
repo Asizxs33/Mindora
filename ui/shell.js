@@ -142,8 +142,11 @@ function updateCourseHome(main, html, sameView) {
 function updateAccountLinks() {
   const { user, profile } = getAccountState();
   document.querySelectorAll('[data-account-entry]').forEach(button => {
+    button.hidden = Boolean(user);
     button.dataset.accountOpen = user ? 'profile' : 'signin';
-    button.textContent = user ? t('My account','Мой аккаунт','Аккаунтым') : t('Sign in','Войти','Кіру');
+    if (user) { button.dataset.view = 'profile'; delete button.dataset.accountOpen; }
+    else delete button.dataset.view;
+    button.innerHTML = `${icon('user', 18)}<span>${user ? t('Profile','Профиль','Профиль') : t('Sign in','Войти','Кіру')}</span>`;
   });
   document.querySelectorAll('[data-account-summary]').forEach(slot => {
     const name = slot.querySelector('[data-account-name]');
@@ -151,7 +154,7 @@ function updateAccountLinks() {
     if (name) name.textContent = user ? (profile?.name || user.name || t('Your account','Твой аккаунт','Аккаунтың')) : t('Make yourself at home','Добро пожаловать','Қош келдің');
     if (detail) detail.textContent = user ? user.email : t('Create your profile and choose what you enjoy.','Создай профиль и выбери, что тебе интересно.','Профиль жасап, қызығушылығыңды таңда.');
     const button = slot.querySelector('[data-account-open]');
-    if (button) { button.dataset.accountOpen = user ? 'profile' : 'signup'; button.textContent = user ? t('Edit my profile','Изменить профиль','Профильді өзгерту') : t('Create account','Создать аккаунт','Аккаунт жасау'); }
+    if (button) { button.dataset.accountOpen = user ? 'profile' : 'signup'; button.innerHTML = `${icon(user ? 'edit' : 'plus', 17)}<span>${user ? t('Edit profile','Изменить профиль','Профильді өзгерту') : t('Create account','Создать аккаунт','Аккаунт жасау')}</span>`; }
     slot.querySelector('[data-account-secondary]')?.toggleAttribute('hidden', Boolean(user));
     slot.querySelector('[data-account-signout]')?.toggleAttribute('hidden', !user);
   });
@@ -162,8 +165,11 @@ export function renderShell(view, state, stats, html, rewards) {
   const main = $('#main');
   const sameView = main.dataset.page === view;
   const quizFocus = rememberQuizFocus(main, view);
-  const expandedPanels = view === 'lesson' && main.dataset.page === view
-    ? ['.style-disclosure', '.practice-hint'].filter(selector => main.querySelector(`${selector}[open]`)) : [];
+  const disclosureSelectors = view === 'lesson' ? ['.style-disclosure', '.practice-hint']
+    : view === 'courses' ? ['.phone-catalog']
+    : view === 'profile' ? ['.profile-rewards', '.profile-draft'] : [];
+  const expandedPanels = sameView
+    ? disclosureSelectors.filter(selector => main.querySelector(`${selector}[open]`)) : [];
   const owner = getAccountState().user?.id || '';
   const signedIn = Boolean(owner);
   const guestGreeting = !signedIn && html.includes('data-guided-step="0"');
@@ -175,9 +181,9 @@ export function renderShell(view, state, stats, html, rewards) {
   $('#top-navigation').innerHTML = brandNav(icon, view, 'top', signedIn);
   $('#mobile-navigation').classList.remove('has-roadmap');
   $('#mobile-navigation').innerHTML = brandNav(icon, view, 'bottom', signedIn);
-  const headerRewards = ['roadmap', 'quests', 'shop'].includes(view) ? rewards : null;
+  const headerRewards = ['roadmap'].includes(view) ? rewards : null;
   $('#top-actions').classList.toggle('has-roadmap-metrics', Boolean(headerRewards));
-  $('#top-actions').innerHTML = guided ? '' : `${rewardMetrics(headerRewards, true)}${languagePicker()}<button class="header-pace" data-view="profile" aria-label="${t('Daily learning time','Время на обучение','Оқу уақыты')}">${icon('clock', 17)}<span>${t(`${state.minutes} min a day`, `${state.minutes} мин в день`, `Күніне ${state.minutes} мин`)}</span></button><button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
+  $('#top-actions').innerHTML = guided ? '' : `${rewardMetrics(headerRewards, true)}${languagePicker()}<button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
   $('.skip-link').textContent = t('Skip to learning','К содержимому','Мазмұнға өту');
   $('.modal-close').setAttribute('aria-label', t('Close window','Закрыть окно','Терезені жабу'));
   main.classList.toggle('dashboard-main', view === 'discover');

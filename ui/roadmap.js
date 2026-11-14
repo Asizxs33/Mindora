@@ -142,7 +142,7 @@ function questRow(quest) {
       <small>${quest.progress} / ${quest.target} <span class="roadmap-gem">${icon('gem', 15)} +${quest.reward}</span></small>
     </div>
     ${quest.claimed ? `<span class="roadmap-complete-label">${icon('check', 17)} ${t('Claimed', 'Получено', 'Алдың')}</span>` : quest.claimable
-      ? `<button type="button" class="secondary" data-roadmap-claim="${escape(quest.id)}">${t('Claim', 'Забрать', 'Алу')}</button>`
+      ? `<button type="button" class="primary" data-roadmap-claim="${escape(quest.id)}">${icon('check', 16)} ${t('Claim', 'Забрать', 'Алу')}</button>`
       : ''}
   </div>`;
 }
@@ -230,8 +230,7 @@ function shopRow(item, rewards) {
 export function rewardsView(section, { rewards, quests = rewards?.quests ?? [], items = rewards?.items ?? [], error = '', notice = '' } = {}) {
   if (section === 'profile') {
     if (!rewards) return '';
-    return `<section class="roadmap-profile" aria-labelledby="roadmap-profile-title">
-      <h2 id="roadmap-profile-title">${t('Learning activity', 'Учебная активность', 'Оқу белсенділігі')}</h2>
+    return `<section class="roadmap-profile" aria-label="${t('Learning activity', 'Учебная активность', 'Оқу белсенділігі')}">
       ${rewardMetrics(rewards)}
       <dl class="roadmap-profile-stats">
         <div><dt>${t('Lessons finished', 'Занятий пройдено', 'Аяқталған сабақтар')}</dt><dd>${rewards.lessons}</dd></div>
@@ -243,15 +242,19 @@ export function rewardsView(section, { rewards, quests = rewards?.quests ?? [], 
         <button type="button" class="text-link" data-view="shop">${icon('store', 18)} ${TITLE.shop()}</button></div>
     </section>`;
   }
-  const heading = TITLE[section]();
+  const heading = t('Rewards', 'Награды', 'Марапаттар');
+  const rewardTabs = `<nav class="reward-tabs" aria-label="${heading}">${[
+    ['quests', 'flag', TITLE.quests()], ['shop', 'store', TITLE.shop()],
+  ].map(([view, symbol, label]) => `<button type="button" data-view="${view}"${section === view ? ' aria-current="page"' : ''}>${icon(symbol, 19)}<span>${label}</span></button>`).join('')}</nav>`;
   if (!rewards) return `<section class="roadmap-empty"><h1>${heading}</h1><p>${t('Sign in to keep your activity and rewards.', 'Войди, чтобы сохранять прогресс и награды.', 'Барысың мен марапаттарыңды сақтау үшін кір.')}</p><button type="button" class="primary" data-account-open="signin">${t('Sign in', 'Войти', 'Кіру')}</button></section>`;
   return `<section class="roadmap-rewards" aria-labelledby="roadmap-rewards-title">
     <header class="roadmap-rewards-heading"><div><h1 id="roadmap-rewards-title">${heading}</h1><p>${section === 'shop'
       ? t('Earn gems in lessons and quests, then use them here.', 'Зарабатывай алмазы в занятиях и заданиях и трать их здесь.', 'Сабақтар мен тапсырмалардан алмас жинап, осында жұмса.')
       : t('Complete these while you study to earn extra gems.', 'Выполняй задания во время учёбы и получай алмазы.', 'Оқу кезінде тапсырмаларды орындап, алмас ал.')}</p></div>
-      ${character('mino', section === 'shop' ? 'explaining' : 'celebrate', 'roadmap-guide')}
+      <span class="rewards-emblem" aria-hidden="true">${icon('gift', 34)}</span>
     </header>
     ${rewardMetrics(rewards)}
+    ${rewardTabs}
     ${feedback(false, error, notice)}
     <div class="roadmap-rewards-list">${section === 'shop' ? items.map(item => shopRow(item, rewards)).join('') : quests.map(questRow).join('')}</div>
     <button type="button" class="text-link" data-view="roadmap">${icon('back', 17)} ${t('Back to my path', 'Вернуться к пути', 'Оқу жолына қайту')}</button>
