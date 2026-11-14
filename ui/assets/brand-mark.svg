@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" role="img" aria-label="Mindora — Mino's curious glasses">
+<g stroke="#422C24" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+<path d="M24 29C15 23 18 9 25 10C33 11 33 22 31 29M69 28C66 17 69 9 76 10C84 12 83 23 77 29" fill="#F5B66B"/>
+<path d="M17 43C17 28 29 22 48 22C70 21 83 28 84 44L85 65C84 80 71 88 51 88C30 88 17 81 15 66Z" fill="#F5B66B"/>
+<path d="M43 72L44 82Q50 87 57 82L58 72" fill="#FFFCF3" stroke-width="4"/>
+<path d="M51 76V83" stroke-width="3"/>
+<path d="M8 42H4M92 42H96" stroke-width="7"/>
+<path d="M11 35Q27 29 43 35L44 55Q42 66 27 66Q13 66 11 55L9 44Q8 38 11 35Z" fill="#FFE4B4"/>
+<path d="M58 35Q74 29 90 35Q94 39 91 48L89 57Q87 66 73 66Q60 66 57 56L56 43Q55 38 58 35Z" fill="#FFE4B4"/>
+<path d="M44 41Q50 37 56 41" stroke-width="6"/>
+<path d="M39 52Q41 44 50 44Q60 44 62 52L65 65Q63 74 51 75Q38 75 35 67Z" fill="#B98D76" stroke-width="4.5"/>
+</g>
+<ellipse cx="27" cy="47" rx="3.8" ry="6" fill="#422C24"/><ellipse cx="74" cy="47" rx="3.8" ry="6" fill="#422C24"/>
+<path d="M43 61V64M56 61V64" stroke="#422C24" stroke-width="3.5" stroke-linecap="round"/>
+<path d="M16 43L22 39M18 49L29 39M62 43L68 39M65 49L76 38" stroke="#FFFCF3" stroke-width="3.8" stroke-linecap="round"/>
+</svg>

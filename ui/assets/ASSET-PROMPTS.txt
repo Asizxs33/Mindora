@@ -1,0 +1,14 @@
+Mindora mentor assets
+Generated with the built-in image_gen tool, 2026-11-14.
+Reference: user-provided capybara drawing. capybara.png is an unchanged copy of that drawing.
+Human mentor images use genuinely transparent backgrounds. Original generated files are retained under C:\Users\Acer\.codex\generated_images.
+
+programmer.png
+Use case: illustration-story. Asset type: transparent character cutout for Mindora mobile learning app. Input image 1 is style reference ONLY: use its thick dark chocolate hand-drawn outlines, rounded simple shapes, cute friendly expression and warm peach/orange colors. Create ONE original HUMAN male programmer mentor Alex with oversized square dark glasses, short tousled dark brown hair, lavender hoodie, holding a small laptop with a simple code-bracket symbol. Warm friendly smile, rounded adult cartoon proportions, large head and short body, simplified mitten hands, waist-up with laptop, centered and entirely visible with generous empty margins. Minimal flat color fills and one soft shadow tone. Genuine transparent background. No animal features, no capybara, no words, no lettering, no watermark, no scene or additional characters.
+
+designer.png
+Use case: illustration-story. Asset type: transparent character cutout for Mindora mobile learning app. Input image 1 is style reference ONLY: use its thick dark chocolate hand-drawn outlines, rounded simple shapes, cute friendly expression and warm peach/orange colors. Create ONE original HUMAN female designer mentor Maya with shoulder-length dark brown hair, warm peach skin, terracotta cardigan over cream shirt, holding a sketchbook and a large pencil. Warm friendly smile, rounded adult cartoon proportions, large head and short body, simplified mitten hands, waist-up, centered and entirely visible with generous empty margins. Minimal flat color fills and one soft shadow tone. Genuine transparent background. No animal features, no capybara, no words, no lettering, no watermark, no scene or additional characters.
+
+teacher.png
+Use case: illustration-story. Asset type: transparent character cutout for Mindora mobile learning app. Input image 1 is style reference ONLY: use its thick dark chocolate hand-drawn outlines, rounded simple shapes, cute friendly expression and warm peach/orange colors. Create ONE original HUMAN teacher mentor Sam with friendly curly brown hair, round dark brown glasses, medium warm tan skin, soft sage green sweater over cream shirt, holding an open book. Warm friendly smile, rounded adult cartoon proportions, large head and short body, simplified mitten hands, waist-up, centered and entirely visible with generous empty margins. Minimal flat color fills and one soft shadow tone. Genuine transparent background. No animal features, no capybara, no words, no lettering, no watermark, no scene or additional characters.
+

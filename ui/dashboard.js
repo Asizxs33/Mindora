@@ -1,204 +1,126 @@
 import { COURSES, escapeHtml } from '../core/engine.js';
-import { learningStats, dailyCourse } from '../core/progress.js';
+import { learningStats } from '../core/progress.js';
 import { icon } from './icons.js';
+import { character } from './characters.js';
 
-export const courseNames = {
-  design: 'Дизайн постера',
-  budget: 'Таблица расходов',
-};
-
+export const courseNames = { design: 'Your first poster', budget: 'Everyday spreadsheets' };
 export const lessonNames = {
-  design: ['Основы дизайна', 'Цвет и композиция', 'Работа с графикой', 'Самостоятельный постер'],
-  budget: ['Основы таблиц', 'Ячейки и диапазоны', 'Таблица расходов', 'Новая задача'],
+  design: ['Make one thing stand out', 'Train your design eye', 'Make it yours', 'Try a fresh brief'],
+  budget: ['Meet your first formula', 'Think in cells', 'Build your own tracker', 'A new set of numbers'],
 };
+const descriptions = {
+  design: 'Make a clear, colourful poster. Keep it as your own SVG file.',
+  budget: 'Add up everyday expenses with a simple formula. Keep your table as a CSV file.',
+};
+const guide = id => id === 'design' ? 'mia' : 'sam';
+const guideName = id => id === 'design' ? 'Mia' : 'Sam';
+const startedCourses = state => Object.keys(COURSES).filter(id => state.goals[id] || state.progress[id] || state.works[id]);
 
 export function badge(icon, name, color, size = 22) {
   return `<span class="game-icon ${color}">${icon(name, size)}</span>`;
 }
 
 export function brandNav(icon, view, place) {
-  const items = {
-    discover: ['home', 'Главная'],
-    courses: ['grid', 'Курсы'],
-    path: ['map', 'Путь обучения'],
-    practice: ['code', 'Практика'],
-    achievements: ['trophy', 'Достижения'],
-    work: ['folder', place === 'bottom' ? 'Работы' : place === 'top' ? 'Проекты' : 'Мои работы'],
-    community: ['users', 'Сообщество'],
-    profile: ['user', 'Профиль'],
-  };
-  const keys = {
-    side: ['discover', 'courses', 'path', 'achievements', 'work', 'community'],
-    top: ['courses', 'practice', 'work', 'community'],
-    bottom: ['discover', 'courses', 'practice', 'work', 'profile'],
-  }[place];
-  return keys.map(key => {
-    const [symbol, name] = items[key];
-    const active = view === key || (key === 'path' && ['lesson', 'result'].includes(view));
-    return `<button class="nav-item ${active ? 'active' : ''}" data-view="${key}" ${active ? 'aria-current="page"' : ''}>${icon(symbol, 23)}<span>${name}</span></button>`;
+  const items = [['discover', 'home', 'Learn'], ['courses', 'book', 'My courses'], ['work', 'folder', 'My work'], ['profile', 'user', 'Profile']];
+  return items.map(([key, symbol, name]) => {
+    const active = view === key || (key === 'discover' && ['path', 'lesson', 'result'].includes(view))
+      || (key === 'profile' && ['practice', 'achievements', 'community'].includes(view));
+    return `<button class="nav-item ${active ? 'active' : ''}" data-view="${key}" ${active ? 'aria-current="page"' : ''}>${icon(symbol, place === 'bottom' ? 22 : 23)}<span>${name}</span></button>`;
   }).join('');
 }
 
-function goalBanner(icon, minutes) {
-  return `<section class="adventure-hero" aria-labelledby="welcome-title">
-    <div class="adventure-scenery"></div>
-    <div class="welcome-copy">
-      <h1 id="welcome-title">Привет! Я Mindora! ${badge(icon, 'hand', 'gold', 28)}</h1>
-      <p>Твой учебный напарник. Выбирай, чему хочешь научиться, проходи увлекательные уроки, выполняй задания и прокачивай навыки шаг за шагом!</p>
+function goalBanner(minutes, compact = false) {
+  return `<section class="learn-home ${compact ? 'new-goal-section' : ''}" aria-labelledby="welcome-title">
+    ${compact ? '' : `<div class="hero-character">${character('mino', 'welcome', 'home-character')}</div><div class="speech-bubble" aria-live="polite">Hi! I’m Mino. Let’s learn something.</div>`}
+    <div class="goal-copy">
+      <${compact ? 'h2' : 'h1'} id="welcome-title">${compact ? 'A little more curious?' : 'What do you want<br>to learn?'}</${compact ? 'h2' : 'h1'}>
+      <p>${compact ? 'Pick another little project to explore.' : 'A small project. A few easy steps.<br>A little more confidence.'}</p>
     </div>
-    <div class="welcome-actions">
-      <form id="goal-form" class="adventure-search">
-        <label for="goal-input" class="search-icon"><span class="visually-hidden">Чему ты хочешь научиться?</span>${icon('search', 25)}</label>
-        <input id="goal-input" placeholder="Чему ты хочешь научиться?" maxlength="180" required>
-        <input type="hidden" id="time-select" value="${minutes}">
-        <button type="submit" class="purple-button" aria-label="Построить путь">${icon('send', 23)}</button>
-      </form>
-      <div class="adventure-topics" aria-label="Темы обучения">
-        <button data-course="design">${badge(icon, 'palette', 'pink', 20)}Дизайн</button>
-        <button data-course="budget"><span class="excel-symbol" aria-hidden="true">X</span>Excel</button>
-        <button data-action="programming"><span class="topic-code">${icon('code', 23)}</span><span class="code-desktop">Программирование</span><span class="code-mobile">Код</span></button>
-        <button data-view="courses"><span class="topic-more">${icon('more', 20)}</span>Ещё</button>
+    <form id="goal-form" class="goal-form">
+      <label class="visually-hidden" for="goal-input">What do you want to learn?</label>
+      <input id="goal-input" name="goal" placeholder="I want to learn how to…" maxlength="180" required autocomplete="off">
+      <input type="hidden" id="time-select" value="${minutes}">
+      <button type="submit" class="primary large">Find my course ${icon('arrow', 19)}</button>
+    </form>
+    <div class="topic-shortcuts" aria-label="Available learning topics">
+      <button class="topic-shortcut" data-course="design">${icon('palette', 18)} Make a poster</button>
+      <button class="topic-shortcut" data-course="budget">${icon('sheet', 18)} Learn spreadsheets</button>
+    </div>
+    <p class="home-note">Two little courses to start with. Learn at your own pace.</p>
+  </section>`;
+}
+
+function resumeCard(state) {
+  const id = state.active, completed = state.progress[id], current = Math.min(completed, 3), done = completed === 4;
+  return `<section class="return-home" aria-labelledby="return-title">
+    <div class="return-heading"><span class="eyebrow">YOUR LITTLE LEARNING SPACE</span><h1 id="return-title">${done ? 'Look how far you’ve come.' : 'Ready for a little more?'}</h1><p>${done ? 'Your project is ready. Keep exploring when you feel like it.' : 'Your place is saved. Let’s take the next small step.'}</p></div>
+    <section class="resume-card ${id}">
+      <div class="resume-mentor">${character(guide(id), done ? 'celebrate' : 'explaining', 'resume-character')}<span>${guideName(id)}, your learning buddy</span></div>
+      <div class="resume-body"><span class="eyebrow">${done ? 'COURSE COMPLETE' : 'PICK UP WHERE YOU LEFT OFF'}</span><h2>${courseNames[id]}</h2>
+        <div class="resume-progress"><span>${completed} of 4 steps complete</span><strong>${completed * 25}%</strong></div>
+        <div class="progress-bar" role="progressbar" aria-label="Course progress" aria-valuemin="0" aria-valuemax="4" aria-valuenow="${completed}"><i style="width:${completed * 25}%"></i></div>
+        <p class="resume-next">${done ? 'One new skill. One project of your own.' : `Next: ${lessonNames[id][current]}`}</p>
+        <button class="primary large" ${done ? 'data-view="work"' : `data-step="${current}"`}>${done ? 'See my work' : completed ? 'Continue learning' : 'Start my first lesson'} ${icon('arrow', 19)}</button>
+        <button class="text-link" data-view="path">${done ? 'Revisit my learning path' : 'See my learning path'} ${icon('map', 16)}</button>
       </div>
-    </div>
-  </section>`;
-}
-
-function mapCard(state, icon) {
-  const id = state.active || 'design';
-  const progress = state.progress[id];
-  const percent = progress * 25;
-  const current = Math.min(progress, 3);
-  const nodes = lessonNames[id].map((name, index) => {
-    const done = index < progress;
-    const locked = index > progress;
-    const action = state.active ? `data-step="${index}"` : `data-course="${id}" data-start`;
-    const symbol = done ? 'check' : locked ? 'lock' : 'play';
-    return `<button class="map-node node-${index} ${done ? 'done' : locked ? 'locked' : 'current'}" ${action} ${locked ? 'disabled' : ''}>
-      ${index === current ? '<span class="map-mascot mascot-study" aria-hidden="true"></span>' : ''}
-      <span class="node-marker">${icon(symbol, 24)}</span>
-      <span class="node-label">${index + 1}. ${name}</span>
-    </button>`;
-  }).join('');
-  return `<section class="game-card game-map" aria-labelledby="map-title">
-    <div class="game-map-head">
-      <div class="map-title">${badge(icon, 'map', 'green', 39)}<div><h2 id="map-title">Мой путь обучения</h2><p>${id === 'design' ? 'Дизайн: от основ до своего постера' : 'Excel: от ячеек до своей таблицы'}</p></div></div>
-      <div class="map-meter"><span>${progress} из 4 этапов</span><div><span class="segmented" role="progressbar" aria-label="Прогресс пути" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}">${Array.from({ length: 8 }, (_, index) => `<i class="${index < progress * 2 ? 'filled' : ''}"></i>`).join('')}</span><strong>${percent}%</strong></div></div>
-    </div>
-    <div class="map-scene">${nodes}</div>
-  </section>`;
-}
-
-function progressCard(state, stats, icon) {
-  const percent = (state.active ? state.progress[state.active] : 0) * 25;
-  const courses = Number(Boolean(state.goals.design)) + Number(Boolean(state.goals.budget));
-  return `<section class="game-card game-progress">
-    <div class="game-card-top"><h2>${badge(icon, 'chart', 'purple')}Мой прогресс</h2><button class="game-link" data-view="path">Подробнее ${icon('arrow', 16)}</button></div>
-    <div class="progress-body"><div class="progress-ring" style="--progress:${percent}%" aria-label="${percent}% пути пройдено"><strong>${percent}%</strong></div>
-    <ul><li>${badge(icon, 'book', 'blue', 17)}Начато курсов: <b>${courses}</b></li><li>${badge(icon, 'success', 'green', 17)}Пройдено этапов: <b>${stats.total}</b></li><li>${badge(icon, 'flame', 'orange', 17)}<b>${stats.streak}</b> дн. подряд</li></ul></div>
-  </section>`;
-}
-
-function dailyCard(state, stats, icon) {
-  const id = dailyCourse(state);
-  const complete = state.progress[id] === 4;
-  const name = courseNames[id];
-  return `<section class="game-card game-daily">
-    <div class="game-card-top"><h2>${badge(icon, 'target', 'purple')}Ежедневная задача</h2><span class="streak-pill">${icon('flame', 14)} ${stats.streak} дн. подряд</span></div>
-    <div class="daily-content"><div class="daily-copy"><div class="task"><span class="task-box ${stats.today ? 'task-done' : ''}">${stats.today ? icon('check', 15) : ''}</span><div>${stats.today ? 'Задача выполнена' : `${complete ? 'Повтори практику' : 'Пройди следующий этап'}<br><strong>${name}</strong>`}${complete || stats.today ? '' : `<strong class="task-xp">${icon('zap', 15)} +50 XP за новый этап</strong>`}</div></div>
-      <button class="purple-button" data-action="daily">${complete ? 'Повторить практику' : stats.today ? 'Продолжить обучение' : 'Выполнить урок'} ${icon('arrow', 18)}</button></div>
-      <span class="daily-mascot mascot-cheer" aria-hidden="true"></span></div>
-  </section>`;
-}
-
-function projectsCard(state, icon) {
-  return `<section class="game-card game-projects">
-    <div class="game-card-top"><h2>${badge(icon, 'folder', 'gold')}Мои работы</h2><button class="game-link" data-view="work">Все работы ${icon('arrow', 16)}</button></div>
-    <p class="project-description">Проекты и упражнения, которыми можно гордиться.</p>
-    <div class="project-previews"><span class="project-mascot mascot-study" aria-hidden="true"></span>
-      ${Object.keys(COURSES).map(id => {
-        const saved = state.works[id];
-        const title = saved ? (id === 'design' ? saved.data.title : 'Моя таблица расходов') : courseNames[id];
-        return `<button class="project-preview" ${saved ? 'data-view="work"' : `data-course="${id}"`}><span class="project-icon ${id}">${icon(id === 'design' ? 'image' : 'sheet', 41)}</span><strong>${escapeHtml(title)}</strong><small>${saved ? `${icon('success', 13)} Сохранено` : 'Учебный проект'}</small></button>`;
-      }).join('')}
-      <button class="project-preview project-code" data-action="programming"><span class="project-icon code">${icon('code', 41)}</span><strong>Бот-помощник</strong><small>Будущий курс</small></button>
-      <button class="project-add" data-view="courses"><span>${icon('plus', 23)}</span>Начать<br>проект</button>
-    </div>
-  </section>`;
-}
-
-export function achievementsCard(state, stats, icon, full = false) {
-  const awards = [
-    ['flame', 'Стрик', '5 дней подряд', stats.streak >= 5],
-    ['book', 'Любознательный', 'Пройди 4 этапа', stats.total >= 4],
-    ['star', 'Практик', 'Заверши 2 проекта', Object.values(state.works).filter(work => work.challenge).length >= 2],
-  ];
-  return `<section class="game-card game-achievements">
-    ${full ? '' : `<div class="game-card-top"><h2>${badge(icon, 'trophy', 'gold')}Достижения и XP</h2><button class="game-link" data-action="achievements">Все достижения ${icon('arrow', 16)}</button></div>`}
-    <div class="level-row"><div class="level-chip"><span class="level-medal">${icon('user', 24)}</span><div><strong>Уровень ${stats.level}</strong><small>Ученик-исследователь</small></div></div><div class="xp-track"><strong>${badge(icon, 'zap', 'gold', 16)} ${stats.xp} XP</strong><div class="xp-bar"><i style="width:${(stats.xp % 200) / 2}%"></i></div><small>До уровня ${stats.level + 1}: ${200 - stats.xp % 200} XP</small></div></div>
-    <div class="awards">${awards.map(([symbol, title, detail, earned]) => `<div class="award ${earned ? 'earned' : ''}"><span class="award-icon">${icon(symbol, 23)}</span><strong>${title}</strong><small>${earned ? 'Получено' : detail}</small></div>`).join('')}</div>
+    </section>
   </section>`;
 }
 
 export function dashboard(state) {
-  const stats = learningStats(state);
-  return `${goalBanner(icon, state.minutes)}
-    <div class="game-grid">
-      ${mapCard(state, icon)}
-      ${progressCard(state, stats, icon)}
-      ${dailyCard(state, stats, icon)}
-      ${projectsCard(state, icon)}
-      ${achievementsCard(state, stats, icon)}
-    </div>`;
+  return state.active && COURSES[state.active] ? `${resumeCard(state)}${goalBanner(state.minutes, true)}` : goalBanner(state.minutes);
 }
 
 export function coursesPage(state) {
-  return `<div class="course-catalog">
-    ${pageBanner('Курсы', 'Выбери проект, который хочешь сделать сам.')}
-    <div class="course-grid">${Object.keys(COURSES).map(id => `<article class="game-card catalog-tile">
-      <div class="project-icon ${id}">${icon(id === 'design' ? 'image' : 'sheet', 48)}</div>
-      <h2>${courseNames[id]}</h2><p>${id === 'design' ? 'Создай свой первый постер и сохрани его как SVG.' : 'Посчитай расходы с помощью формулы SUM и сохрани таблицу как CSV.'}</p>
-      <button class="purple-button" data-course="${id}">${state.progress[id] ? 'Продолжить' : 'Начать'} ${icon('arrow', 17)}</button>
-    </article>`).join('')}</div>
-  </div>`;
+  const ids = startedCourses(state);
+  return `<section class="my-courses">${pageBanner('My courses', 'Your own little paths. Ready whenever you are.')}
+    ${ids.length ? `<div class="course-grid">${ids.map(id => {
+      const completed = state.progress[id], done = completed === 4;
+      return `<article class="game-card catalog-tile ${id}">
+        <div class="course-tile-top"><span class="course-symbol">${icon(id === 'design' ? 'palette' : 'sheet', 26)}</span><span class="course-state ${done ? 'complete' : ''}">${done ? 'Completed' : `${completed} of 4 steps`}</span></div>
+        <h2>${courseNames[id]}</h2><p>${descriptions[id]}</p>
+        <div class="progress-bar" role="progressbar" aria-label="${courseNames[id]} progress" aria-valuenow="${completed}" aria-valuemin="0" aria-valuemax="4"><i style="width:${completed * 25}%"></i></div>
+        <button class="primary" data-course="${id}">${done ? 'Revisit course' : 'Open my course'} ${icon('arrow', 18)}</button>
+      </article>`;
+    }).join('')}</div><button class="secondary new-course-button" data-home>${icon('plus', 18)} Explore another goal</button>` : `<div class="empty-state courses-empty">${character('mino', 'thinking', 'empty-character')}<h2>Your first little adventure.</h2><p>Tell Mino what you’d like to learn.<br>Your courses will live right here.</p><button class="primary large" data-home>Let’s begin ${icon('arrow', 18)}</button></div>`}
+  </section>`;
 }
 
 export function pageBanner(title, description, mood = 'study') {
-  return `<section class="page-banner page-banner-${mood}">
-    <div><h1>${escapeHtml(title)}</h1><p>${escapeHtml(description)}</p></div>
-    <span class="page-mascot mascot-${mood}" aria-hidden="true"></span>
+  const pose = mood === 'cheer' ? 'celebrate' : mood === 'study' ? 'explaining' : mood;
+  return `<section class="page-banner page-banner-${mood}"><div><h1>${escapeHtml(title)}</h1><p>${escapeHtml(description)}</p></div>${character('mino', pose, 'page-character')}</section>`;
+}
+
+export function achievementsCard(state, stats, icon, full = false) {
+  const awards = [
+    ['flame', 'A little every day', 'Learn on 5 days in a row', stats.streak >= 5],
+    ['book', 'Curious mind', 'Complete 4 learning steps', stats.total >= 4],
+    ['star', 'Made by you', 'Finish 2 independent projects', Object.values(state.works).filter(work => work.challenge).length >= 2],
+  ];
+  return `<section class="game-card game-achievements">
+    ${full ? '' : `<div class="game-card-top"><h2>Your little milestones</h2><button class="text-link" data-action="achievements">See all ${icon('arrow', 16)}</button></div>`}
+    <div class="level-row"><div class="level-chip"><span class="level-medal">${icon('spark', 26)}</span><div><strong>Level ${stats.level}</strong><small>A curious explorer</small></div></div><div class="xp-track"><strong>${stats.xp} XP</strong><div class="xp-bar"><i style="width:${(stats.xp % 200) / 2}%"></i></div><small>${200 - stats.xp % 200} XP to level ${stats.level + 1}</small></div></div>
+    <div class="awards">${awards.map(([symbol, title, detail, earned]) => `<div class="award ${earned ? 'earned' : ''}"><span class="award-icon">${icon(symbol, 27)}</span><strong>${title}</strong><small>${earned ? 'You earned this!' : detail}</small></div>`).join('')}</div>
   </section>`;
 }
 
 export function sidePage(view, state) {
   const stats = learningStats(state);
   if (view === 'practice') {
-    return `${pageBanner('Практика', 'Примени знания в редакторе постера или в таблице.')}
+    return `${pageBanner('A little practice', 'Try an idea. Make something. Learn by doing.')}
       <div class="course-grid">${Object.keys(COURSES).map(id => {
         const unlocked = state.progress[id] >= 2;
-        return `<section class="game-card simple-panel">
-          <h2>${badge(icon, id === 'design' ? 'palette' : 'sheet', id === 'design' ? 'pink' : 'green')}${courseNames[id]}</h2>
-          <p>${unlocked ? 'Выбери новый вариант задания для своего уровня.' : 'Пройди вводный урок и вопросы, чтобы открыть редактор.'}</p>
-          <button class="purple-button" ${unlocked ? `data-action="practice" data-id="${id}"` : `data-course="${id}"`}>${unlocked ? 'Открыть практику' : 'Перейти к урокам'} ${icon(unlocked ? 'arrow' : 'lock', 17)}</button>
-        </section>`;
+        return `<section class="game-card practice-tile ${id}"><span class="course-symbol">${icon(id === 'design' ? 'palette' : 'sheet', 26)}</span><h2>${courseNames[id]}</h2><p>${unlocked ? 'A fresh little challenge to make your new skill stick.' : 'Finish the lesson and three questions to unlock this practice.'}</p><button class="${unlocked ? 'primary' : 'secondary'}" ${unlocked ? `data-action="practice" data-id="${id}"` : `data-course="${id}"`}>${unlocked ? 'Let me try' : 'Go to my lessons'} ${icon(unlocked ? 'arrow' : 'lock', 18)}</button></section>`;
       }).join('')}</div>`;
   }
-  if (view === 'achievements') {
-    return `${pageBanner('Достижения', 'Следи за уровнем, опытом и наградами.', 'cheer')}
-      ${achievementsCard(state, stats, icon, true)}`;
-  }
-  if (view === 'community') {
-    return `${pageBanner('Сообщество', 'Здесь появятся обсуждения и проекты участников.')}
-      <section class="game-card simple-panel">
-        <h2>${badge(icon, 'folder', 'gold')}Твои проекты</h2>
-        <p>Создай свою работу в практикуме и сохрани её в портфолио.</p>
-        <button class="purple-button" data-view="work">Открыть мои работы ${icon('arrow', 17)}</button>
-      </section>`;
-  }
-  return `${pageBanner('Профиль', 'Твой прогресс хранится в этом браузере.')}
-    <section class="game-card simple-panel">
-      <h2>${badge(icon, 'user', 'purple')}Гостевой профиль</h2>
-      <p><strong>${stats.xp} XP</strong> · Уровень ${stats.level}</p>
-      <label for="profile-minutes">Цель по времени на день</label>
-      <select class="profile-select" id="profile-minutes">${[5, 10, 20].map(minutes => `<option value="${minutes}" ${minutes === state.minutes ? 'selected' : ''}>${minutes} мин</option>`).join('')}</select>
-    </section>`;
+  if (view === 'achievements') return `${pageBanner('Look at you grow.', 'Every small step counts.', 'cheer')}${achievementsCard(state, stats, icon, true)}`;
+  if (view === 'community') return `${pageBanner('Learning, together.', 'A little space for curious people.')}<section class="game-card community-preview"><span class="course-symbol">${icon('users', 28)}</span><h2>Our community is still growing.</h2><p>Sharing and discussions aren’t available yet. For now, keep your projects in My work.</p><button class="secondary" data-view="work">See my work ${icon('arrow', 18)}</button></section>`;
+  return `${pageBanner('Your little corner', 'Every little step is worth keeping.')}
+    <section class="profile-overview"><div class="profile-identity"><span class="profile-avatar">${icon('user', 25)}</span><div><h2>Curious learner</h2><p>Guest profile · Level ${stats.level}</p></div></div>
+      <div class="profile-stats"><div><strong>${stats.total}</strong><span>Steps learned</span></div><div><strong>${Object.keys(state.works).length}</strong><span>Projects made</span></div><div><strong>${stats.xp}</strong><span>XP earned</span></div></div>
+    </section>
+    <section class="profile-settings"><div><h2>Your daily pace</h2><p>A little time can go a long way.</p></div><label class="visually-hidden" for="profile-minutes">Daily learning time</label><select class="profile-select" id="profile-minutes">${[5, 10, 20].map(minutes => `<option value="${minutes}" ${minutes === state.minutes ? 'selected' : ''}>${minutes} minutes</option>`).join('')}</select></section>
+    <section class="profile-settings motion-preference"><div><h2>Character motion</h2><p>Gentle movement and little celebrations.</p><small data-character-motion-status></small></div><button type="button" class="motion-switch" role="switch" data-character-motion aria-label="Character motion"><span data-character-motion-label>Character motion</span></button></section>
+    <nav class="profile-links" aria-label="More to explore">${[['practice', 'edit', 'A little practice', 'Try something you’ve learned'], ['achievements', 'trophy', 'My milestones', 'Celebrate your small wins'], ['community', 'users', 'Community', 'A space that’s still growing']].map(([target, symbol, title, text]) => `<button data-view="${target}"><span class="profile-link-icon">${icon(symbol, 23)}</span><span><strong>${title}</strong><small>${text}</small></span>${icon('arrow', 18)}</button>`).join('')}<button data-action="about"><span class="profile-link-icon">${icon('leaf', 23)}</span><span><strong>About Mindora</strong><small>Small steps. Real things you can make.</small></span>${icon('arrow', 18)}</button></nav>
+    <p class="profile-note">${icon('lock', 14)} Your progress and projects stay in this browser.</p>`;
 }
