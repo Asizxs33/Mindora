@@ -33,6 +33,7 @@
 .ai-lesson h3 { font-size: 17px; line-height: 1.45; letter-spacing: 0; }
 .ai-lesson-page p { margin-block: 8px; }
 .ai-lesson-instruction { font-size: 18px; line-height: 1.8; }
+.ai-lesson-page-navigation > [hidden] { display: none; }
 /* The mentor is the speaker for the current learning action, not decoration. */
 .ai-lesson-mentor { display: grid; grid-template-columns: 140px minmax(0, 1fr); align-items: center; gap: 20px; margin-block: 18px 26px; }
 .ai-lesson .ai-lesson-mentor-character { --character-size: 140px; --character-height: 210px; --character-frame-width: 100%; --character-frame-height: 100%; justify-self: center; }

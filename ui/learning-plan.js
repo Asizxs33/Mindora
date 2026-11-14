@@ -1,10 +1,18 @@
 import { escapeHtml as esc } from '../core/engine.js';
 import { lessonPages } from '../core/learning-plan.js';
-import { character } from './characters.js';
 import { timeOptions } from './budget-session.js';
 import { icon } from './icons.js';
 import { currentLanguage, t } from './language.js';
 import { message } from './messages.js';
+import { mentorForTopic, mentorScene, renderLessonTemplate } from './lesson-templates.js';
+
+if (typeof document !== 'undefined' && !document.getElementById('mindora-template-styles')) {
+  const stylesheet = document.createElement('link');
+  stylesheet.id = 'mindora-template-styles';
+  stylesheet.rel = 'stylesheet';
+  stylesheet.href = new URL('./lesson-templates.css', import.meta.url).href;
+  document.head.append(stylesheet);
+}
 
 const pageName = page => ({
   explain: t('Understand', 'Разберись', 'Түсіну'),
@@ -16,20 +24,11 @@ const pageName = page => ({
 // The same mentor stays with a learner through the explanation, attempt and feedback.
 // This only selects presentation; the controller still owns every lesson transition.
 function lessonMentor(plan) {
-  const subject = `${plan.goal ?? ''} ${plan.title ?? ''}`.toLowerCase();
-  if (/\b(code|coding|python|javascript|programming|html|css|sql)\b|программ|код|бағдарлам/.test(subject)) return 'sam';
-  if (/\b(design|layout|poster|typography|figma)\b|дизайн|плакат/.test(subject)) return 'mia';
-  if (/\b(art|draw|drawing|paint|painting)\b|рисова|сурет/.test(subject)) return 'artist';
-  if (/\b(smm|social|marketing|instagram)\b|маркет|соцсет/.test(subject)) return 'smm';
-  if (/\b(write|writing|copywriting|story|text)\b|писат|текст|жазу/.test(subject)) return 'copywriter';
-  return 'mino';
+  return mentorForTopic(`${plan.goal ?? ''} ${plan.title ?? ''}`);
 }
 
 function mentorView(mentor, mood, content, extraClass = '') {
-  return `<div class="ai-lesson-mentor ${extraClass}">
-    ${character(mentor, mood, 'ai-lesson-mentor-character')}
-    <div class="ai-lesson-mentor-speech">${content}</div>
-  </div>`;
+  return mentorScene(mentor, mood, content, extraClass);
 }
 
 function reviewView(review, nested = false) {
@@ -70,22 +69,13 @@ function historyView({ plan, answers, reviews, completed }) {
   </details>`;
 }
 
-function sourceIllustration(resource) {
-  return (resource.images ?? []).map(image => `<figure class="lesson-source-figure"><img src="${esc(image.url)}" alt="${esc(image.alt.replace(/^Image\s+\d+:\s*/i, ''))}" loading="lazy" referrerpolicy="no-referrer"></figure>`).join('');
-}
-
 function explanationView(step, mentor) {
-  return `${mentorView(mentor, 'explaining', `<h3 lang="${esc(currentLanguage())}">${t('Let’s make it simple.', 'Разберёмся вместе.', 'Бірге түсініп алайық.')}</h3><p>${esc(step.teaching?.why ?? step.criterion)}</p>`)}
-    <div class="ai-lesson-instruction learning-answer">${esc(step.instruction)}</div>
-    ${step.resource ? sourceIllustration(step.resource) : ''}
+  return `${renderLessonTemplate({ type: 'theory', prompt: t('Let’s make it simple.', 'Разберёмся вместе.', 'Бірге түсініп алайық.'), intro: step.teaching?.why ?? step.criterion, body: step.instruction, images: step.resource?.images }, {}, { external: true, mentor })}
     ${step.resource && !step.resource.images?.length ? `<p class="small-note"><a class="source-link" href="${esc(step.resource.url)}" target="_blank" rel="noopener noreferrer" lang="${esc(currentLanguage())}">${t('Open lesson material', 'Открыть материал урока', 'Сабақ материалын ашу')} ${icon('arrow', 14)}</a></p>` : ''}`;
 }
 
 function exampleView(teaching, mentor) {
-  return `<div class="ai-lesson-example">
-    <section class="ai-lesson-example-input"><h3 lang="${esc(currentLanguage())}">${icon('edit', 18)} ${t('Starting point', 'Исходные данные', 'Бастапқы деректер')}</h3><div class="learning-answer">${esc(teaching.example.input)}</div></section>
-    <section class="ai-lesson-example-output"><h3 lang="${esc(currentLanguage())}">${icon('check', 18)} ${t('Worked result', 'Готовый результат', 'Дайын нәтиже')}</h3><div class="learning-answer">${esc(teaching.example.output)}</div></section>
-    </div>${mentorView(mentor, 'explaining', `<h3 lang="${esc(currentLanguage())}">${t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді')}</h3><p>${esc(teaching.example.explanation)}</p>`)} `;
+  return renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output }, {}, { external: true, mentor });
 }
 
 function checkpointView(teaching, study, busy, mentor) {
@@ -155,7 +145,7 @@ function screenView(saved, busy, reviewError) {
     <nav class="ai-lesson-page-navigation" aria-label="${t('Lesson navigation', 'Навигация по занятию', 'Сабақ бойынша навигация')}" lang="${esc(currentLanguage())}">
       <button class="secondary" type="button" data-learning-page="back"${busy || pageIndex === 0 ? ' disabled' : ''}>${icon('back', 18)} ${t('Back', 'Назад', 'Артқа')}</button>
       <span class="ai-lesson-page-count">${t(`Screen ${pageIndex + 1} of ${pages.length}`, `Экран ${pageIndex + 1} из ${pages.length}`, `${pages.length} экранның ${pageIndex + 1}-і`)}</span>
-      ${page === 'practice' ? '' : page === 'check' && !checkedCorrect ? `<button class="primary ai-lesson-check-button" type="button" data-learning-page="check"${busy || !Number.isInteger(study.choice) ? ' disabled' : ''}>${study.checked ? t('Check again', 'Проверить ещё раз', 'Қайта тексеру') : t('Check answer', 'Проверить ответ', 'Жауапты тексеру')}</button>` : `<button class="primary" type="button" data-learning-page="next"${busy ? ' disabled' : ''}>${page === 'check' ? t('Try it yourself', 'Перейти к практике', 'Өзің орындау') : t('Continue', 'Продолжить', 'Жалғастыру')} ${icon('arrow', 18)}</button>`}
+      ${page === 'practice' ? '' : page === 'check' && !checkedCorrect ? `<button type="button" data-learning-page="next" disabled hidden aria-hidden="true" tabindex="-1">${t('Continue', 'Продолжить', 'Жалғастыру')}</button><button class="primary ai-lesson-check-button" type="button" data-learning-page="check"${busy || !Number.isInteger(study.choice) ? ' disabled' : ''}>${study.checked ? t('Check again', 'Проверить ещё раз', 'Қайта тексеру') : t('Check answer', 'Проверить ответ', 'Жауапты тексеру')}</button>` : `<button class="primary" type="button" data-learning-page="next"${busy ? ' disabled' : ''}>${page === 'check' ? t('Try it yourself', 'Перейти к практике', 'Өзің орындау') : t('Next', 'Дальше', 'Әрі қарай')} ${icon('arrow', 18)}</button>`}
     </nav>
   </section>`;
 }

@@ -1,0 +1,205 @@
+import { escapeHtml as esc } from '../core/engine.js';
+import { character } from './characters.js';
+import { icon } from './icons.js';
+import { t } from './language.js';
+
+// Presentation only. A course controller owns progression, persistence and credit.
+// Content is plain data, never model-generated HTML or executable code.
+export const LESSON_TEMPLATES = Object.freeze({
+  theory: { label: 'One idea', fields: ['body'] },
+  illustration: { label: 'Picture & explanation', fields: ['image', 'body'] },
+  comparison: { label: 'Worked example', fields: ['before', 'after', 'explanation'] },
+  choice: { label: 'Choose one', fields: ['options', 'answer'] },
+  'multi-choice': { label: 'Choose several', fields: ['options', 'answers'] },
+  order: { label: 'Put in order', fields: ['items', 'answer'] },
+  match: { label: 'Match pairs', fields: ['pairs'] },
+  'gap-fill': { label: 'Complete a sentence', fields: ['before', 'after', 'accepted'] },
+  practice: { label: 'Make something', fields: ['body', 'criterion'] },
+  recap: { label: 'Remember & continue', fields: ['points'] },
+});
+
+export function mentorForTopic(topic = '') {
+  const subject = String(topic).toLowerCase();
+  if (/\b(code|coding|python|javascript|programming|html|css|sql|spreadsheet|budget)\b|программ|код|бағдарлам|таблиц|кесте/.test(subject)) return 'sam';
+  if (/\b(design|layout|poster|typography|figma)\b|дизайн|плакат/.test(subject)) return 'mia';
+  if (/\b(art|draw|drawing|paint|painting)\b|рисова|сурет/.test(subject)) return 'artist';
+  if (/\b(smm|social|marketing|instagram)\b|маркет|соцсет/.test(subject)) return 'smm';
+  if (/\b(write|writing|copywriting|story|text|grammar|language)\b|писат|текст|жазу|граммат/.test(subject)) return 'copywriter';
+  return 'mino';
+}
+
+export function mentorScene(mentor, mood, content, extraClass = '') {
+  // content is trusted, escaped markup from the caller, not an API string.
+  return `<div class="ai-lesson-mentor ${esc(extraClass)}">${character(mentor, mood, 'ai-lesson-mentor-character')}<div class="ai-lesson-mentor-speech">${content}</div></div>`;
+}
+
+function safeImage(value) {
+  if (typeof value !== 'string') return '';
+  if (/^\/ui\/assets\/[a-zA-Z0-9_./-]+$/.test(value) && !value.includes('..')) return value;
+  try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password ? url.href : ''; } catch { return ''; }
+}
+const list = value => Array.isArray(value) ? value : [];
+const text = value => esc(String(value ?? ''));
+const heading = value => value ? `<h3>${text(value)}</h3>` : '';
+const disabled = value => value ? ' disabled' : '';
+
+// Validate AI-authored blocks before handing them to the standalone presenter.
+// This is a UI contract; the production API still validates its existing v2 plan.
+export function normalizeLessonTemplate(raw) {
+  if (!raw || !Object.hasOwn(LESSON_TEMPLATES, raw.type)) return null;
+  const clean = (value, max = 1200) => typeof value === 'string' && value.trim() && value.length <= max ? value.trim() : null;
+  const title = clean(raw.title, 160);
+  if (!title) return null;
+  const block = { type: raw.type, title };
+  for (const name of ['intro', 'body', 'before', 'after', 'explanation', 'criterion', 'beforeLabel', 'afterLabel']) {
+    if (raw[name] !== undefined) { const value = clean(raw[name]); if (!value) return null; block[name] = value; }
+  }
+  if (['mino', 'mia', 'sam', 'artist', 'copywriter', 'smm'].includes(raw.mentor)) block.mentor = raw.mentor;
+  if (raw.id && /^[\w-]{1,80}$/.test(raw.id)) block.id = raw.id;
+  const strings = (value, min = 1, max = 8) => Array.isArray(value) && value.length >= min && value.length <= max && value.every(v => clean(v, 400)) ? value.map(v => v.trim()) : null;
+  const indices = (value, length) => Array.isArray(value) && value.length > 0 && new Set(value).size === value.length && value.every(i => Number.isInteger(i) && i >= 0 && i < length);
+  switch (raw.type) {
+    case 'theory': if (!block.body) return null; break;
+    case 'illustration': {
+      const url = safeImage(raw.image?.url), alt = clean(raw.image?.alt, 240);
+      if (!url || !alt || !block.body) return null; block.image = { url, alt }; break;
+    }
+    case 'comparison': if (!block.before || !block.after || !block.explanation) return null; break;
+    case 'choice': case 'multi-choice': {
+      const options = strings(raw.options, 2, 6);
+      if (!options || new Set(options).size !== options.length || !block.explanation) return null;
+      block.options = options;
+      if (raw.type === 'choice') { if (!indices([raw.answer], options.length)) return null; block.answer = raw.answer; }
+      else { if (!indices(raw.answers, options.length)) return null; block.answers = [...raw.answers]; }
+      break;
+    }
+    case 'order': {
+      const items = strings(raw.items, 2, 6);
+      if (!items || !block.explanation || !indices(raw.answer, items.length) || raw.answer.length !== items.length) return null;
+      block.items = items; block.answer = [...raw.answer]; break;
+    }
+    case 'match': {
+      if (!Array.isArray(raw.pairs) || raw.pairs.length < 2 || raw.pairs.length > 6 || !block.explanation || raw.pairs.some(p => !clean(p?.left, 200) || !clean(p?.right, 200))) return null;
+      block.pairs = raw.pairs.map(p => ({ left: p.left.trim(), right: p.right.trim() }));
+      if (new Set(block.pairs.map(p => p.left)).size !== block.pairs.length || new Set(block.pairs.map(p => p.right)).size !== block.pairs.length) return null;
+      break;
+    }
+    case 'gap-fill': block.accepted = strings(raw.accepted, 1, 10); if (!block.accepted || !block.before || !block.after || !block.explanation) return null; break;
+    case 'practice': if (!block.body || !block.criterion) return null; break;
+    case 'recap': block.points = strings(raw.points, 1, 5); if (!block.points) return null; break;
+  }
+  return block;
+}
+
+export function renderLessonTemplate(block, state = {}, { external = false, mentor = 'mino', busy = false } = {}) {
+  const type = Object.hasOwn(LESSON_TEMPLATES, block?.type) ? block.type : 'theory';
+  const locked = busy || state.correct === true;
+  const mood = state.checked ? state.correct ? 'celebrate' : 'encourage' : ['choice', 'multi-choice', 'order', 'match', 'gap-fill'].includes(type) ? 'thinking' : 'explaining';
+  const speaker = block.mentor || mentor;
+  const prompt = block.prompt || block.title;
+  const scene = mentorScene(speaker, mood, `${heading(prompt)}${block.intro ? `<p>${text(block.intro)}</p>` : ''}`);
+  let content = '';
+  if (type === 'theory') content = `<div class="ai-lesson-instruction learning-answer">${text(block.body)}</div>${list(block.images).map(image => safeImage(image.url) ? `<figure class="lesson-source-figure"><img src="${text(safeImage(image.url))}" alt="${text(String(image.alt ?? '').replace(/^Image\s+\d+:\s*/i, ''))}" loading="lazy" referrerpolicy="no-referrer"></figure>` : '').join('')}`;
+  if (type === 'illustration') {
+    const src = safeImage(block.image?.url);
+    content = `${src ? `<figure class="lesson-source-figure"><img src="${text(src)}" alt="${text(block.image.alt)}" loading="lazy" referrerpolicy="no-referrer"></figure>` : ''}<div class="ai-lesson-instruction learning-answer">${text(block.body)}</div>`;
+  }
+  if (type === 'comparison') content = `<div class="ai-lesson-example"><section class="ai-lesson-example-input">${heading(block.beforeLabel || t('Starting point', 'Исходные данные', 'Бастапқы деректер'))}<div class="learning-answer">${text(block.before)}</div></section><section class="ai-lesson-example-output">${heading(block.afterLabel || t('Worked result', 'Готовый результат', 'Дайын нәтиже'))}<div class="learning-answer">${text(block.after)}</div></section></div>${block.explanation ? `<p class="template-explanation">${text(block.explanation)}</p>` : ''}`;
+  if (type === 'choice' || type === 'multi-choice') {
+    const selected = type === 'choice' ? [state.choice] : list(state.selected);
+    content = `<div class="ai-lesson-choices" role="group" aria-label="${text(prompt)}">${list(block.options).map((option, i) => `<button type="button" class="ai-lesson-choice${selected.includes(i) ? ' is-selected' : ''}" ${external ? 'data-learning-choice' : 'data-template-choice'}="${i}" aria-pressed="${selected.includes(i)}"${disabled(locked)}><span class="ai-lesson-choice-mark" aria-hidden="true">${selected.includes(i) ? icon('check', 18) : String.fromCharCode(65 + i)}</span><span>${text(option)}</span></button>`).join('')}</div>`;
+  }
+  if (type === 'order') {
+    const order = list(state.order).length === list(block.items).length ? state.order : list(block.items).map((_, i) => i);
+    content = `<ol class="template-order">${order.map((id, index) => `<li><span class="template-number">${index + 1}</span><span>${text(block.items[id])}</span><span class="template-order-actions"><button class="template-move" type="button" data-template-move="${index}" data-direction="-1" aria-label="${text(t('Move up', 'Переместить вверх', 'Жоғары жылжыту'))}: ${text(block.items[id])}"${disabled(locked || index === 0)}>↑</button><button class="template-move" type="button" data-template-move="${index}" data-direction="1" aria-label="${text(t('Move down', 'Переместить вниз', 'Төмен жылжыту'))}: ${text(block.items[id])}"${disabled(locked || index === order.length - 1)}>↓</button></span></li>`).join('')}</ol>`;
+  }
+  if (type === 'match') {
+    const pairs = list(block.pairs);
+    content = `<div class="template-matching">${pairs.map((pair, index) => `<label class="template-match-row"><span>${text(pair.left)}</span><select data-template-match="${index}"${disabled(locked)}><option value="">${t('Choose a match', 'Выбери пару', 'Жұбын таңда')}</option>${pairs.map((_, i) => pairs.length - 1 - i).map(i => `<option value="${i}"${String(state.matches?.[index]) === String(i) ? ' selected' : ''}>${text(pairs[i].right)}</option>`).join('')}</select></label>`).join('')}</div>`;
+  }
+  if (type === 'gap-fill') content = `<label class="template-gap"><span>${text(block.before)}</span><input data-template-input aria-label="${t('Missing word or phrase', 'Пропущенное слово или фраза', 'Түсіп қалған сөз немесе тіркес')}" value="${text(state.value)}" maxlength="200" autocomplete="off"${disabled(locked)}><span>${text(block.after)}</span></label>`;
+  if (type === 'practice') content = `<p class="learning-answer">${text(block.body)}</p><div class="ai-lesson-criterion"><strong>${t('Before you finish', 'Перед завершением', 'Аяқтау алдында')}</strong><p>${text(block.criterion)}</p></div>${external ? '' : `<label class="field"><span>${t('Your result', 'Твой результат', 'Нәтижең')}</span><textarea data-template-input rows="5" maxlength="1500"${disabled(busy)}>${text(state.value)}</textarea></label>`}`;
+  if (type === 'recap') content = `<ul class="template-recap">${list(block.points).map(point => `<li>${icon('check', 20)}<span>${text(point)}</span></li>`).join('')}</ul>${block.body ? `<p>${text(block.body)}</p>` : ''}`;
+  const interactive = ['choice', 'multi-choice', 'order', 'match', 'gap-fill', 'practice'].includes(type);
+  const feedback = !external && state.checked ? `<div class="ai-lesson-check-feedback${state.correct ? ' is-correct' : ''}" role="status"><strong>${type === 'practice' ? t('Your draft is ready.', 'Черновик готов.', 'Нобайың дайын.') : state.correct ? t('That’s right.', 'Верно.', 'Дұрыс.') : t('Let’s try that again.', 'Попробуем ещё раз.', 'Қайта байқап көрейік.')}</strong><p>${text(type === 'practice' ? block.criterion : block.explanation)}</p></div>` : '';
+  const check = !external && interactive ? `<button class="primary template-check" type="button" data-template-check${disabled(busy || !canCheckTemplate(block, state) || state.correct === true)}>${type === 'practice' ? t('Keep my draft', 'Сохранить черновик', 'Нобайды сақтау') : t('Check answer', 'Проверить ответ', 'Жауапты тексеру')} ${icon('arrow', 18)}</button>` : '';
+  return `<section class="lesson-template template-${type}" data-lesson-template="${type}">${type === 'theory' ? content + scene : scene + content}${feedback}${check}</section>`;
+}
+
+export function canCheckTemplate(block, state) {
+  switch (block.type) {
+    case 'choice': return Number.isInteger(state.choice) && state.choice >= 0 && state.choice < list(block.options).length;
+    case 'multi-choice': return list(state.selected).length > 0;
+    case 'order': return list(block.items).length > 0;
+    case 'match': return list(block.pairs).length > 0 && block.pairs.every((_, i) => Number.isInteger(state.matches?.[i]));
+    case 'gap-fill': case 'practice': return Boolean(String(state.value ?? '').trim());
+    default: return false;
+  }
+}
+
+export function checkTemplate(block, state) {
+  if (!canCheckTemplate(block, state)) return { checked: false, correct: false };
+  let correct = false;
+  switch (block.type) {
+    case 'choice': correct = state.choice === block.answer; break;
+    case 'multi-choice': correct = list(state.selected).length === list(block.answers).length && state.selected.every(i => block.answers.includes(i)); break;
+    case 'order': correct = JSON.stringify(state.order ?? block.items.map((_, i) => i)) === JSON.stringify(block.answer); break;
+    case 'match': correct = block.pairs.every((_, i) => state.matches[i] === i); break;
+    case 'gap-fill': correct = list(block.accepted).some(answer => String(answer).trim().toLocaleLowerCase() === String(state.value).trim().toLocaleLowerCase()); break;
+    // A free response is a draft, not a claim that the learner's work is correct.
+    case 'practice': return { checked: true, correct: null };
+  }
+  return { checked: true, correct };
+}
+
+// A local exercise presenter for template previews and future course adapters.
+// It emits answers; it never awards course credit or calls an AI provider.
+export function mountLessonTemplate(host, block, { state = {}, onChange = () => {} } = {}) {
+  block = normalizeLessonTemplate(block);
+  if (!block) throw new TypeError('Invalid lesson template content.');
+  let current = structuredClone(state);
+  const render = () => { host.innerHTML = renderLessonTemplate(block, current); };
+  const notify = () => onChange(structuredClone(current));
+  const change = event => {
+    const target = event.target;
+    if (target.matches('[data-template-input]')) current.value = target.value;
+    else if (target.matches('[data-template-match]')) current.matches = { ...current.matches, [target.dataset.templateMatch]: target.value === '' ? null : Number(target.value) };
+    else return;
+    current.checked = false; current.correct = false;
+    // Do not replace a focused text field while the learner types.
+    const feedback = host.querySelector('[role="status"]');
+    if (feedback) feedback.remove();
+    const button = host.querySelector('[data-template-check]');
+    if (button) button.disabled = !canCheckTemplate(block, current);
+    notify();
+  };
+  const click = event => {
+    const button = event.target.closest('button');
+    if (!button || button.disabled) return;
+    const choice = button.dataset.templateChoice;
+    let focusSelector = '';
+    if (choice !== undefined) {
+      const index = Number(choice);
+      if (block.type === 'multi-choice') current.selected = list(current.selected).includes(index) ? current.selected.filter(i => i !== index) : [...list(current.selected), index];
+      else current.choice = index;
+      current.checked = false; current.correct = false;
+      focusSelector = `[data-template-choice="${index}"]`;
+    } else if (button.dataset.templateMove !== undefined) {
+      const from = Number(button.dataset.templateMove), to = from + Number(button.dataset.direction);
+      current.order ??= block.items.map((_, i) => i);
+      if (to < 0 || to >= current.order.length) return;
+      [current.order[from], current.order[to]] = [current.order[to], current.order[from]];
+      current.checked = false; current.correct = false;
+      focusSelector = `[data-template-move="${to}"][data-direction="${button.dataset.direction}"]:not(:disabled)`;
+    } else if (button.hasAttribute('data-template-check')) {
+      current = { ...current, ...checkTemplate(block, current) };
+      focusSelector = '[role="status"]';
+    } else return;
+    render(); notify();
+    const focus = host.querySelector(focusSelector) || host.querySelector('[data-template-check]');
+    if (focus) { if (focus.getAttribute('role') === 'status') focus.tabIndex = -1; focus.focus(); }
+  };
+  host.addEventListener('click', click); host.addEventListener('input', change); host.addEventListener('change', change);
+  render();
+  return () => { host.removeEventListener('click', click); host.removeEventListener('input', change); host.removeEventListener('change', change); };
+}

@@ -76,20 +76,51 @@ function resumeCard(state) {
 
 export function dashboard(state) {
   const saved = state.learningPlan;
-  const session = saved ? `<section class="game-card simple-panel">
-    <h2>${escapeHtml(saved.plan.title)}</h2>
-    <p>${t(`${saved.completed} of ${saved.plan.steps.length} tasks complete`, `Выполнено ${saved.completed} из ${saved.plan.steps.length} заданий`, `${saved.plan.steps.length} тапсырманың ${saved.completed} орындалды`)}</p>
-    <button class="primary" data-view="learning-plan">${saved.completed === saved.plan.steps.length ? t('View my lesson result','Посмотреть результат','Нәтижені көру') : t('Resume my lesson','Продолжить занятие','Сабақты жалғастыру')}</button>
-  </section>` : '';
+  const newGoal = `<details class="goal-disclosure"><summary><span>${t("Learn something else", "Выбрать другую цель", "Басқа мақсат таңдау")}</span>${icon('chevron', 18)}</summary>${goalBanner(state.minutes, true)}</details>`;
+  if (saved) {
+    const total = saved.plan.steps.length;
+    const completed = Math.min(total, Math.max(0, saved.completed));
+    const done = completed === total;
+    const progress = total ? Math.round(completed / total * 100) : 0;
+    const next = saved.plan.steps[completed];
+    return `<section class="return-home" aria-labelledby="return-title">
+      <div class="return-heading"><h1 id="return-title">${done ? t("You did it!", "Отличная работа!", "Жарайсың!") : t("Welcome back.", "С возвращением.", "Қайта келгеніңе қуаныштымыз.")}</h1></div>
+      <section class="resume-card personalized">
+        <div class="resume-mentor">${character('mino', done ? 'celebrate' : 'explaining', 'resume-character')}<span>${done ? t("Let’s see what you learned.", "Посмотрим, чему ты научился.", "Не үйренгеніңді көрейік.") : t("Ready for your next small step?", "Продолжим с того же места?", "Тоқтаған жерден жалғастырайық па?")}</span></div>
+        <div class="resume-body"><h2>${escapeHtml(saved.plan.title)}</h2>
+          <div class="resume-progress"><span>${t(`${completed} of ${total} tasks complete`, `Выполнено ${completed} из ${total} заданий`, `${total} тапсырманың ${completed} орындалды`)}</span></div>
+          <div class="progress-bar" role="progressbar" aria-label="${t("Lesson progress", "Прогресс занятия", "Сабақ барысы")}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${completed}"><i style="width:${progress}%"></i></div>
+          <p class="resume-next">${done ? t("Your answers and feedback are ready to review.", "Твои ответы и подсказки можно посмотреть снова.", "Жауаптарың мен кеңестерді қайта көре аласың.") : escapeHtml(next?.title || t("Continue with your next task.", "Продолжи со следующего задания.", "Келесі тапсырмадан жалғастыр."))}</p>
+          <button class="primary large" data-view="learning-plan">${done ? t('View my lesson result','Посмотреть результат','Нәтижені көру') : t('Resume my lesson','Продолжить занятие','Сабақты жалғастыру')} ${icon('arrow', 19)}</button>
+          <button class="text-link resume-path-link" data-view="courses">${t("My courses", "Мои курсы", "Курстарым")} ${icon('book', 16)}</button>
+        </div>
+      </section>
+    </section>${newGoal}`;
+  }
   return state.active && COURSES[state.active]
-    ? `${session}${resumeCard(state)}<details class="goal-disclosure"><summary><span>${t("Learn something else", "Выбрать другую цель", "Басқа мақсат таңдау")}</span>${icon('chevron', 18)}</summary>${goalBanner(state.minutes, true)}</details>`
-    : `${session}${goalBanner(state.minutes)}`;
+    ? `${resumeCard(state)}${newGoal}`
+    : goalBanner(state.minutes);
 }
 
 export function coursesPage(state) {
   const ids = startedCourses(state);
-  return `<section class="my-courses">${pageBanner(t("My courses", "Мои курсы", "Курстарым"), ids.length ? t("Pick up where you left off.", "Продолжи с того же места.", "Тоқтаған жерден жалғастыр.") : '')}
-    ${ids.length ? `<div class="course-grid">${ids.map(id => {
+  const saved = state.learningPlan;
+  let personalCourse = '';
+  if (saved) {
+    const total = saved.plan.steps.length;
+    const completed = Math.min(total, Math.max(0, saved.completed));
+    const done = completed === total;
+    const progress = total ? Math.round(completed / total * 100) : 0;
+    personalCourse = `<article class="game-card catalog-tile personalized">
+      <div class="course-tile-top"><span class="course-symbol">${icon('book', 26)}</span><span class="course-state ${done ? 'complete' : ''}">${done ? t("Completed", "Завершён", "Аяқталды") : t(`${progress}% complete`, `Пройдено ${progress}%`, `${progress}% аяқталды`)}</span></div>
+      <h2>${escapeHtml(saved.plan.title)}</h2><p>${escapeHtml(saved.plan.outcome || saved.plan.goal || t("Made for your learning goal.", "Занятие для твоей цели.", "Мақсатыңа сай жасалған сабақ."))}</p>
+      <div class="progress-bar" role="progressbar" aria-label="${t("Lesson progress", "Прогресс занятия", "Сабақ барысы")}" aria-valuenow="${completed}" aria-valuemin="0" aria-valuemax="${total}"><i style="width:${progress}%"></i></div>
+      <button class="primary" data-view="learning-plan">${done ? t("View my lesson result", "Посмотреть результат", "Нәтижені көру") : t("Resume my lesson", "Продолжить занятие", "Сабақты жалғастыру")} ${icon('arrow', 18)}</button>
+    </article>`;
+  }
+  const hasCourses = ids.length || saved;
+  return `<section class="my-courses">${pageBanner(t("My courses", "Мои курсы", "Курстарым"), hasCourses ? t("Pick up where you left off.", "Продолжи с того же места.", "Тоқтаған жерден жалғастыр.") : '')}
+    ${hasCourses ? `<div class="course-grid">${personalCourse}${ids.map(id => {
       const completed = state.progress[id], done = completed === 4;
       return `<article class="game-card catalog-tile ${id}">
         <div class="course-tile-top"><span class="course-symbol">${icon(id === 'design' ? 'palette' : 'sheet', 26)}</span><span class="course-state ${done ? 'complete' : ''}">${done ? t("Completed", "Завершён", "Аяқталды") : t(`${completed * 25}% complete`, `Пройдено ${completed * 25}%`, `${completed * 25}% аяқталды`)}</span></div>

@@ -1,0 +1,30 @@
+/* Shared lesson building blocks; no dependency on a course subject. */
+.lesson-template { min-width: 0; overflow-wrap: anywhere; }
+.lesson-template > .ai-lesson-mentor { margin-top: 0; }
+.template-theory { display: flex; flex-direction: column; }
+.template-theory > .ai-lesson-mentor { order: -1; }
+.lesson-template .template-check { width: 100%; margin-top: 24px; }
+.template-explanation { padding: 16px 20px; background: #fff4e9; border-left: 3px solid #bc4b00; border-radius: 0 12px 12px 0; }
+.template-order, .template-recap { list-style: none; padding: 0; margin: 22px 0; display: grid; gap: 12px; }
+.template-order > li { display: flex; align-items: center; gap: 12px; border: 1.5px solid #e9ddd3; border-radius: 14px; padding: 12px; background: white; }
+.template-order > li > span:nth-child(2) { flex: 1; }
+.template-number { display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: #fff3e8; color: #a64100; font-size: 14px; font-weight: 800; }
+.template-order-actions { display: flex; gap: 4px; }
+.template-move { width: 44px; height: 44px; padding: 0; border: 1px solid #e9ddd3; border-radius: 10px; background: #fffaf5; color: #83451d; font-size: 22px; }
+.template-move:disabled { opacity: .35; cursor: default; }
+.template-matching { display: grid; gap: 12px; margin-block: 22px; }
+.template-match-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: center; padding: 14px; border: 1px solid #e9ddd3; border-radius: 14px; }
+.template-match-row select { min-width: 0; width: 100%; min-height: 48px; border: 1.5px solid #d9c9be; border-radius: 10px; background: white; padding: 10px; color: #302723; font: inherit; }
+.template-gap { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 24px 20px; border-radius: 18px; background: #fff4e9; line-height: 1.7; font-size: 21px; }
+.template-gap input { min-width: 120px; width: 180px; max-width: 100%; min-height: 52px; border: 0; border-bottom: 3px solid #bc4b00; border-radius: 8px 8px 0 0; padding: 10px; font: inherit; color: #302723; background: white; }
+.template-recap > li { display: flex; align-items: flex-start; gap: 14px; padding: 16px 18px; background: #fff7ee; border-radius: 14px; }
+.template-recap svg { flex-shrink: 0; color: #a64100; margin-top: 4px; }
+.template-illustration .lesson-source-figure { border: 1px solid #eedfce; border-radius: 18px; padding: 12px; background: #fffaf5; }
+.template-illustration .lesson-source-figure img { display: block; width: 100%; max-height: 320px; object-fit: contain; }
+@media (max-width: 440px) {
+  .template-match-row { grid-template-columns: 1fr; gap: 8px; }
+  .template-order > li { gap: 8px; padding: 10px; font-size: 15px; }
+  .template-number { width: 24px; height: 24px; }
+  .template-order-actions { flex-direction: column; }
+  .template-gap { padding: 18px 16px; font-size: 18px; }
+}
