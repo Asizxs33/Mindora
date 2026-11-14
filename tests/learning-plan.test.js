@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateDeepSeekPlan } from '../backend/deepseek-plan.js';
 import { planApi } from '../backend/plan-api.js';
+import { reviewWithDeepSeek, taskReviewApi } from '../backend/task-review-api.js';
 import { restorePlan } from '../core/learning-plan.js';
 
 const source = 'https://docs.python.org/3/tutorial/controlflow.html';
@@ -50,6 +51,51 @@ test('a saved plan restores answers and opens the first unfinished task', async 
   assert.equal(saved.completed, 1);
   assert.equal(saved.answers[saved.completed], 'Черновик ответа');
   assert.equal(restorePlan({ plan, answers: ['', 'Готово'], completed: 2 }).completed, 0);
+  const review = { answer: 'Черновик ответа', observation: 'Есть пример.', nextAction: 'Добавь вывод.' };
+  assert.deepEqual(restorePlan({ ...saved, reviews: [null, review] }).reviews, [null, review, null]);
+  assert.deepEqual(restorePlan({
+    ...saved, answers: ['Готово', 'Новый ответ'], reviews: [null, review],
+  }).reviews, [null, null, null]);
+});
+
+test('task review requests thinking mode and returns only shaped feedback', async () => {
+  const input = { goal: 'Python', task: 'Напиши цикл', criterion: 'Выведи три строки', answer: 'Вывод: a, b, c' };
+  const feedback = { observation: 'Указаны три значения.', nextAction: 'Покажи каждое значение с новой строки.' };
+  const result = await reviewWithDeepSeek(input, 'test-only', async (url, options) => {
+    assert.equal(url, 'https://api.deepseek.com/chat/completions');
+    const request = JSON.parse(options.body);
+    assert.equal(request.thinking.type, 'enabled');
+    assert.equal(request.response_format.type, 'json_object');
+    assert.deepEqual(JSON.parse(request.messages[1].content), input);
+    return Response.json({ choices: [{
+      finish_reason: 'stop',
+      message: { content: JSON.stringify({ ...feedback, extra: 'ignored' }), reasoning_content: 'private' },
+    }] });
+  });
+  assert.deepEqual(result, feedback);
+  await assert.rejects(reviewWithDeepSeek(input, 'test-only', async () => Response.json({
+    choices: [{ finish_reason: 'length', message: { content: JSON.stringify(feedback) } }],
+  })), /Incomplete DeepSeek review/);
+});
+
+test('task review validates submissions and uses the AI quota on guest requests', async () => {
+  const input = { goal: 'Python', task: 'Напиши цикл', criterion: 'Выведи три строки', answer: 'Вывод: a, b, c' };
+  const request = (body, origin = 'https://mindora.test') => new Request('https://mindora.test/api/task-review', {
+    method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const feedback = { observation: 'Указаны три значения.', nextAction: 'Проверь разделение на строки.' };
+  let calls = 0;
+  const configured = {
+    apiKey: 'test-only', databaseUrl: 'test-only', reserve: async () => true,
+    review: async raw => { calls++; assert.deepEqual(raw, input); return feedback; },
+  };
+  assert.equal((await taskReviewApi(request({ ...input, answer: ' ' }), configured)).status, 400);
+  assert.equal((await taskReviewApi(request(input, 'https://other.test'), configured)).status, 403);
+  assert.equal((await taskReviewApi(request(input), { ...configured, apiKey: '' })).status, 503);
+  assert.equal((await taskReviewApi(request(input), { ...configured, reserve: async () => false })).status, 429);
+  assert.equal(calls, 0);
+  assert.deepEqual(await (await taskReviewApi(request({ ...input, account: 'ignored' }), configured)).json(), { review: feedback });
+  assert.equal(calls, 1);
 });
 
 test('the endpoint validates input and limits provider requests before calling DeepSeek', async () => {

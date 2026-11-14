@@ -10,10 +10,16 @@ http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = decodeURIComponent(url.pathname);
-    if (['/api/account', '/api/budget-draft', '/api/learning-plan'].includes(pathname)) {
+    if (['/api/account', '/api/budget-draft', '/api/learning-plan', '/api/task-review'].includes(pathname)) {
       const { accountApi, budgetDraftApi } = await import('./backend/cloud-api.js');
       const { planApi } = await import('./backend/plan-api.js');
-      const handlers = { '/api/account': accountApi, '/api/budget-draft': budgetDraftApi, '/api/learning-plan': planApi };
+      const { taskReviewApi } = await import('./backend/task-review-api.js');
+      const handlers = {
+        '/api/account': accountApi,
+        '/api/budget-draft': budgetDraftApi,
+        '/api/learning-plan': planApi,
+        '/api/task-review': taskReviewApi,
+      };
       const request = new Request(url, {
         method: req.method,
         headers: req.headers,

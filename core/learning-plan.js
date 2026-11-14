@@ -31,6 +31,20 @@ function text(value, max) {
   return clean && clean.length <= max ? clean : null;
 }
 
+export function taskReviewInput(raw) {
+  const goal = text(raw?.goal, 180);
+  const task = text(raw?.task, 480);
+  const criterion = text(raw?.criterion, 320);
+  const answer = text(raw?.answer, 1500);
+  return goal && task && criterion && answer ? { goal, task, criterion, answer } : null;
+}
+
+export function normalizeTaskReview(raw) {
+  const observation = text(raw?.observation, 320);
+  const nextAction = text(raw?.nextAction, 320);
+  return observation && nextAction ? { observation, nextAction } : null;
+}
+
 // The server supplies the source map from provider results; free-form model URLs cannot become links.
 export function normalizePlan(raw, input, sources) {
   if (!raw || !input || !Array.isArray(raw.steps)) return null;
@@ -65,7 +79,13 @@ export function restorePlan(saved) {
   const plan = normalizePlan({ ...saved.plan, steps }, input, sources);
   if (!plan) return null;
   const answers = plan.steps.map(({ id }) => typeof saved.answers?.[id] === 'string' ? saved.answers[id].slice(0, 1500) : '');
+  const reviews = answers.map((answer, index) => {
+    const entry = saved.reviews?.[index];
+    if (!answer.trim() || entry?.answer !== answer.trim()) return null;
+    const review = normalizeTaskReview(entry);
+    return review ? { answer: entry.answer, ...review } : null;
+  });
   let completed = 0;
   while (completed < plan.steps.length && completed < saved.completed && answers[completed].trim()) completed++;
-  return { plan, answers, completed };
+  return { plan, answers, reviews, completed };
 }
