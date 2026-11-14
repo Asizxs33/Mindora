@@ -211,7 +211,7 @@ export function rewardsView(section, { rewards, quests = rewards?.quests ?? [], 
       <h2 id="roadmap-profile-title">${t('Learning activity', 'Учебная активность', 'Оқу белсенділігі')}</h2>
       ${rewardMetrics(rewards)}
       <dl class="roadmap-profile-stats">
-        <div><dt>${t('AI lessons finished', 'ИИ-занятий пройдено', 'Аяқталған ЖИ сабақтары')}</dt><dd>${rewards.lessons}</dd></div>
+        <div><dt>${t('Lessons finished', 'Занятий пройдено', 'Аяқталған сабақтар')}</dt><dd>${rewards.lessons}</dd></div>
         <div><dt>${t('Correct exercises today', 'Верных упражнений сегодня', 'Бүгінгі дұрыс жаттығулар')}</dt><dd>${rewards.correct}</dd></div>
         <div><dt>${t('Streak freezes', 'Заморозки серии', 'Серия қатырулары')}</dt><dd>${rewards.freezes}</dd></div>
       </dl>

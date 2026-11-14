@@ -10,6 +10,7 @@ function courseCard(course, loading, isRoadmap) {
   const progressLabel = isRoadmap ? t('Completed lessons', 'Пройденные занятия', 'Аяқталған сабақтар') : t('Completed tasks', 'Выполненные задания', 'Орындалған тапсырмалар');
   return `<li class="learning-library-card">
     <div class="learning-library-card-summary"><h3 lang="${esc(course.language || currentLanguage())}">${esc(course.title)}</h3>
+    ${Number.isFinite(course.minutes) ? `<p class="learning-library-duration">${course.minutes} ${isRoadmap ? t('min per lesson', 'мин на занятие', 'мин сабаққа') : t('min', 'мин', 'мин')}</p>` : ''}
     ${total ? `<div class="learning-library-progress"><progress max="${total}" value="${completed}" aria-label="${progressLabel}"></progress><span>${done ? t('Completed', 'Завершено', 'Аяқталды') : `${completed}/${total}`}</span></div>` : ''}</div>
     <button type="button" class="secondary" ${isRoadmap ? 'data-learning-roadmap' : 'data-learning-open'}="${esc(course.id)}"${loading ? ' disabled' : ''}>${pathLabel} ${icon('arrow', 18)}</button>
   </li>`;

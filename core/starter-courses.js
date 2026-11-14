@@ -1,5 +1,5 @@
 import { languageCode } from './language.js';
-import { restorePlan } from './learning-plan.js';
+import { PLAN_DURATIONS, restorePlan } from './learning-plan.js';
 
 // Authored, ready-to-open lessons. They use the same saved-plan contract as a
 // generated course, but do not call a model or pre-award any learner progress.
@@ -236,21 +236,533 @@ const courses = [
   },
 ];
 
-export function starterCourses(language = 'en') {
+const extensions = {
+  'ai-prompts': [
+    {
+      en: {
+        title: 'Separate the task from the notes',
+        instruction: 'Use two labels: Task for what to do, and Notes for the source facts. Ask for an answer based only on those notes. Labels make the request easier to read; they do not guarantee a correct answer.',
+        why: 'The reader can see which text is an instruction and which text is evidence.',
+        input: 'Notes: The chess club meets Thursday at 15:00 in room 7.',
+        output: 'Task: Write one reminder using only the notes.\nNotes: The chess club meets Thursday at 15:00 in room 7.',
+        explanation: 'The first line gives the task. The second supplies the facts the reminder should preserve.',
+        question: 'Which two items are source facts rather than instructions?',
+        options: ['The club meets Thursday at 15:00.', 'Write one short reminder.', 'The room number is 7.'],
+        feedback: 'The meeting time and room are facts. “Write one short reminder” tells the assistant what to do.',
+        takeaway: 'Label the task and the notes separately. Keep the result tied to the notes.',
+        task: 'Write a Task/Notes prompt for one reminder. Facts: a music group meets Monday at 16:00 in room 3. Ask to use only these notes.',
+        criterion: 'Task and Notes are separate; the task asks for one reminder using only the three supplied facts.',
+      },
+      ru: {
+        title: 'Отдели задачу от заметок',
+        instruction: 'Используй две подписи: «Задача» — что сделать, «Заметки» — исходные факты. Попроси ответить только по заметкам. Подписи упрощают чтение, но не гарантируют правильный ответ.',
+        why: 'Сразу видно, где инструкция, а где факты для ответа.',
+        input: 'Заметки: шахматный клуб собирается в четверг в 15:00 в кабинете 7.',
+        output: 'Задача: напиши одно напоминание только по заметкам.\nЗаметки: шахматный клуб собирается в четверг в 15:00 в кабинете 7.',
+        explanation: 'Первая строка задаёт действие, вторая содержит факты, которые нужно сохранить.',
+        question: 'Какие два пункта — исходные факты, а не инструкции?',
+        options: ['Клуб собирается в четверг в 15:00.', 'Напиши одно короткое напоминание.', 'Номер кабинета — 7.'],
+        feedback: 'Время встречи и кабинет — факты. «Напиши напоминание» — инструкция.',
+        takeaway: 'Отдельно подпиши задачу и заметки. Ответ должен опираться на заметки.',
+        task: 'Составь запрос с разделами «Задача» и «Заметки»: музыкальный кружок в понедельник в 16:00 в кабинете 3. Попроси одно напоминание только по этим данным.',
+        criterion: 'Задача и заметки разделены; нужно одно напоминание только с тремя указанными фактами.',
+      },
+      kk: {
+        title: 'Міндет пен жазбаны бөл',
+        instruction: 'Екі белгі қолдан: «Міндет» — не істеу керек, «Жазба» — бастапқы фактілер. Тек жазбаға сүйеніп жауап беруді сұра. Белгілер оқуды жеңілдетеді, бірақ жауаптың дұрыстығына кепіл болмайды.',
+        why: 'Қай мәтін нұсқау, қай мәтін жауапқа негіз болатын дерек екені көрінеді.',
+        input: 'Жазба: шахмат клубы бейсенбіде сағат 15:00-де 7-бөлмеде жиналады.',
+        output: 'Міндет: тек жазбаға сүйеніп бір еске салу жаз.\nЖазба: шахмат клубы бейсенбіде сағат 15:00-де 7-бөлмеде жиналады.',
+        explanation: 'Бірінші жол әрекетті көрсетеді. Екінші жолда сақталуы керек фактілер берілген.',
+        question: 'Қай екі тармақ нұсқау емес, бастапқы дерек?',
+        options: ['Клуб бейсенбіде сағат 15:00-де жиналады.', 'Бір қысқа еске салу жаз.', 'Бөлме нөмірі — 7.'],
+        feedback: 'Кездесу уақыты мен бөлме — деректер. «Еске салу жаз» — нұсқау.',
+        takeaway: 'Міндет пен жазбаны бөлек белгіле. Жауап жазбаға сүйенсін.',
+        task: '«Міндет» және «Жазба» бөлімдері бар сұрау жаз: музыка үйірмесі дүйсенбіде сағат 16:00-де 3-бөлмеде өтеді. Тек осы деректерден бір еске салу сұра.',
+        criterion: 'Міндет пен жазба бөлінген; тек берілген үш дерекпен бір еске салу сұралған.',
+      },
+      assessment: copy => ({ type: 'multi-choice', question: copy.question, options: copy.options, answers: [0, 2], explanation: copy.feedback }),
+    },
+    {
+      en: {
+        title: 'Check the answer against the facts',
+        instruction: 'Compare every claim with the notes. Keep supported details. Remove a claim the notes do not support, or ask for the missing information. Confident wording is not evidence.',
+        why: 'A fluent answer can still introduce a detail that was never supplied.',
+        input: 'Notes: The art club meets Friday at 16:00 in the library.\nDraft: Join the free art club Friday at 16:00 in the library.',
+        output: 'Join the art club Friday at 16:00 in the library.',
+        explanation: 'The notes give the day, time and place. They do not say whether entry is free, so that claim was removed.',
+        question: 'Which detail in the draft is unsupported by the notes?',
+        options: ['The club meets on Friday.', 'Entry is free.', 'The meeting is in the library.'],
+        feedback: 'There is no price information in the notes. “Free” is an unsupported addition.',
+        takeaway: 'Check each claim. Missing information is a question, not a fact.',
+        task: 'Notes: a book swap is Sunday at 12:00 in the hall. Draft: “Bring five books to the free book swap Sunday at 12:00 in the hall.” Rewrite using only supported details.',
+        criterion: 'Keep the book swap, Sunday, 12:00 and hall; remove the unsupported five-book requirement and price claim.',
+      },
+      ru: {
+        title: 'Сверь ответ с фактами',
+        instruction: 'Сравни каждое утверждение с заметками. Сохрани подтверждённые детали. Удали неподтверждённое или уточни недостающие сведения. Уверенный тон не заменяет доказательство.',
+        why: 'Связный ответ иногда добавляет сведения, которых не было в исходных данных.',
+        input: 'Заметки: кружок рисования в пятницу в 16:00 в библиотеке.\nЧерновик: приходи на бесплатный кружок рисования в пятницу в 16:00 в библиотеку.',
+        output: 'Приходи на кружок рисования в пятницу в 16:00 в библиотеку.',
+        explanation: 'День, время и место указаны. О цене ничего не сказано, поэтому слово «бесплатный» убрано.',
+        question: 'Какая деталь черновика не подтверждена заметками?',
+        options: ['Кружок проходит в пятницу.', 'Вход бесплатный.', 'Встреча проходит в библиотеке.'],
+        feedback: 'В заметках нет цены. Утверждение о бесплатном входе добавлено без основания.',
+        takeaway: 'Проверяй каждое утверждение. Недостающие сведения нужно уточнять, а не придумывать.',
+        task: 'Заметки: обмен книгами в воскресенье в 12:00 в зале. Черновик: «Принеси пять книг на бесплатный обмен в воскресенье в 12:00 в зале». Оставь только подтверждённые сведения.',
+        criterion: 'Сохранены обмен книгами, воскресенье, 12:00 и зал; убраны требования о пяти книгах и бесплатном входе.',
+      },
+      kk: {
+        title: 'Жауапты деректермен салыстыр',
+        instruction: 'Әр тұжырымды жазбамен салыстыр. Расталған деректерді сақта. Негізі жоқ тұжырымды алып таста немесе жетіспейтін ақпаратты сұра. Сенімді жазылған сөйлем дәлел емес.',
+        why: 'Жатық жауапта бастапқы жазбада болмаған дерек пайда болуы мүмкін.',
+        input: 'Жазба: сурет үйірмесі жұмада сағат 16:00-де кітапханада өтеді.\nНұсқа: жұмада сағат 16:00-де кітапханадағы тегін сурет үйірмесіне кел.',
+        output: 'Жұмада сағат 16:00-де кітапханадағы сурет үйірмесіне кел.',
+        explanation: 'Күні, уақыты және орны берілген. Бағасы айтылмағандықтан, «тегін» сөзі алынды.',
+        question: 'Қай тұжырым жазбадағы дерекпен расталмайды?',
+        options: ['Үйірме жұмада өтеді.', 'Қатысу тегін.', 'Кездесу кітапханада өтеді.'],
+        feedback: 'Жазбада баға туралы дерек жоқ. «Тегін» деген тұжырым негізсіз қосылған.',
+        takeaway: 'Әр тұжырымды тексер. Жоқ ақпаратты ойдан қоспай, сұра.',
+        task: 'Жазба: кітап алмасу жексенбіде сағат 12:00-де залда өтеді. Нұсқа: «Жексенбіде сағат 12:00-де залдағы тегін кітап алмасуға бес кітап әкел». Тек расталған деректерді қалдыр.',
+        criterion: 'Кітап алмасу, жексенбі, 12:00 және зал сақталған; бес кітап талабы мен тегін қатысу тұжырымы алынған.',
+      },
+      assessment: copy => ({ type: 'choice', question: copy.question, options: copy.options, answer: 1, explanation: copy.feedback }),
+    },
+  ],
+  'python-basics': [
+    {
+      en: {
+        title: 'Give a value a name',
+        instruction: 'Use = to assign a value to a variable: name = "Mino". print(name) uses the stored value; print("name") prints the literal word name. Assigning a new value changes what that variable refers to.',
+        why: 'A variable lets you change a value without rewriting every instruction that uses it.',
+        input: 'name = "Mino"\nname = "Mia"\nprint(name)', output: 'Mia',
+        explanation: 'The second assignment replaces the value associated with name before print reads it.',
+        question: 'Complete print(...) using the variable name, not a text literal.',
+        feedback: 'Use name without quotes. Quoted "name" would display the word name instead.',
+        takeaway: 'A variable name reads its value. Quotes make literal text.',
+        task: 'Assign "Astana" to city, then assign "Almaty" to city. Print the variable and write the expected output below.',
+        criterion: 'city is assigned twice; print(city) displays Almaty, without quotes.',
+      },
+      ru: {
+        title: 'Дай значению имя',
+        instruction: 'Знак = присваивает значение переменной: name = "Mino". print(name) использует сохранённое значение, а print("name") печатает слово name. Новое присваивание меняет значение, на которое ссылается переменная.',
+        why: 'Переменная позволяет менять значение, не переписывая каждую команду, которая его использует.',
+        input: 'name = "Mino"\nname = "Mia"\nprint(name)', output: 'Mia',
+        explanation: 'Второе присваивание меняет значение name до того, как его прочитает print.',
+        question: 'Допиши print(...), используя переменную name, а не текст в кавычках.',
+        feedback: 'Нужно name без кавычек. Запись "name" вывела бы само слово name.',
+        takeaway: 'Имя переменной даёт её значение. Кавычки обозначают буквальный текст.',
+        task: 'Присвой city строку "Astana", затем строку "Almaty". Выведи переменную и ниже укажи результат.',
+        criterion: 'Есть два присваивания city; print(city) выводит Almaty без кавычек.',
+      },
+      kk: {
+        title: 'Мәнге атау бер',
+        instruction: '= таңбасы айнымалыға мән меншіктейді: name = "Mino". print(name) сақталған мәнді қолданады, ал print("name") name сөзін шығарады. Жаңа меншіктеу айнымалы сілтейтін мәнді өзгертеді.',
+        why: 'Айнымалы мәнді оны қолданатын әр нұсқауды қайта жазбай өзгертуге мүмкіндік береді.',
+        input: 'name = "Mino"\nname = "Mia"\nprint(name)', output: 'Mia',
+        explanation: 'Екінші меншіктеу print оқығанға дейін name мәнін өзгертеді.',
+        question: 'print(...) ішіне тырнақшадағы мәтінді емес, name айнымалысын жаз.',
+        feedback: 'Тырнақшасыз name жаз. "name" деп жазсаң, name сөзінің өзі шығады.',
+        takeaway: 'Айнымалы атауы оның мәнін береді. Тырнақша нақты мәтінді белгілейді.',
+        task: 'city айнымалысына "Astana", содан кейін "Almaty" мәнін меншікте. Айнымалыны шығар және астына нәтижесін жаз.',
+        criterion: 'city екі рет меншіктелген; print(city) тырнақшасыз Almaty мәтінін шығарады.',
+      },
+      assessment: copy => ({ type: 'gap-fill', question: copy.question, before: 'name = "Mino"\nprint(', after: ')', accepted: ['name'], explanation: copy.feedback }),
+    },
+    {
+      en: {
+        title: 'Numbers and text behave differently',
+        instruction: 'With numbers, + adds: 2 + 3 is 5. With two strings, + joins their text: "2" + "3" is "23". Quotes change the type of value. Do not mix a string and a number with + in these examples.',
+        why: 'Reading the quotes helps you predict whether Python calculates or joins text.',
+        input: 'print(2 + 3)\nprint("2" + "3")', output: '5\n23',
+        explanation: 'The first line adds two numbers. The second joins two strings, so both digits stay next to each other.',
+        question: 'Match each print statement to its output.',
+        feedback: '4 + 1 gives 5; "4" + "1" joins to 41; 4 + 4 gives 8.',
+        takeaway: 'Numbers add. Strings join. Check the quotes before predicting the output.',
+        task: 'Write print(2 + 6) and print("2" + "6"). Under each line, write its result and explain the difference in one sentence.',
+        criterion: 'The results are 8 and 26; the explanation distinguishes numeric addition from joining strings.',
+      },
+      ru: {
+        title: 'Числа и текст работают по-разному',
+        instruction: 'Для чисел + означает сложение: 2 + 3 даёт 5. Для двух строк + соединяет текст: "2" + "3" даёт "23". Кавычки меняют тип значения. В этих примерах не смешивай строку и число при +.',
+        why: 'Кавычки подсказывают, будет Python считать или соединять текст.',
+        input: 'print(2 + 3)\nprint("2" + "3")', output: '5\n23',
+        explanation: 'Первая строка складывает числа. Вторая соединяет строки, поэтому цифры стоят рядом.',
+        question: 'Соедини команду print с её результатом.',
+        feedback: '4 + 1 даёт 5; "4" + "1" соединяется в 41; 4 + 4 даёт 8.',
+        takeaway: 'Числа складываются, строки соединяются. Сначала проверь кавычки.',
+        task: 'Напиши print(2 + 6) и print("2" + "6"). Под каждой командой укажи результат и одним предложением объясни разницу.',
+        criterion: 'Результаты — 8 и 26; объяснена разница между сложением чисел и соединением строк.',
+      },
+      kk: {
+        title: 'Сан мен мәтін әртүрлі жұмыс істейді',
+        instruction: 'Сандар үшін + қосады: 2 + 3 нәтижесі — 5. Екі мәтіндік жол үшін + мәтіндерді біріктіреді: "2" + "3" нәтижесі — "23". Тырнақша мәннің түрін өзгертеді. Бұл мысалдарда + арқылы сан мен мәтінді араластырма.',
+        why: 'Тырнақша Python есептей ме, әлде мәтін біріктіре ме — соны анықтауға көмектеседі.',
+        input: 'print(2 + 3)\nprint("2" + "3")', output: '5\n23',
+        explanation: 'Бірінші жол екі санды қосады. Екінші жол екі мәтінді біріктіреді, сондықтан цифрлар қатар тұрады.',
+        question: 'Әр print командасын нәтижесімен сәйкестендір.',
+        feedback: '4 + 1 нәтижесі — 5; "4" + "1" бірігіп 41 болады; 4 + 4 нәтижесі — 8.',
+        takeaway: 'Сандар қосылады. Мәтіндер бірігеді. Алдымен тырнақшаға қара.',
+        task: 'print(2 + 6) және print("2" + "6") жаз. Әрқайсысының астына нәтижесін көрсетіп, айырмасын бір сөйлеммен түсіндір.',
+        criterion: 'Нәтижелер — 8 және 26; сан қосу мен мәтін біріктіру айырмасы түсіндірілген.',
+      },
+      assessment: copy => ({ type: 'match', question: copy.question, left: ['print(4 + 1)', 'print("4" + "1")', 'print(4 + 4)'], right: ['41', '8', '5'], answer: [2, 0, 1], explanation: copy.feedback }),
+    },
+  ],
+  'everyday-english': [
+    {
+      en: {
+        title: 'Say what is not true',
+        instruction: 'To make a negative with be, put not after am, is or are: I am not late. She is not at home. They are not ready. Keep the correct verb form for the person.',
+        why: 'A negative lets you correct a misunderstanding without changing the whole sentence.',
+        input: 'She is at home.\nThey are ready.', output: 'She is not at home.\nThey are not ready.',
+        explanation: 'not follows is or are. The rest of each sentence stays in the same order.',
+        question: 'Complete the present-tense negative: She ___ not at home.',
+        feedback: 'She uses is. The full sentence is She is not at home.',
+        takeaway: 'Person + am/is/are + not + the rest of the sentence.',
+        task: 'Make both sentences negative: I am late. We are ready. Write the full forms.',
+        criterion: 'The answers are I am not late. and We are not ready. The verb forms stay unchanged.',
+      },
+      ru: {
+        title: 'Скажи, что это не так',
+        instruction: 'Для отрицания с be поставь not после am, is или are: I am not late. She is not at home. They are not ready. Сохрани правильную форму глагола для каждого лица.',
+        why: 'Отрицание помогает исправить недопонимание, не меняя всё предложение.',
+        input: 'She is at home.\nThey are ready.', output: 'She is not at home.\nThey are not ready.',
+        explanation: 'not стоит после is или are. Порядок остальных слов сохраняется.',
+        question: 'Допиши отрицание в настоящем времени: She ___ not at home.',
+        feedback: 'С She нужно is. Полное предложение: She is not at home.',
+        takeaway: 'Лицо + am/is/are + not + остальная часть предложения.',
+        task: 'Сделай отрицательными оба предложения: I am late. We are ready. Используй полные формы.',
+        criterion: 'Получилось I am not late. и We are not ready. Формы глагола не изменились.',
+      },
+      kk: {
+        title: 'Олай емес екенін айт',
+        instruction: 'Be етістігімен болымсыз сөйлем жасау үшін not сөзін am, is немесе are сөзінен кейін қой: I am not late. She is not at home. Әр есімдікке сәйкес етістік түрін сақта.',
+        why: 'Болымсыз сөйлем түсінбеушілікті бүкіл сөйлемді өзгертпей түзетуге көмектеседі.',
+        input: 'She is at home.\nThey are ready.', output: 'She is not at home.\nThey are not ready.',
+        explanation: 'not сөзі is немесе are сөзінен кейін келеді. Қалған сөздердің реті өзгермейді.',
+        question: 'Осы шақтағы болымсыз сөйлемді толықтыр: She ___ not at home.',
+        feedback: 'She сөзімен is қолданылады. Толық сөйлем: She is not at home.',
+        takeaway: 'Есімдік + am/is/are + not + сөйлемнің қалған бөлігі.',
+        task: 'Екі сөйлемді болымсыз түрге өзгерт: I am late. We are ready. Толық нұсқаларын жаз.',
+        criterion: 'I am not late. және We are not ready. сөйлемдері жазылған; етістік түрлері сақталған.',
+      },
+      assessment: copy => ({ type: 'gap-fill', question: copy.question, before: 'She', after: 'not at home.', accepted: ['is'], explanation: copy.feedback }),
+    },
+    {
+      en: {
+        title: 'Ask a question with be',
+        instruction: 'For a standard yes/no question, put am, is or are before the person: You are ready. → Are you ready? Use a short reply: Yes, I am. or No, I am not. Do not shorten a positive short reply to Yes, I’m.',
+        why: 'Changing the word order turns a statement into a question.',
+        input: 'She is from Astana.', output: 'Is she from Astana?\nYes, she is.',
+        explanation: 'is moves before she. The answer keeps she is and uses the full verb form.',
+        question: 'Which is the standard question for You are ready?',
+        options: ['Are ready you?', 'Are you ready?', 'Is you ready?'],
+        feedback: 'Are moves before you. The rest stays in order: Are you ready?',
+        takeaway: 'Am/Is/Are + person + the rest? Answer with the matching person and verb.',
+        task: 'Turn They are at the library. into a yes/no question. Then write a full positive short answer.',
+        criterion: 'The question is Are they at the library? and the reply is Yes, they are.',
+      },
+      ru: {
+        title: 'Задай вопрос с be',
+        instruction: 'В обычном вопросе с ответом да/нет поставь am, is или are перед лицом: You are ready. → Are you ready? Краткий ответ: Yes, I am. или No, I am not. Утвердительный краткий ответ не сокращают до Yes, I’m.',
+        why: 'Перестановка слов превращает утверждение в вопрос.',
+        input: 'She is from Astana.', output: 'Is she from Astana?\nYes, she is.',
+        explanation: 'is стоит перед she. В ответе сохраняются she is и полная форма глагола.',
+        question: 'Какой обычный вопрос соответствует You are ready?',
+        options: ['Are ready you?', 'Are you ready?', 'Is you ready?'],
+        feedback: 'Are ставится перед you. Остальные слова сохраняют порядок: Are you ready?',
+        takeaway: 'Am/Is/Are + лицо + остальная часть? В ответе используй соответствующие лицо и глагол.',
+        task: 'Преврати They are at the library. в вопрос да/нет. Затем напиши утвердительный краткий ответ с полной формой глагола.',
+        criterion: 'Вопрос: Are they at the library? Ответ: Yes, they are.',
+      },
+      kk: {
+        title: 'Be арқылы сұрақ қой',
+        instruction: 'Иә/жоқ жауабын күтетін қалыпты сұрақта am, is немесе are есімдіктің алдына шығады: You are ready. → Are you ready? Қысқа жауап: Yes, I am. немесе No, I am not. Болымды қысқа жауапта Yes, I’m деп қысқартпа.',
+        why: 'Сөздердің орнын ауыстыру хабарлы сөйлемді сұраққа айналдырады.',
+        input: 'She is from Astana.', output: 'Is she from Astana?\nYes, she is.',
+        explanation: 'is сөзі she сөзінің алдына шықты. Жауапта she is және етістіктің толық түрі сақталады.',
+        question: 'You are ready сөйлемінің қалыпты сұрақ түрі қайсы?',
+        options: ['Are ready you?', 'Are you ready?', 'Is you ready?'],
+        feedback: 'Are сөзі you сөзінің алдына шығады. Қалған сөздердің реті сақталады: Are you ready?',
+        takeaway: 'Am/Is/Are + есімдік + қалған бөлік? Жауапта сәйкес есімдік пен етістікті қолдан.',
+        task: 'They are at the library. сөйлемін иә/жоқ сұрағына айналдыр. Содан кейін етістікті қысқартпай болымды қысқа жауап жаз.',
+        criterion: 'Сұрақ: Are they at the library? Жауап: Yes, they are.',
+      },
+      assessment: copy => ({ type: 'choice', question: copy.question, options: copy.options, answer: 1, explanation: copy.feedback }),
+    },
+  ],
+  'clear-writing': [
+    {
+      en: {
+        title: 'Name who does the action',
+        instruction: 'When the actor matters and is known, place that person before the action: Dana sends the poster. This often makes responsibility easier to see. Keep the facts and time; do not invent an actor if the source does not name one.',
+        why: 'The reader can quickly see who needs to act.',
+        input: 'The poster will be sent by Dana at 14:00.', output: 'Dana will send the poster at 14:00.',
+        explanation: 'Dana comes first, followed by the action. The poster and 14:00 remain unchanged.',
+        question: 'Which rewrite clearly names the actor and preserves the deadline?',
+        options: ['The poster will arrive sometime.', 'Dana will send the poster at 14:00.', 'Someone should send a poster.'],
+        feedback: 'The second sentence keeps Dana, the poster and 14:00 while making the action direct.',
+        takeaway: 'Known actor + clear action + needed details.',
+        task: 'Rewrite directly: “The room will be opened by Sam at 09:00.” Keep every fact.',
+        criterion: 'Sam is the actor, opening is the action, and the room and 09:00 are preserved.',
+      },
+      ru: {
+        title: 'Назови того, кто действует',
+        instruction: 'Когда исполнитель известен и важен, поставь его перед действием: «Дана отправит постер». Так проще увидеть ответственность. Сохраняй факты и время; не придумывай исполнителя, если его нет в источнике.',
+        why: 'Читатель сразу понимает, кто должен действовать.',
+        input: 'Постер будет отправлен Даной в 14:00.', output: 'Дана отправит постер в 14:00.',
+        explanation: 'Сначала названа Дана, затем действие. Постер и время 14:00 сохранены.',
+        question: 'Какой вариант прямо называет исполнителя и сохраняет время?',
+        options: ['Постер когда-нибудь придёт.', 'Дана отправит постер в 14:00.', 'Кто-нибудь должен отправить постер.'],
+        feedback: 'Второе предложение сохраняет Дану, постер и 14:00 и прямо называет действие.',
+        takeaway: 'Известный исполнитель + понятное действие + нужные детали.',
+        task: 'Перепиши прямо: «Кабинет будет открыт Сэмом в 09:00». Сохрани все факты.',
+        criterion: 'Сэм — исполнитель, открытие — действие; кабинет и 09:00 сохранены.',
+      },
+      kk: {
+        title: 'Әрекетті кім жасайтынын ата',
+        instruction: 'Орындаушы белгілі әрі маңызды болса, оны әрекеттің алдына қой: «Дана постерді жібереді». Кімнің жауапты екенін көру оңай болады. Фактілер мен уақытты сақта; орындаушы деректе жоқ болса, оны ойдан қоспа.',
+        why: 'Оқырман әрекетті кім жасайтынын бірден түсінеді.',
+        input: 'Постер Дана тарапынан сағат 14:00-де жіберіледі.', output: 'Дана постерді сағат 14:00-де жібереді.',
+        explanation: 'Алдымен Дана, содан кейін әрекет айтылды. Постер мен 14:00 уақыты өзгерген жоқ.',
+        question: 'Қай нұсқада орындаушы анық аталып, уақыт сақталған?',
+        options: ['Постер бір кезде келеді.', 'Дана постерді сағат 14:00-де жібереді.', 'Біреу постерді жіберуі керек.'],
+        feedback: 'Екінші сөйлем Дана, постер және 14:00 деректерін сақтап, әрекетті анық көрсетеді.',
+        takeaway: 'Белгілі орындаушы + нақты әрекет + қажетті деректер.',
+        task: 'Тікелей жаз: «Бөлме Сэм тарапынан сағат 09:00-де ашылады». Барлық деректі сақта.',
+        criterion: 'Орындаушы — Сэм, әрекет — ашу; бөлме және 09:00 сақталған.',
+      },
+      assessment: copy => ({ type: 'choice', question: copy.question, options: copy.options, answer: 1, explanation: copy.feedback }),
+    },
+    {
+      en: {
+        title: 'Give each action its own sentence',
+        instruction: 'When several instructions are hard to follow, separate them into short complete sentences or a numbered list. Keep the order and all necessary facts. This is a clarity tool, not a rule that every sentence must contain only one idea.',
+        why: 'Separate actions help a reader follow a sequence without losing a step.',
+        input: 'Read your draft and find an unclear sentence and rewrite that sentence before sending the message.',
+        output: '1. Read your draft.\n2. Rewrite an unclear sentence.\n3. Send the message.',
+        explanation: 'The list preserves the order: read, revise, send. Each line has one main action.',
+        question: 'Put these instructions in the useful order: review the draft before sending it.',
+        items: ['Send the message.', 'Read the draft.', 'Rewrite an unclear sentence.'],
+        feedback: 'Read first, improve the unclear sentence next, then send the revised message.',
+        takeaway: 'For a sequence, keep the order and give each action room.',
+        task: 'Rewrite as two complete sentences: “Bring a notebook to room 4 at 10:00 and put your bag by the door.” Keep both actions and all details.',
+        criterion: 'One sentence asks for the notebook in room 4 at 10:00; the other puts the bag by the door. No facts are dropped.',
+      },
+      ru: {
+        title: 'Раздели действия на предложения',
+        instruction: 'Если несколько инструкций трудно понять, раздели их на короткие законченные предложения или нумерованный список. Сохрани порядок и нужные факты. Это приём для ясности, а не запрет на несколько мыслей в одном предложении.',
+        why: 'Отдельные действия проще выполнять последовательно, не пропуская шаги.',
+        input: 'Прочитай черновик и найди непонятное предложение и перепиши его перед отправкой сообщения.',
+        output: '1. Прочитай черновик.\n2. Перепиши непонятное предложение.\n3. Отправь сообщение.',
+        explanation: 'Сохранён порядок: прочитать, улучшить, отправить. В каждой строке одно основное действие.',
+        question: 'Расставь инструкции по порядку: проверь черновик до отправки.',
+        items: ['Отправь сообщение.', 'Прочитай черновик.', 'Перепиши непонятное предложение.'],
+        feedback: 'Сначала прочитай, затем исправь непонятное предложение и только потом отправь.',
+        takeaway: 'В последовательности сохраняй порядок и отделяй действия.',
+        task: 'Раздели на два законченных предложения: «Принеси блокнот в кабинет 4 к 10:00 и поставь сумку у двери». Сохрани оба действия и все детали.',
+        criterion: 'Первое предложение просит принести блокнот в кабинет 4 к 10:00, второе — поставить сумку у двери. Все факты сохранены.',
+      },
+      kk: {
+        title: 'Әр әрекетті жеке сөйлемге бөл',
+        instruction: 'Бірнеше нұсқауды орындау қиын болса, оларды қысқа толық сөйлемдерге немесе нөмірленген тізімге бөл. Реті мен қажетті деректерін сақта. Бұл — түсініктілік тәсілі, әр сөйлемде міндетті түрде жалғыз ой болсын деген қатаң ереже емес.',
+        why: 'Бөлінген әрекеттер қадамдарды өткізіп алмай, ретімен орындауға көмектеседі.',
+        input: 'Мәтін нұсқасын оқып, түсініксіз сөйлемді тауып, хабарламаны жібермес бұрын оны қайта жаз.',
+        output: '1. Мәтін нұсқасын оқы.\n2. Түсініксіз сөйлемді қайта жаз.\n3. Хабарламаны жібер.',
+        explanation: 'Оқу, түзету, жіберу реті сақталған. Әр жолда бір негізгі әрекет бар.',
+        question: 'Нұсқауларды ретте: жібермес бұрын мәтін нұсқасын тексер.',
+        items: ['Хабарламаны жібер.', 'Мәтін нұсқасын оқы.', 'Түсініксіз сөйлемді қайта жаз.'],
+        feedback: 'Алдымен оқы, кейін түсініксіз сөйлемді түзет, содан соң жібер.',
+        takeaway: 'Тізбекте ретті сақтап, әр әрекетті бөлек көрсет.',
+        task: 'Екі толық сөйлемге бөл: «Дәптерді сағат 10:00-де 4-бөлмеге әкел де, сөмкеңді есік жанына қой». Екі әрекет пен барлық деректі сақта.',
+        criterion: 'Бір сөйлемде дәптерді 10:00-де 4-бөлмеге әкелу, екіншісінде сөмкені есік жанына қою айтылған. Дерек жоғалмаған.',
+      },
+      assessment: copy => ({ type: 'order', question: copy.question, items: copy.items, answer: [1, 2, 0], explanation: copy.feedback }),
+    },
+  ],
+};
+
+const extendedFinals = {
+  'ai-prompts': {
+    10: {
+      en: {
+        instruction: 'Separate the instruction from its source facts. Write the prompt, not the assistant’s answer.',
+        task: 'Create a Task/Notes prompt for a one-sentence invitation using only these notes: the robotics club meets Thursday at 15:00 in room 2; bring a notebook.',
+        criterion: 'Task asks for one invitation sentence using only Notes. Notes includes Thursday, 15:00, room 2 and a notebook. Instructions are separate from facts.',
+      },
+      ru: {
+        instruction: 'Отдели инструкцию от исходных фактов. Напиши запрос, а не ответ помощника.',
+        task: 'Составь запрос с разделами «Задача» и «Заметки» на одно предложение-приглашение только по этим данным: клуб робототехники в четверг в 15:00 в кабинете 2; нужно принести блокнот.',
+        criterion: 'Задача просит одно приглашение только по заметкам. Заметки содержат четверг, 15:00, кабинет 2 и блокнот. Инструкция отделена от фактов.',
+      },
+      kk: {
+        instruction: 'Нұсқауды бастапқы деректерден бөл. Көмекшінің жауабын емес, сұрауды жаз.',
+        task: '«Міндет» және «Жазба» бөлімдері бар сұрау құрастыр. Тек осы деректермен бір сөйлемдік шақыру сұра: робототехника клубы бейсенбіде сағат 15:00-де 2-бөлмеде жиналады; дәптер әкелу керек.',
+        criterion: 'Міндет тек жазбадан бір сөйлемдік шақыру сұрайды. Жазбада бейсенбі, 15:00, 2-бөлме және дәптер бар. Нұсқау деректерден бөлінген.',
+      },
+    },
+    20: {
+      en: {
+        instruction: 'Build a source-based prompt, then check a sample answer against the same notes.',
+        task: 'Notes: the drawing club meets Friday at 16:00 in the library. Write Task/Notes sections asking for one reminder using only those facts. Then correct this sample: “Join us Friday at 16:00 in room 3. Free snacks included.”',
+        criterion: 'The prompt separates task and notes. The corrected reminder keeps Friday and 16:00, replaces room 3 with the library, and removes the unsupported free-snacks claim.',
+      },
+      ru: {
+        instruction: 'Составь запрос по исходным данным, затем проверь пример ответа по тем же данным.',
+        task: 'Данные: кружок рисования в пятницу в 16:00 в библиотеке. Напиши разделы «Задача» и «Заметки», попросив одно напоминание только по этим фактам. Затем исправь пример: «Ждём вас в пятницу в 16:00 в кабинете 3. Будут бесплатные угощения».',
+        criterion: 'Задача отделена от данных. Сохранены пятница и 16:00, кабинет 3 заменён библиотекой, неподтверждённое обещание угощений убрано.',
+      },
+      kk: {
+        instruction: 'Деректерге сүйенген сұрау құрастыр, содан кейін жауап үлгісін сол деректермен салыстыр.',
+        task: 'Дерек: сурет үйірмесі жұмада сағат 16:00-де кітапханада өтеді. «Міндет» және «Жазба» бөлімдерінде тек осы фактілермен бір еске салу сұра. Содан кейін үлгіні түзет: «Жұмада сағат 16:00-де 3-бөлмеге келіңіз. Тегін тағам беріледі».',
+        criterion: 'Міндет деректерден бөлінген. Жұма мен 16:00 сақталып, 3-бөлме кітапханаға ауыстырылған; тегін тағам туралы дерексіз уәде алынған.',
+      },
+    },
+  },
+  'python-basics': {
+    10: {
+      en: {
+        instruction: 'Store text in a variable, use it, then replace its value.',
+        task: 'Write code that sets message to "Hello", prints message, changes message to "Welcome", and prints message again. Below the code, write the two expected output lines.',
+        criterion: 'The same variable is assigned twice and printed after each assignment. The output is Hello followed by Welcome. Text values have matching quotes.',
+      },
+      ru: {
+        instruction: 'Сохрани текст в переменной, используй его и замени значение.',
+        task: 'Присвой message текст "Hello", выведи message, замени значение на "Welcome" и снова выведи message. Под кодом укажи две ожидаемые строки результата.',
+        criterion: 'Одна переменная получает два значения и выводится после каждого присваивания. Результат: Hello, затем Welcome. Текст в парных кавычках.',
+      },
+      kk: {
+        instruction: 'Мәтінді айнымалыға сақта, оны қолдан, содан кейін мәнін өзгерт.',
+        task: 'message айнымалысына "Hello" мәтінін меншіктеп, мәнін шығар. Кейін мәнін "Welcome" мәтініне ауыстырып, қайта шығар. Кодтың астына күтілетін екі нәтиже жолын жаз.',
+        criterion: 'Бір айнымалыға екі мән меншіктеліп, әр меншіктеуден кейін шығарылған. Нәтиже: алдымен Hello, кейін Welcome. Мәтін жұп тырнақшада.',
+      },
+    },
+    20: {
+      en: {
+        instruction: 'Combine reassignment with numeric addition and text joining. Predict each result.',
+        task: 'Set points to the number 4, then change it to 6. Print points + 3. On the next line, print "6" + "3". Write both outputs and one sentence explaining why they differ.',
+        criterion: 'points is reassigned before printing. The numeric expression outputs 9; joining strings outputs 63. The explanation distinguishes adding numbers from joining text.',
+      },
+      ru: {
+        instruction: 'Соедини изменение переменной, сложение чисел и объединение текста. Предскажи результаты.',
+        task: 'Присвой points число 4, затем замени его на 6. Выведи points + 3. Следующей командой выведи "6" + "3". Укажи оба результата и одним предложением объясни различие.',
+        criterion: 'points изменено до вывода. Сложение чисел даёт 9, объединение строк — 63. Объяснение различает сложение чисел и соединение текста.',
+      },
+      kk: {
+        instruction: 'Айнымалыны өзгертуді, сан қосуды және мәтін біріктіруді бірге қолдан. Нәтижелерді болжа.',
+        task: 'points айнымалысына 4 санын меншіктеп, кейін 6-ға өзгерт. points + 3 нәтижесін шығар. Келесі командамен "6" + "3" нәтижесін шығар. Екі нәтижені жазып, айырмасын бір сөйлеммен түсіндір.',
+        criterion: 'points мәні шығарудан бұрын өзгертілген. Сандардың қосындысы — 9, мәтіндердің бірігуі — 63. Түсіндірме сан қосуды мәтін біріктіруден ажыратады.',
+      },
+    },
+  },
+  'everyday-english': {
+    10: {
+      en: {
+        instruction: 'Introduce a person and correct one detail with a negative sentence.',
+        task: 'Dana is from Astana, not Almaty. Write three English sentences: introduce Dana with She is, name her city with She is from, then say she is not from Almaty.',
+        criterion: 'The sentences identify Dana and Astana correctly. The negative places not after is: She is not from Almaty.',
+      },
+      ru: {
+        instruction: 'Представь человека и уточни одну деталь отрицательным предложением.',
+        task: 'Дана из Астаны, а не из Алматы. Напиши три предложения на английском: представь Дану через She is, назови город через She is from, затем скажи, что она не из Алматы.',
+        criterion: 'Верно указаны Dana и Astana. В отрицании not стоит после is: She is not from Almaty.',
+      },
+      kk: {
+        instruction: 'Адамды таныстырып, бір деректі болымсыз сөйлеммен нақтыла.',
+        task: 'Дана Астанадан, Алматыдан емес. Ағылшынша үш сөйлем жаз: She is арқылы Дананы таныстыр, She is from арқылы қаласын ата, кейін оның Алматыдан емес екенін айт.',
+        criterion: 'Dana және Astana дұрыс көрсетілген. Болымсыз сөйлемде not сөзі is сөзінен кейін тұр: She is not from Almaty.',
+      },
+    },
+    20: {
+      en: {
+        instruction: 'Turn a statement into a question, answer it briefly, and add a negative sentence.',
+        task: 'Facts: Amina is ready. She is not tired. Ask in English whether Amina is ready. Give a positive short answer using she without a contraction. Then write the negative sentence about being tired.',
+        criterion: 'The question puts Is before Amina. The answer is Yes, she is. The final sentence is She is not tired, with not after is.',
+      },
+      ru: {
+        instruction: 'Преврати утверждение в вопрос, кратко ответь и добавь отрицательное предложение.',
+        task: 'Амина готова и не устала. По-английски спроси, готова ли Амина. Дай краткий положительный ответ с she без сокращения. Затем напиши отрицательное предложение о том, что она не устала.',
+        criterion: 'В вопросе Is стоит перед Amina. Ответ: Yes, she is. Последнее предложение: She is not tired, где not стоит после is.',
+      },
+      kk: {
+        instruction: 'Хабарлы сөйлемді сұраққа айналдыр, қысқа жауап бер және болымсыз сөйлем қос.',
+        task: 'Әмина дайын, ол шаршаған жоқ. Ағылшынша Әминаның дайын екенін сұра. She сөзімен қысқартусыз болымды қысқа жауап бер. Кейін оның шаршамағанын болымсыз сөйлеммен жаз.',
+        criterion: 'Сұрақта Is сөзі Amina алдында тұр. Жауап: Yes, she is. Соңғы сөйлем: She is not tired; not сөзі is сөзінен кейін келеді.',
+      },
+    },
+  },
+  'clear-writing': {
+    10: {
+      en: {
+        instruction: 'Name the person doing each action. Keep the original meaning and deadlines.',
+        task: 'Rewrite with the actor first: “The invitation will be sent by Dana today before 18:00.” “Ten posters will be printed by Sam tomorrow.” Keep both actions and all details.',
+        criterion: 'Dana will send the invitation today before 18:00. Sam will print ten posters tomorrow. Each sentence starts with its actor and preserves the meaning.',
+      },
+      ru: {
+        instruction: 'Назови исполнителя каждого действия. Сохрани исходный смысл и сроки.',
+        task: 'Поставь исполнителя в начало: «Приглашение будет отправлено Даной сегодня до 18:00». «Десять постеров будут напечатаны Сэмом завтра». Сохрани оба действия и все детали.',
+        criterion: 'Дана отправит приглашение сегодня до 18:00. Сэм напечатает десять постеров завтра. Предложения начинаются с исполнителей и сохраняют исходный смысл.',
+      },
+      kk: {
+        instruction: 'Әр әрекетті кім орындайтынын ата. Мағына мен мерзімдерді сақта.',
+        task: 'Орындаушыны сөйлем басына қой: «Шақыру бүгін 18:00-ге дейін Дана тарапынан жіберіледі». «Ертең он постер Сэм тарапынан басып шығарылады». Екі әрекет пен барлық деректі сақта.',
+        criterion: 'Дана шақыруды бүгін 18:00-ге дейін жібереді. Сэм ертең он постер басып шығарады. Әр сөйлем орындаушыдан басталып, бастапқы мағынаны сақтайды.',
+      },
+    },
+    20: {
+      en: {
+        instruction: 'Split a crowded message into three complete sentences. Give each sentence one actor and one action.',
+        task: 'Rewrite as three short sentences: “On Friday, Mia must print ten posters by 15:00 and bring them to room 2 by 16:00, while Sam must email the invitation by 14:00.” Preserve every person, action, quantity, place and deadline.',
+        criterion: 'Three sentences cover Mia printing ten posters, Mia bringing them to room 2, and Sam emailing the invitation. Friday and the respective 15:00, 16:00 and 14:00 deadlines are preserved.',
+      },
+      ru: {
+        instruction: 'Раздели перегруженное сообщение на три законченных предложения. В каждом — один исполнитель и одно действие.',
+        task: 'Напиши три коротких предложения: «В пятницу Миа должна напечатать десять постеров до 15:00 и принести их в кабинет 2 до 16:00, а Сэм должен отправить приглашение по электронной почте до 14:00». Сохрани людей, действия, количество, место и сроки.',
+        criterion: 'Отдельно описаны печать десяти постеров Мией, доставка в кабинет 2 и отправка приглашения Сэмом. Сохранены пятница и соответствующие сроки: 15:00, 16:00 и 14:00.',
+      },
+      kk: {
+        instruction: 'Күрделі хабарламаны үш толық сөйлемге бөл. Әр сөйлемде бір орындаушы және бір әрекет болсын.',
+        task: 'Үш қысқа сөйлеммен жаз: «Жұмада Миа 15:00-ге дейін он постер басып шығарып, оларды 16:00-ге дейін 2-бөлмеге апаруы керек, ал Сэм шақыруды 14:00-ге дейін электронды пошта арқылы жіберуі керек». Барлық адамды, әрекетті, санды, орынды және мерзімді сақта.',
+        criterion: 'Үш сөйлемде Миа он постер басып шығарады, оларды 2-бөлмеге апарады және Сэм шақыру жібереді. Жұма және тиісті 15:00, 16:00, 14:00 мерзімдері сақталған.',
+      },
+    },
+  },
+};
+
+export const STARTER_DURATIONS = Object.freeze([5, 10, 20]);
+
+export function starterCourses(language = 'en', minutes = 5) {
+  if (!STARTER_DURATIONS.includes(minutes)) return [];
   const lang = languageCode(language);
   return courses.map(course => ({
     id: course.id, title: course[lang].title, description: course[lang].description,
-    minutes: 5, mentor: course.mentor, topic: course.topic, icon: course.icon,
+    minutes, durations: [...STARTER_DURATIONS], stepCount: PLAN_DURATIONS[minutes].length,
+    mentor: course.mentor, topic: course.topic, icon: course.icon,
   }));
 }
 
-export function getStarterCourse(id, language = 'en') {
+export function getStarterCourse(id, language = 'en', minutes = 5) {
   const course = courses.find(item => item.id === id);
-  if (!course) return null;
+  if (!course || !STARTER_DURATIONS.includes(minutes)) return null;
   const lang = languageCode(language), copy = course[lang];
+  const finalStep = minutes === 5
+    ? { title: copy.finalTitle, instruction: copy.finalInstruction, task: copy.finalTask, criterion: copy.finalCriterion }
+    : { title: { en: 'Put it all together', ru: 'Примени всё вместе', kk: 'Бәрін бірге қолдан' }[lang], ...extendedFinals[id][minutes][lang] };
+  const additional = extensions[id].slice(0, PLAN_DURATIONS[minutes].length - 2).map(lesson => {
+    const content = lesson[lang];
+    return {
+      title: content.title, instruction: content.instruction, task: content.task, criterion: content.criterion,
+      resource: { ...course.source, images: [] },
+      teaching: {
+        why: content.why, example: { input: content.input, output: content.output, explanation: content.explanation },
+        assessment: lesson.assessment(content), takeaway: content.takeaway,
+      },
+    };
+  });
   return restorePlan({
     plan: {
-      formatVersion: 3, language: lang, minutes: 5,
+      formatVersion: 3, language: lang, minutes,
       goal: copy.goal, title: copy.title, outcome: copy.outcome,
       steps: [
         {
@@ -261,9 +773,10 @@ export function getStarterCourse(id, language = 'en') {
             assessment: course.assessment(copy), takeaway: copy.takeaway,
           },
         },
-        { title: copy.finalTitle, instruction: copy.finalInstruction, task: copy.finalTask, criterion: copy.finalCriterion },
+        ...additional,
+        finalStep,
       ],
     },
-    answers: ['', ''], reviews: [null, null], completed: 0, study: [],
+    answers: Array(PLAN_DURATIONS[minutes].length).fill(''), reviews: Array(PLAN_DURATIONS[minutes].length).fill(null), completed: 0, study: [],
   });
 }

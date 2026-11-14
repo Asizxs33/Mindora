@@ -33,7 +33,7 @@ dialog.account-dialog { --account-orange: #c34b00; --account-orange-dark: #a93f0
 .account-intro h1:focus { outline: none; }
 .account-dialog .account-intro p { font-size: 17px; line-height: 1.5; color: #4a3b31; margin: 7px 0 0; }
 .account-guide { display: grid; place-items: center; flex: 0 0 200px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(ellipse at center,var(--account-peach) 0 57%,transparent 58%); }
-.account-dialog .account-mino { --character-size: 210px; width: 210px; height: 210px; flex: 0 0 210px; margin: 0; }
+.account-dialog .account-mino { --character-size: 210px; width: 210px; height: 210px; max-width: 100%; flex: 0 0 210px; margin: 0; }
 .account-inputs,.account-interest-field { padding: 0; margin: 0; border: 0; min-width: 0; }
 .account-field { display: flex; flex-direction: column; gap: 9px; margin-bottom: 23px; font-size: 16px; line-height: 1.4; font-weight: 700; }
 .account-required { color: #b73938; font-weight: 700; }
