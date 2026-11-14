@@ -15,49 +15,54 @@ const draft = {
   })),
 };
 
-function modelResponse(steps, { search = true, opened = true } = {}) {
+const github = 'https://github.com/python/cpython/blob/main/Doc/tutorial/controlflow.rst';
+
+function modelResponse(value) {
   return Response.json({ choices: [{
-    finish_reason: 'stop', message: {
-      content: JSON.stringify({ ...draft, steps }),
-      server_tool_calls: search ? [{ calls: [{
-        type: 'deepseek_web_search', kind: 'deep_search', status: 'completed', action: { type: 'search' },
-        sources: [{ type: 'url', url: source, title: 'Python Tutorial' }],
-      }, {
-        type: 'deepseek_web_search', kind: 'deep_search', status: opened ? 'completed' : 'failed',
-        action: { type: 'open_page', url: source }, page: { url: source, title: 'Python Tutorial' },
-      }, {
-        type: 'deepseek_web_search', kind: 'deep_search', status: 'completed',
-        action: { type: 'open_page' }, page: { url: 'https://made-up.example.org/cycle', title: 'Unsearched page' },
-      }] }] : [],
-    },
+    finish_reason: 'stop', message: { content: JSON.stringify(value) },
   }] });
 }
 
-test('the research agent builds timed lessons using sources it both found and opened', async () => {
+function researchFixture(steps, { readable = true, verify = () => {} } = {}) {
+  return async (url, options) => {
+    const request = JSON.parse(options.body);
+    if (url.endsWith('/v1/tools/search')) {
+      assert.equal(request.need_content, true);
+      return Response.json({ results: request.query.endsWith('site:github.com')
+        ? [{ url: github, title: 'CPython tutorial' }]
+        : [{ url: source, title: 'Python Tutorial', content: readable ? 'A for loop iterates over a sequence.' : '' }] });
+    }
+    if (url.endsWith('/v1/tools/fetch')) {
+      if (!readable) return new Response(null, { status: 404 });
+      assert.equal(request.url, github);
+      return Response.json({ content: 'The for statement iterates over the items of a sequence.' });
+    }
+    assert.equal(url, 'https://api.deepseek.com/chat/completions');
+    assert.equal(request.response_format.type, 'json_object');
+    const input = JSON.parse(request.messages[1].content);
+    if (!input.materials) return modelResponse({ query: 'Python loops beginner guide', githubQuery: 'Python for loop tutorial' });
+    assert.deepEqual(input.materials.map(item => item.url), [source, github]);
+    assert.match(input.materials[1].content, /items of a sequence/);
+    verify(request, input);
+    return modelResponse({ ...draft, steps });
+  };
+}
+
+test('the research agent reads search results and GitHub before preparing timed lessons', async () => {
   for (const [minutes, count] of [[5, 2], [10, 3], [20, 4]]) {
     const plan = await generateDeepSeekPlan({ goal: 'Освоить циклы', minutes }, 'test-only',
-      async (url, options) => {
-        assert.equal(url, 'https://api.deepseek.com/chat/completions');
-        const request = JSON.parse(options.body);
-        assert.deepEqual(request.tools, [{ type: 'deepseek_web_search' }]);
-        assert.equal(request.thinking.type, 'enabled');
-        assert.match(request.messages[0].content, /site:github\.com/);
-        assert.equal(JSON.parse(request.messages[1].content).minutes, minutes);
-        return modelResponse(draft.steps.slice(0, count));
-      });
+      researchFixture(draft.steps.slice(0, count), { verify: (_, input) => assert.equal(input.minutes, minutes) }));
     assert.equal(plan.steps.length, count);
     assert.equal(plan.steps.reduce((sum, step) => sum + step.minutes, 0), minutes);
     assert.deepEqual(plan.steps.filter(step => step.resource).map(step => step.resource.url), [source]);
   }
   await assert.rejects(generateDeepSeekPlan({ goal: 'Освоить циклы', minutes: 5 }, 'test-only',
-    async () => modelResponse(draft.steps.slice(0, 2), { search: false })));
-  await assert.rejects(generateDeepSeekPlan({ goal: 'Освоить циклы', minutes: 5 }, 'test-only',
-    async () => modelResponse(draft.steps.slice(0, 2), { opened: false })), /missing opened lesson sources/);
+    researchFixture(draft.steps.slice(0, 2), { readable: false })), /No readable learning materials/);
 });
 
 test('a saved plan restores answers and opens the first unfinished task', async () => {
   const plan = await generateDeepSeekPlan({ goal: 'Освоить циклы', minutes: 10 }, 'test-only',
-    async () => modelResponse(draft.steps.slice(0, 3)));
+    researchFixture(draft.steps.slice(0, 3)));
   const saved = restorePlan(JSON.parse(JSON.stringify({ plan, answers: ['Готово', 'Черновик ответа'], completed: 1 })));
   assert.equal(saved.completed, 1);
   assert.equal(saved.answers[saved.completed], 'Черновик ответа');
@@ -112,12 +117,11 @@ test('task review validates submissions and uses the AI quota on guest requests'
 
 test('a localized plan preserves its language through generation and browser restore', async () => {
   const input = { goal: 'Python циклдерін үйрену', minutes: 5, language: 'kk' };
-  const plan = await generateDeepSeekPlan(input, 'test-only', async (_, options) => {
-    const request = JSON.parse(options.body);
+  const plan = await generateDeepSeekPlan(input, 'test-only', researchFixture(draft.steps.slice(0, 2), { verify: (request, body) => {
     assert.match(request.messages[0].content, /in Kazakh/);
-    assert.deepEqual(JSON.parse(request.messages[1].content), input);
-    return modelResponse(draft.steps.slice(0, 2));
-  });
+    assert.equal(body.language, input.language);
+    assert.equal(body.goal, input.goal);
+  } }));
   assert.equal(restorePlan({ plan, answers: [], completed: 0 }).plan.language, 'kk');
 });
 
