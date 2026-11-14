@@ -23,7 +23,7 @@ async function geometry(page, label) {
     const lines = [], walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
       const node = walker.currentNode, parent = node.parentElement;
-      if (!node.textContent.trim() || !visible(parent) || parent.closest('.mindora-character,script,style,.sr-only')) continue;
+      if (!node.textContent.trim() || !visible(parent) || parent.closest('.mindora-character,script,style,.sr-only,.visually-hidden')) continue;
       const range = document.createRange(); range.selectNodeContents(node);
       for (const box of range.getClientRects()) if (box.width && box.height) lines.push({ box, text: node.textContent.trim().slice(0, 65) });
     }
