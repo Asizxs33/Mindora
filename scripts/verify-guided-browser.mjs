@@ -31,7 +31,10 @@ async function context({ signedIn = true, saved = null } = {}) {
       courses.set(course.id, course); body = { course };
     } else if (url.pathname === '/api/learning-roadmap') {
       const input = request.postDataJSON();
-      body = { roadmap: { ...input, title: 'My Python journey', outcome: 'Build a small program one lesson at a time.', level: 'beginner', levelReason: 'Fixture: you selected starting from scratch.',
+      if (input.action === 'clarify') {
+        body = { clarification: { question: 'What would you like to make?', directions:
+          ['A small program', 'A weekly report', 'A chart'].map(title => ({ title, goal: input.goal + ': ' + title, diagnosticQuestion: 'How would you begin this task?' })) } };
+      } else body = { roadmap: { ...input, title: 'My Python journey', outcome: 'Build a small program one lesson at a time.', level: 'beginner', levelReason: 'Fixture: you selected starting from scratch.',
         stages: ['Print a message', 'Store a value', 'Work with numbers', 'Build a tiny project'].map(title => ({ title, objective: `Practise: ${title.toLowerCase()}.` })) } };
     } else if (url.pathname === '/api/learning-plan') {
       const input = request.postDataJSON(), saved = getStarterCourse('python-basics', input.language, input.minutes);
@@ -254,6 +257,9 @@ try {
   await j.locator('#goal-input').fill('Learn Python for my work');
   await j.locator('#time-select').selectOption('5');
   await j.locator('#goal-form button[type="submit"]').click();
+  await j.locator('[name="direction"][value="0"]').check();
+  await j.locator('#roadmap-form button[type="submit"]').click();
+  await j.locator('[name="diagnosticUnknown"]').check();
   await j.locator('input[name="experience"][value="new"]').check();
   await j.locator('#roadmap-form button[type="submit"]').click();
   await j.locator('input[name="motivation"][value="work"]').check();
@@ -277,11 +283,13 @@ try {
   }
   await j.waitForSelector('#learning-plan-complete');
   assert.equal((await state(j)).learningRoadmap.progress[0].completed, true);
+  await j.locator('[data-action="next-path-lesson"]').click();
+  await j.waitForSelector('.ai-lesson-reader');
+  assert.ok((await state(j)).learningRoadmap.progress[1].courseId);
   await j.locator('.ai-lesson-exit').click();
   await j.waitForSelector('.roadmap-layout');
   assert.equal(await j.locator('[data-roadmap-stage="1"]').count(), 1);
   await j.reload();
-  await j.waitForSelector('.roadmap-layout');
   await j.waitForSelector('.roadmap-layout');
   assert.equal((await state(j)).learningRoadmap.progress[0].completed, true);
   await j.screenshot({ path: join(tmpdir(), 'mindora-personal-roadmap-phone.png'), fullPage: true });
@@ -296,6 +304,9 @@ try {
   await j.locator('.phone-course-nav [data-view="new-course"]').click();
   await j.locator('#goal-input').fill('Build a weekly report');
   await j.locator('#goal-form button[type="submit"]').click();
+  await j.locator('[name="direction"][value="0"]').check();
+  await j.locator('#roadmap-form button[type="submit"]').click();
+  await j.locator('[name="diagnosticUnknown"]').check();
   await j.locator('input[name="experience"][value="some"]').check();
   await j.locator('#roadmap-form button[type="submit"]').click();
   await j.locator('input[name="motivation"][value="work"]').check();

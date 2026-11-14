@@ -13,7 +13,7 @@ const minoScenes = JSON.parse(await readFile(new URL('../ui/assets/characters/mi
 let checks = 0;
 
 try {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  let page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/core/app.js', route => route.fulfill({ body: '' }));
@@ -27,7 +27,7 @@ try {
     };
   });
   const character = page.locator('.mindora-character');
-  const image = page.locator('[data-character-animation]');
+  let image = page.locator('[data-character-animation]');
   const playing = () => page.waitForFunction(() => document.querySelector('.mindora-character')?.dataset.characterPlaying === 'true');
   async function frameHashes(count = 4) {
     const hashes = [];
@@ -47,10 +47,18 @@ try {
   await page.evaluate(() => window.renderMotionFixture('mia'));
   await playing();
   const uri = await image.getAttribute('src');
-  await page.waitForTimeout(1950);
-  assert.equal(new Set(await frameHashes()).size, 1, 'Human mentor holds the resting pose');
-  await page.waitForTimeout(1850);
-  assert.ok(new Set(await frameHashes(10)).size >= 3, 'Human gesture repeats after its three-second hold');
+  let previous, stableSince = Date.now(), rested = false, followingChanges = 0;
+  const deadline = Date.now() + 14000;
+  while (Date.now() < deadline && followingChanges < 3) {
+    const [frame] = await frameHashes(1);
+    if (frame !== previous) {
+      if (rested) followingChanges++;
+      previous = frame;
+      stableSince = Date.now();
+    } else if (Date.now() - stableSince > 2450) rested = true;
+  }
+  assert.ok(rested, 'Human mentor holds the resting pose');
+  assert.ok(followingChanges >= 3, 'Human gesture repeats after its three-second hold');
   assert.equal(await image.getAttribute('src'), uri, 'No swapping between still and animation');
   checks += 3;
 
@@ -106,7 +114,12 @@ try {
   checks += 3;
 
   // A new document drops decoded image references before exercising failures.
-  await page.reload();
+  await page.close();
+  page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/core/app.js', route => route.fulfill({ body: '' }));
+  await page.goto(base);
+  image = page.locator('[data-character-animation]');
   await page.evaluate(async () => {
     const { character, mountCharacters } = await import('/ui/characters.js');
     document.body.innerHTML = '<main id="motion-fixture"></main>';
