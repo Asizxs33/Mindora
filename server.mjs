@@ -10,12 +10,13 @@ http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = decodeURIComponent(url.pathname);
-    if (['/api/account', '/api/budget-draft', '/api/learning-plan', '/api/task-review', '/api/learning-courses', '/api/learning-workspace'].includes(pathname)) {
+    if (['/api/account', '/api/budget-draft', '/api/learning-plan', '/api/task-review', '/api/learning-courses', '/api/learning-workspace', '/api/learning-roadmap'].includes(pathname)) {
       const { accountApi, budgetDraftApi } = await import('./backend/cloud-api.js');
       const { planApi } = await import('./backend/plan-api.js');
       const { taskReviewApi } = await import('./backend/task-review-api.js');
       const { learningCoursesApi } = await import('./backend/learning-courses-api.js');
       const { learningWorkspaceApi } = await import('./backend/learning-workspace-api.js');
+      const { roadmapApi } = await import('./backend/roadmap-api.js');
       const handlers = {
         '/api/account': accountApi,
         '/api/budget-draft': budgetDraftApi,
@@ -23,6 +24,7 @@ http.createServer(async (req, res) => {
         '/api/task-review': taskReviewApi,
         '/api/learning-courses': learningCoursesApi,
         '/api/learning-workspace': learningWorkspaceApi,
+        '/api/learning-roadmap': roadmapApi,
       };
       const request = new Request(url, {
         method: req.method,

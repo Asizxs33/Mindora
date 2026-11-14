@@ -35,7 +35,7 @@ function modelResponse(value) {
   }] });
 }
 
-function researchFixture(steps, { readable = true, verify = () => {} } = {}) {
+function researchFixture(steps, { readable = true, verify = () => {}, verifySearch = () => {} } = {}) {
   return async (url, options) => {
     const request = JSON.parse(options.body);
     if (url.endsWith('/v1/tools/search')) {
@@ -51,7 +51,10 @@ function researchFixture(steps, { readable = true, verify = () => {} } = {}) {
     }
     assert.equal(url, 'https://api.deepseek.com/chat/completions');
     const input = JSON.parse(request.messages[1].content);
-    if (!input.materials) return modelResponse({ query: 'Python loops beginner guide', githubQuery: 'Python for loop tutorial' });
+    if (!input.materials) {
+      verifySearch(input);
+      return modelResponse({ query: 'Python loops beginner guide', githubQuery: 'Python for loop tutorial' });
+    }
     assert.deepEqual(input.materials.map(item => item.url), [source, github]);
     assert.match(input.materials[1].content, /items of a sequence/);
     verify(request, input);
@@ -173,6 +176,43 @@ test('the generation endpoint validates input before calling DeepSeek', async ()
   assert.equal(calls, 0);
   assert.equal((await planApi(request(5), configured)).status, 200);
   assert.equal(calls, 1);
+});
+
+test('roadmap stages use the saved objective and level to research and compose one focused lesson', async () => {
+  const roadmapStage = {
+    goal: 'Automate Python reports', title: 'Work with indexes',
+    objective: 'Add row numbers using enumerate.',
+    level: 'intermediate', levelReason: 'Already comfortable with lists and simple for loops.',
+  };
+  const goal = 'Automate Python reports / Work with indexes';
+  const create = stage => new Request('https://mindora.test/api/learning-plan', {
+    method: 'POST', headers: { origin: 'https://mindora.test', 'content-type': 'application/json', 'X-Mindora-Account': 'account-a' },
+    body: JSON.stringify({ goal, minutes: 5, language: 'en', roadmapStage: stage }),
+  });
+  const configured = {
+    apiKey: 'test-only', settings: accountSettings, session: accountSession,
+    generate: (input, key) => generateDeepSeekPlan(input, key, researchFixture(draft.steps.slice(0, 2), {
+      verifySearch(input) {
+        const { levelReason, ...expectedSearch } = roadmapStage;
+        assert.deepEqual(input.stage, expectedSearch);
+      },
+      verify(request, input) {
+        assert.deepEqual(input.roadmapStage, roadmapStage);
+        assert.match(request.messages[0].content, /Teach only the selected roadmap stage objective/);
+      },
+    }), offlineReader),
+    store: () => ({ create: async (_userId, id, saved) => ({ id, saved, revision: 1 }) }),
+  };
+  const invalid = await planApi(create({ ...roadmapStage, level: 'expert' }), configured);
+  assert.equal(invalid.status, 400);
+  assert.equal((await invalid.json()).code, 'INVALID_ROADMAP_STAGE');
+  const response = await planApi(create(roadmapStage), configured);
+  assert.equal(response.status, 200);
+  const { plan, course } = await response.json();
+  assert.equal(plan.goal, goal);
+  assert.equal(plan.roadmapStage, undefined);
+  assert.deepEqual(course.saved.plan, plan);
+  assert.equal(plan.steps[0].resource.url, source);
 });
 
 test('generation and review surface a 429 from DeepSeek', async () => {
