@@ -1,0 +1,19 @@
+.template-studio { background: #fffaf5; color: #302723; }
+.studio-header { max-width: 900px; margin: auto; padding: 20px 28px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.studio-brand { color: #ad4500; font-size: 27px; font-weight: 850; text-decoration: none; letter-spacing: -1px; }
+.studio-brand span { display: block; color: #827267; font-size: 11px; font-weight: 650; letter-spacing: .13em; text-transform: uppercase; }
+.studio-header .secondary { min-height: 44px; font-size: 13px; padding: 8px 12px; }
+.studio-main { width: calc(100% - 40px); max-width: 720px; margin: 18px auto 50px; padding: 28px 34px; border: 1px solid #eddfd3; border-radius: 24px; background: #fff; }
+.studio-topline { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.studio-topline p, .studio-step { color: #a94708; font-size: 12px; font-weight: 800; letter-spacing: .05em; }
+.studio-topline select { max-width: 100%; min-height: 44px; font: inherit; font-size: 13px; border: 1px solid #e9ddd3; border-radius: 10px; padding: 8px; background: #fffaf5; color: #634a39; }
+.studio-progress { height: 7px; background: #fae6d7; border-radius: 8px; overflow: hidden; margin: 18px 0; }
+.studio-progress i { display: block; height: 100%; background: #bc4b00; transition: width .2s; }
+.studio-step { margin-bottom: 24px; text-transform: uppercase; }
+#template-stage { min-height: 420px; }
+#template-stage .ai-lesson-mentor-speech h3 { font-size: 24px; line-height: 1.25; letter-spacing: -.5px; }
+.studio-footer { display: flex; gap: 12px; border-top: 1px solid #f0e7df; margin-top: 30px; padding-top: 22px; }
+.studio-footer .primary { flex: 1; }
+.studio-note { font-size: 12px; line-height: 1.6; color: #857367; margin-top: 22px; }
+@media(max-width:600px) { .studio-header { padding: 16px 20px; } .studio-main { width: 100%; margin: 0; padding: 18px 20px 28px; border: 0; border-radius: 0; } .template-studio { background: white; } #template-stage .ai-lesson-mentor-speech h3 { font-size: 20px; } .studio-footer { position: sticky; bottom: 0; background: white; padding-bottom: max(16px, env(safe-area-inset-bottom)); } }
+@media(prefers-reduced-motion:reduce) { .studio-progress i { transition: none; } }

@@ -1,42 +1,103 @@
-/** Friendly portrait sprites. Public character()/mountCharacters() APIs are unchanged.
- * Human atlas: five identities × welcome / thoughtful / celebrate poses.
- * Mino retains the original capybara atlas. All learning state belongs to core.
+/** Original illustrations and the supplied Mia pointing animation.
+ * GIF playback is explicitly stopped for reduced motion, hidden tabs and offscreen
+ * mentors. Supplied SVG rigs provide a network-error fallback. State stays in core.
  */
 import { t } from './language.js';
+import { rigMarkup } from './character-rigs.js';
 
 const characters = Object.freeze({
   mino: { name: 'Mino', atlas: 'mino-poses-v3.png', fallback: 'capybara.png' },
-  mia: { name: 'Mia', column: 0, cropX: 40 },
-  sam: { name: 'Sam', column: 1, cropX: 275 },
-  leo: { name: 'Leo', column: 1, cropX: 275 },
-  artist: { name: 'Ari', column: 2, cropX: 520 },
-  copywriter: { name: 'Nora', column: 3, cropX: 765 },
-  smm: { name: 'Zoe', column: 4, cropX: 1005 },
+  mia: { name: 'Mia', role: 'graphic_designer', image: 'graphic-designer-v3.png', order: 0,
+    motion: { image: 'mia-pointing.gif', still: 'mia-pointing-still.png', width: 360, height: 720, duration: 1240, pause: 5800 } },
+  sam: { name: 'Sam', role: 'programmer', image: 'programmer-v3.png', order: 1 },
+  leo: { name: 'Sam', role: 'programmer', image: 'programmer-v3.png', order: 1 },
+  artist: { name: 'Ari', role: 'artist', image: 'artist-v3.png', order: 2 },
+  copywriter: { name: 'Nora', role: 'copywriter', image: 'copywriter-v3.png', order: 3 },
+  smm: { name: 'Zoe', role: 'smm', image: 'smm-v3.png', order: 4 },
 });
 const aliases = { programmer: 'leo', designer: 'mia', graphic_designer: 'mia', teacher: 'sam', capybara: 'mino', art: 'artist', writing: 'copywriter', social: 'smm' };
 const moods = new Set(['welcome', 'thinking', 'explaining', 'encourage', 'celebrate', 'incorrect']);
 const MOTION_KEY = 'mindora.characters.motion.v1';
-const HUMAN_ATLAS = 'team-rounded-v5.png';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, value => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value]));
 const asset = file => new URL(`./assets/${file}`, import.meta.url).href;
 const helloTimers = new WeakMap(), observed = new WeakSet(), atlasLoads = new Map();
+const animatedMedia = new WeakMap();
 let mounted = false, preference = 'on', reducedMotion, resizeObserver, visibilityObserver, statusElement;
 
 export function character(kind = 'mino', mood = 'welcome', className = '') {
   kind = aliases[kind] || kind;
   if (!Object.hasOwn(characters, kind)) kind = 'mino';
   mood = moods.has(mood) ? mood : 'welcome';
-  const model = characters[kind], human = model.column !== undefined;
+  const model = characters[kind], human = Boolean(model.role);
   const art = human
-    ? `<img class="human-atlas-image" src="${escape(asset(HUMAN_ATLAS))}" alt="" decoding="async" draggable="false">`
+    ? `<img class="human-source-image" ${model.motion ? 'data-character-animation ' : ''}src="${escape(asset(`team/${model.motion?.still || model.image}`))}" alt="" width="${model.motion?.width || 1024}" height="${model.motion?.height || 1536}" decoding="async" draggable="false"><span class="human-source-fallback">${rigMarkup(model.role)}</span>`
     : `<img class="character-fallback" src="${escape(asset(model.fallback))}" alt="" loading="lazy" decoding="async">`;
-  const position = human ? ` style="--human-offset:${(-model.cropX / 230 * 100).toFixed(6)}%;--character-idle-delay:-${model.column * 1.37}s"` : '';
-  return `<button type="button" class="mindora-character character-${kind} ${human ? 'character-human character-portrait' : 'character-atlas'} ${escape(className)}" data-character-kind="${kind}" data-character-mood="${mood}" data-character-hello${position} aria-label="${t(`Say hello to ${model.name}`, `Поздороваться: ${model.name}`, `Сәлемдесу: ${model.name}`)}" title="${t(`Say hello to ${model.name}`, `Поздороваться: ${model.name}`, `Сәлемдесу: ${model.name}`)}"><span class="character-frame" aria-hidden="true"><span class="character-art">${art}</span></span><span class="character-reaction" aria-hidden="true">${t('Hi there!', 'Привет!', 'Сәлем!')}</span></button>`;
+  const position = human ? ` style="--character-idle-delay:-${model.order * 1.37}s;--character-aspect-ratio:${model.motion ? '1/2' : '2/3'}"` : '';
+  return `<button type="button" class="mindora-character character-${kind} ${human ? 'character-human character-portrait' : 'character-atlas'} ${model.motion ? 'character-animated-source' : ''} ${escape(className)}" data-character-kind="${kind}" data-character-mood="${mood}" data-character-hello${position} aria-label="${t(`Say hello to ${model.name}`, `Поздороваться: ${model.name}`, `Сәлемдесу: ${model.name}`)}" title="${t(`Say hello to ${model.name}`, `Поздороваться: ${model.name}`, `Сәлемдесу: ${model.name}`)}"><span class="character-frame" aria-hidden="true"><span class="character-art">${art}</span></span><span class="character-reaction" aria-hidden="true">${t('Hi there!', 'Привет!', 'Сәлем!')}</span></button>`;
+
 }
 
 function readPreference() {
   try { return localStorage.getItem(MOTION_KEY) === 'off' ? 'off' : 'on'; }
   catch { return 'on'; }
+}
+
+function canAnimate(element) {
+  return preference !== 'off' && !reducedMotion?.matches && !document.hidden
+    && element.isConnected && element.dataset.characterVisible !== 'false';
+}
+
+function syncAnimatedCharacter(element, restart = false) {
+  const motion = characters[element.dataset.characterKind]?.motion;
+  const image = element.querySelector('[data-character-animation]');
+  if (!motion || !image) return;
+  const still = asset(`team/${motion.still}`), animation = asset(`team/${motion.image}`);
+  let playback = animatedMedia.get(element);
+  if (!playback) {
+    playback = { enabled: false, failed: false, timer: null };
+    animatedMedia.set(element, playback);
+    image.addEventListener('load', () => {
+      if (image.src !== animation || !playback.enabled || !canAnimate(element)) return;
+      clearTimeout(playback.timer);
+      element.dataset.characterPlaying = 'true';
+      playback.timer = setTimeout(() => {
+        image.src = still; element.dataset.characterPlaying = 'false';
+        playback.timer = setTimeout(() => syncAnimatedCharacter(element, true), motion.pause);
+      }, motion.duration);
+    });
+    image.addEventListener('error', () => {
+      playback.failed = true; playback.enabled = false; clearTimeout(playback.timer);
+      element.dataset.characterPlaying = 'false';
+      // A failed GIF still leaves the original supplied portrait available.
+      const fallback = asset(`team/${characters[element.dataset.characterKind].image}`);
+      if (image.src !== fallback) image.src = fallback;
+    });
+  }
+  const enabled = canAnimate(element) && !playback.failed;
+  if (!enabled) {
+    clearTimeout(playback.timer); playback.enabled = false;
+    element.dataset.characterPlaying = 'false';
+    if (!playback.failed && image.src !== still) image.src = still;
+    return;
+  }
+  if (playback.enabled && !restart) return;
+  clearTimeout(playback.timer); playback.enabled = true;
+  const play = () => {
+    if (!canAnimate(element) || playback.failed) { syncAnimatedCharacter(element); return; }
+    image.src = animation;
+    // The load listener times the gesture from actual image readiness, including
+    // a cold first request on mobile. No timeout competes with network loading.
+  };
+  // The original GIF is a single gesture. A static interval keeps it calm and
+  // also resets playback without modifying, re-encoding or cache-busting it.
+  if (restart && image.src !== still) {
+    image.src = still;
+    playback.timer = setTimeout(play, 80);
+  } else play();
+}
+
+function syncAnimatedMedia() {
+  document.querySelectorAll('.character-animated-source').forEach(element => syncAnimatedCharacter(element));
 }
 
 function updateMotion() {
@@ -55,25 +116,32 @@ function updateMotion() {
         : t('Motion is off.','Анимация выключена.','Анимация өшірулі.');
     if (element.textContent !== message) element.textContent = message;
   });
+  syncAnimatedMedia();
 }
 
-function updateVisibility() { document.documentElement.dataset.characterPageHidden = document.hidden ? 'true' : 'false'; }
+function updateVisibility() {
+  document.documentElement.dataset.characterPageHidden = document.hidden ? 'true' : 'false';
+  syncAnimatedMedia();
+}
 
 function fitFrame(element) {
   const width = element.clientWidth, height = element.clientHeight;
   if (!width || !height) return;
   if (element.classList.contains('character-human')) {
-    // Measured 230×418 crop windows retain all hands and avoid adjacent sprites.
-    const portraitWidth = Math.min(width, height * 230 / 418);
+    // Contain the complete original figure, including tablet, hands and shoes.
+    const motion = characters[element.dataset.characterKind]?.motion;
+    const ratio = motion ? motion.width / motion.height : 2 / 3;
+    const portraitWidth = Math.min(width, height * ratio);
     element.style.setProperty('--character-frame-width', `${portraitWidth}px`);
-    element.style.setProperty('--character-frame-height', `${portraitWidth * 418 / 230}px`);
+    element.style.setProperty('--character-frame-height', `${portraitWidth / ratio}px`);
   } else element.style.setProperty('--character-frame-size', `${Math.min(width, height)}px`);
 }
 
 function applyAtlas(file) {
   const ready = atlasLoads.get(file)?.status === 'ready';
-  const selector = file === HUMAN_ATLAS ? '.character-human' : '.character-mino';
-  document.querySelectorAll(selector).forEach(element => {
+  document.querySelectorAll('.mindora-character').forEach(element => {
+    const model = characters[element.dataset.characterKind];
+    if (!model || (model.atlas || `team/${model.image}`) !== file) return;
     element.classList.toggle('character-ready', ready);
     element.classList.toggle('character-image-error', atlasLoads.get(file)?.status === 'failed');
   });
@@ -98,7 +166,7 @@ function discover(root = document) {
     if (!observed.has(element)) {
       observed.add(element); fitFrame(element); resizeObserver?.observe(element); visibilityObserver?.observe(element);
     }
-    loadAtlas(model.atlas || HUMAN_ATLAS);
+    loadAtlas(model.atlas || `team/${model.image}`);
   }
   updateMotion();
 }
@@ -111,6 +179,8 @@ function release(root) {
     resizeObserver?.unobserve(element); visibilityObserver?.unobserve(element); observed.delete(element);
     const pending = helloTimers.get(element);
     if (pending) { clearTimeout(pending.timer); helloTimers.delete(element); }
+    const playback = animatedMedia.get(element);
+    if (playback) { clearTimeout(playback.timer); playback.enabled = false; }
   }
 }
 
@@ -123,6 +193,7 @@ function greet(element) {
   element.dataset.characterGreeting = String(index);
   element.dataset.characterMood = element.classList.contains('character-human') ? 'celebrate' : 'welcome';
   element.classList.remove('character-hello'); void element.offsetWidth; element.classList.add('character-hello');
+  syncAnimatedCharacter(element, true);
   const messages = [t('Hi! I’m here with you.', 'Привет! Я рядом.', 'Сәлем! Қасыңдамын.'), t('Little steps count.', 'Продолжай шаг за шагом.', 'Біртіндеп жалғастыр.'), t('You’ve got this!', 'У тебя получится!', 'Қолыңнан келеді!')];
   const message = messages[(index - 1) % messages.length];
   const reaction = element.querySelector('.character-reaction');
@@ -153,7 +224,10 @@ export function mountCharacters() {
   if ('ResizeObserver' in window) resizeObserver = new ResizeObserver(entries => entries.forEach(entry => fitFrame(entry.target)));
   else window.addEventListener('resize', () => document.querySelectorAll('.mindora-character').forEach(fitFrame), { passive: true });
   if ('IntersectionObserver' in window) visibilityObserver = new IntersectionObserver(entries => {
-    for (const entry of entries) entry.target.dataset.characterVisible = String(entry.isIntersecting);
+    for (const entry of entries) {
+      entry.target.dataset.characterVisible = String(entry.isIntersecting);
+      syncAnimatedCharacter(entry.target);
+    }
   }, { rootMargin: '0px' });
   statusElement = document.createElement('div'); statusElement.className = 'character-live-status'; statusElement.setAttribute('role', 'status'); statusElement.setAttribute('aria-live', 'polite'); document.body.append(statusElement);
   document.addEventListener('click', event => {
@@ -171,6 +245,10 @@ export function mountCharacters() {
   window.addEventListener('storage', event => { if (event.key === MOTION_KEY || event.key === null) { preference = readPreference(); updateMotion(); } });
   window.addEventListener('online', () => {
     for (const [file, entry] of atlasLoads) if (entry.status === 'failed') atlasLoads.delete(file);
+    document.querySelectorAll('.character-animated-source').forEach(element => {
+      const playback = animatedMedia.get(element);
+      if (playback) playback.failed = false;
+    });
     discover();
   });
   new MutationObserver(records => {

@@ -100,54 +100,62 @@ const cross = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" strok
 const eye = '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
 
 function progress() {
-  return `<div class="account-steps" aria-label="Registration: step ${view.step + 1} of 3"><div class="account-step-bars" aria-hidden="true">${[0, 1, 2].map(i => `<i class="${i <= view.step ? 'on' : ''}"></i>`).join('')}</div><span>Step ${view.step + 1} of 3 <b>· ${['About you', 'Your interests', 'Your account'][view.step]}</b></span></div>`;
+  const label = t(`Step ${view.step + 1} of 3`, `Шаг ${view.step + 1} из 3`, `3 қадамның ${view.step + 1}-қадамы`);
+  return `<div class="account-steps" aria-label="${label}"><span>${label}</span><div class="account-step-bars" aria-hidden="true">${[0, 1, 2].map(i => `<i class="${i <= view.step ? 'on' : ''}"></i>`).join('')}</div></div>`;
 }
 
 function aboutFields() {
   const d = view.draft;
-  return `<label class="account-field" for="account-name"><span>Your name</span><input id="account-name" name="name" autocomplete="given-name" maxlength="80" value="${esc(d.name)}" placeholder="What should we call you?" required></label>
-    <div class="account-field-row"><label class="account-field account-age" for="account-age"><span>Age <small>optional</small></span><input id="account-age" name="age" type="number" inputmode="numeric" min="1" max="120" step="1" value="${esc(d.age)}" placeholder="Age"></label><label class="account-field" for="account-gender"><span>Gender <small>optional</small></span><select id="account-gender" name="gender">${genders.map(([value, title]) => `<option value="${value}" ${value === d.gender ? 'selected' : ''}>${title}</option>`).join('')}</select></label></div>`;
+  const genderLabels = [t('Select an option', 'Выберите вариант', 'Нұсқаны таңдаңыз'), t('Woman', 'Женщина', 'Әйел'), t('Man', 'Мужчина', 'Ер'), t('Non-binary', 'Небинарный', 'Бинарлы емес'), t('Another identity', 'Другой вариант', 'Басқа'), t('Prefer not to say', 'Не хочу указывать', 'Көрсеткім келмейді')];
+  const optional = t('(optional)', '(необязательно)', '(міндетті емес)');
+  return `<label class="account-field" for="account-name"><span>${t('Name', 'Имя', 'Атыңыз')} <b class="account-required" aria-hidden="true">*</b></span><input id="account-name" name="name" autocomplete="given-name" maxlength="80" value="${esc(d.name)}" placeholder="${t('Your name', 'Ваше имя', 'Атыңыз')}" required></label>
+    <div class="account-field-row"><label class="account-field account-age" for="account-age"><span>${t('Age', 'Возраст', 'Жасыңыз')} <small>${optional}</small></span><input id="account-age" name="age" type="number" inputmode="numeric" min="1" max="120" step="1" value="${esc(d.age)}" placeholder="${t('Your age', 'Ваш возраст', 'Жасыңыз')}"></label><label class="account-field" for="account-gender"><span>${t('Gender', 'Пол', 'Жынысыңыз')} <small>${optional}</small></span><select id="account-gender" name="gender">${genders.map(([value], i) => `<option value="${value}" ${value === d.gender ? 'selected' : ''}>${genderLabels[i]}</option>`).join('')}</select></label></div><p class="account-field-note">${t('You can update this later.', 'Это можно изменить позже.', 'Кейін өзгерте аласыз.')}</p>`;
 }
 
 function interestFields() {
   const selected = view.draft.interests;
   const all = [...topics, ...selected.filter(value => !topics.some(topic => topic.toLowerCase() === value.toLowerCase()))];
-  return `<fieldset class="account-interest-field"><legend class="account-sr-only">Your interests</legend><div class="account-interests">${all.map(label => {
+  const labels = { Design: t('Design', 'Дизайн', 'Дизайн'), Coding: t('Coding', 'Программирование', 'Бағдарламалау'), Languages: t('Languages', 'Языки', 'Тілдер'), Spreadsheets: t('Spreadsheets', 'Таблицы', 'Кестелер'), Writing: t('Writing', 'Тексты', 'Мәтін жазу'), Marketing: t('Marketing', 'Маркетинг', 'Маркетинг'), Photography: t('Photography', 'Фотография', 'Фотография'), 'Everyday skills': t('Everyday skills', 'Навыки на каждый день', 'Күнделікті дағдылар') };
+  return `<fieldset class="account-interest-field"><legend class="account-sr-only">${t('Your interests', 'Ваши интересы', 'Қызығушылықтарыңыз')}</legend><div class="account-interests">${all.map(label => {
     const active = selected.some(value => value.toLowerCase() === label.toLowerCase());
-    return `<button type="button" class="account-interest ${active ? 'selected' : ''}" data-account-interest="${esc(label)}" aria-pressed="${active}"><span>${esc(label)}</span><span aria-hidden="true">${active ? '✓' : '+'}</span></button>`;
-  }).join('')}</div></fieldset><p class="account-interest-count" aria-live="polite">${selected.length} of 8 selected <span>· You can skip this</span></p>
-    <label class="account-field account-custom-label" for="account-custom"><span>Something else?</span></label><div class="account-custom"><input id="account-custom" name="custom" maxlength="40" value="${esc(view.draft.custom)}" placeholder="Add your own interest" autocomplete="off"><button type="button" data-account-action="add-interest" aria-label="Add your interest">Add +</button></div>`;
+    return `<button type="button" class="account-interest ${active ? 'selected' : ''}" data-account-interest="${esc(label)}" aria-pressed="${active}"><span>${esc(Object.hasOwn(labels, label) ? labels[label] : label)}</span><span class="account-interest-check" aria-hidden="true">${active ? '✓' : '+'}</span></button>`;
+  }).join('')}</div></fieldset><p class="account-interest-count" aria-live="polite">${t(`${selected.length} of 8 selected`, `Выбрано ${selected.length} из 8`, `8-ден ${selected.length} таңдалды`)} <span>${t('Optional', 'Необязательно', 'Міндетті емес')}</span></p>
+    <label class="account-field account-custom-label" for="account-custom"><span>${t('Add something you love', 'Добавьте свой интерес', 'Өз қызығушылығыңызды қосыңыз')}</span></label><div class="account-custom"><input id="account-custom" name="custom" maxlength="40" value="${esc(view.draft.custom)}" placeholder="${t('Your own interest', 'Например, музыка', 'Мысалы, музыка')}" autocomplete="off"><button type="button" data-account-action="add-interest" aria-label="${t('Add your interest', 'Добавить интерес', 'Қызығушылықты қосу')}">${t('Add', 'Добавить', 'Қосу')} <span aria-hidden="true">+</span></button></div>`;
+}
+
+function passwordVisibilityLabel(visible, confirm = false) {
+  return confirm ? visible ? t('Hide confirmation password', 'Скрыть повтор пароля', 'Қайталанған құпиясөзді жасыру') : t('Show confirmation password', 'Показать повтор пароля', 'Қайталанған құпиясөзді көрсету') : visible ? t('Hide password', 'Скрыть пароль', 'Құпиясөзді жасыру') : t('Show password', 'Показать пароль', 'Құпиясөзді көрсету');
 }
 
 function passwordField(confirm = false) {
   const field = confirm ? 'confirm' : 'password';
   const visible = confirm ? view.showConfirm : view.showPassword;
   const signup = view.mode === 'signup';
-  return `<label class="account-field" for="account-${field}"><span>${confirm ? 'Confirm password' : 'Password'}</span><span class="account-password"><input id="account-${field}" name="${field}" type="${visible ? 'text' : 'password'}" autocomplete="${signup ? 'new-password' : 'current-password'}" ${signup ? 'minlength="8"' : ''} maxlength="128" value="${esc(view.draft[field])}" placeholder="${confirm ? 'Enter it again' : signup ? 'At least 8 characters' : 'Enter your password'}" required><button type="button" data-account-action="${confirm ? 'toggle-confirm' : 'toggle-password'}" aria-label="${visible ? 'Hide' : 'Show'} ${confirm ? 'confirmation password' : 'password'}" aria-pressed="${visible}">${eye}</button></span></label>`;
+  return `<label class="account-field" for="account-${field}"><span>${confirm ? t('Confirm password', 'Повторите пароль', 'Құпиясөзді қайталаңыз') : t('Password', 'Пароль', 'Құпиясөз')}</span><span class="account-password"><input id="account-${field}" name="${field}" type="${visible ? 'text' : 'password'}" autocomplete="${signup ? 'new-password' : 'current-password'}" ${signup ? 'minlength="8"' : ''} maxlength="128" value="${esc(view.draft[field])}" placeholder="${confirm ? t('Enter it again', 'Ещё раз', 'Қайта енгізіңіз') : signup ? t('At least 8 characters', 'Не менее 8 символов', 'Кемінде 8 таңба') : t('Enter your password', 'Ваш пароль', 'Құпиясөзіңіз')}" required><button type="button" data-account-action="${confirm ? 'toggle-confirm' : 'toggle-password'}" aria-label="${passwordVisibilityLabel(visible, confirm)}" aria-pressed="${visible}">${eye}</button></span></label>`;
 }
 
 function accountFields() {
-  return `<label class="account-field" for="account-email"><span>Email</span><input id="account-email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="254" value="${esc(view.draft.email)}" placeholder="you@example.com" required></label>${passwordField()}${view.mode === 'signup' ? passwordField(true) : ''}`;
+  return `<label class="account-field" for="account-email"><span>${t('Email', 'Электронная почта', 'Электрондық пошта')}</span><input id="account-email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="254" value="${esc(view.draft.email)}" placeholder="you@example.com" required></label>${passwordField()}${view.mode === 'signup' ? passwordField(true) : ''}`;
 }
 
 function content() {
-  if (view.mode === 'profile' && loadingSession && !session.user) return `<div class="account-loading" data-account-loading role="status">${character('mino', 'thinking', 'account-mino')}<h1 id="account-heading" tabindex="-1">Finding your account…</h1><p>This will only take a moment.</p><button type="button" class="account-guest" data-account-action="close">${t('Back to home', 'На главную', 'Басты бетке')}</button></div>`;
+  if (view.mode === 'profile' && loadingSession && !session.user) return `<div class="account-loading" data-account-loading role="status">${character('mino', 'thinking', 'account-mino')}<h1 id="account-heading" tabindex="-1">${t('Finding your account…', 'Загружаем профиль…', 'Профиль жүктелуде…')}</h1><p>${t('Just a moment.', 'Секунду.', 'Бір сәт күтіңіз.')}</p><button type="button" class="account-guest" data-account-action="close">${t('Back to home', 'На главную', 'Басты бетке')}</button></div>`;
   const signup = view.mode === 'signup', profile = view.mode === 'profile';
-  const titles = ['Let’s get to know you.', 'What interests you?', 'Your learning starts here.'];
-  const descriptions = ['A name is all you need for this step.', 'Pick a few things you’d like to explore.', 'Create an account with your email and password.'];
-  const title = signup ? titles[view.step] : profile ? 'Your profile' : 'Welcome back.';
-  const description = signup ? descriptions[view.step] : profile ? 'A little about you. Update it whenever you like.' : 'Sign in to your Mindora account.';
-  const primary = view.pending ? (profile ? 'Saving…' : signup ? 'Creating your account…' : 'Signing in…') : profile ? 'Save profile' : signup ? view.step === 2 ? 'Create account' : 'Continue' : 'Sign in';
-  return `<form id="mindora-account-form" class="account-form" novalidate aria-busy="${view.pending}">
+  const titles = [t('A little about you.', 'Немного о вас.', 'Өзіңіз жайлы.'), t('What interests you?', 'Что вам интересно?', 'Сізге не қызық?'), t('Make it yours.', 'Ваш личный аккаунт.', 'Жеке аккаунтыңыз.')];
+  const descriptions = [t('What should we call you?', 'Как вас называть?', 'Сізді қалай атаймыз?'), t('Choose what you’d love to learn.', 'Выберите, чему хотите научиться.', 'Нені үйренгіңіз келетінін таңдаңыз.'), t('Keep your courses and progress together.', 'Курсы и прогресс будут в вашем аккаунте.', 'Курстарыңыз бен жетістігіңіз бір жерде.')];
+  const title = signup ? titles[view.step] : profile ? t('Your profile.', 'Ваш профиль.', 'Сіздің профиліңіз.') : t('Welcome back.', 'С возвращением.', 'Қайта қош келдіңіз.');
+  const description = signup ? descriptions[view.step] : profile ? t('Your learning, your way.', 'Учитесь в своём ритме.', 'Өз қарқыныңызбен оқыңыз.') : t('Let’s pick up where you left off.', 'Продолжим с того места, где остановились.', 'Тоқтаған жеріңізден жалғастырайық.');
+  const primary = view.pending ? (profile ? t('Saving…', 'Сохраняем…', 'Сақталуда…') : signup ? t('Creating your account…', 'Создаём аккаунт…', 'Аккаунт құрылуда…') : t('Signing in…', 'Входим…', 'Кіруде…')) : profile ? t('Save profile', 'Сохранить профиль', 'Профильді сақтау') : signup ? view.step === 2 ? t('Create account', 'Создать аккаунт', 'Аккаунт құру') : t('Continue', 'Продолжить', 'Жалғастыру') : t('Sign in', 'Войти', 'Кіру');
+  return `<form id="mindora-account-form" class="account-form account-${view.mode}" novalidate aria-busy="${view.pending}">
     <div class="account-form-body">${signup ? progress() : ''}
-    ${signup && view.step > 0 ? `<button type="button" class="account-back" data-account-action="back" ${view.pending ? 'disabled' : ''}>${arrow} Back</button>` : ''}
-    <div class="account-intro"><div><h1 id="account-heading" tabindex="-1">${title}</h1><p>${description}</p></div>${character('mino', profile ? 'explaining' : signup && view.step === 2 ? 'celebrate' : 'welcome', 'account-mino')}</div>
+    ${signup && view.step > 0 ? `<button type="button" class="account-back" data-account-action="back" ${view.pending ? 'disabled' : ''}>${arrow} ${t('Back', 'Назад', 'Артқа')}</button>` : ''}
+    <div class="account-intro"><div class="account-intro-copy"><h1 id="account-heading" tabindex="-1">${title}</h1><p>${description}</p></div><div class="account-guide">${character('mino', view.pending ? 'thinking' : profile ? 'explaining' : signup && view.step === 2 ? 'celebrate' : signup && view.step === 1 ? 'explaining' : 'welcome', 'account-mino')}</div></div>
     <div class="account-error" id="account-error" role="alert" ${view.error ? '' : 'hidden'}>${esc(view.error)}</div><div class="account-notice" id="account-notice" role="status" ${view.notice ? '' : 'hidden'}>${esc(view.notice)}</div><div class="account-service-note" data-account-service ${session.available === false ? '' : 'hidden'}>${t('Accounts are temporarily unavailable. Please try again shortly.', 'Вход в аккаунт временно недоступен. Попробуй чуть позже.', 'Аккаунтқа кіру уақытша қолжетімсіз. Біраздан кейін қайталап көр.')}</div>
     <fieldset class="account-inputs" ${view.pending ? 'disabled' : ''}><legend class="account-sr-only">${title}</legend>
-    ${profile ? `<p class="account-email-label">${esc(session.user?.email || '')}</p>${aboutFields()}<h2 class="account-section-title">Your interests</h2>${interestFields()}` : signup ? view.step === 0 ? aboutFields() : view.step === 1 ? interestFields() : accountFields() : accountFields()}
+    ${profile ? `<p class="account-email-label">${esc(session.user?.email || '')}</p>${aboutFields()}<h2 class="account-section-title">${t('Your interests', 'Ваши интересы', 'Қызығушылықтарыңыз')}</h2>${interestFields()}` : signup ? view.step === 0 ? aboutFields() : view.step === 1 ? interestFields() : accountFields() : accountFields()}
     </fieldset></div>
     <footer class="account-footer"><button type="submit" class="account-primary" ${view.pending ? 'disabled' : ''}>${primary}${view.pending ? '<span class="account-spinner" aria-hidden="true"></span>' : ''}</button>
-    ${profile ? `<button type="button" class="account-guest account-signout" data-account-action="signout" ${view.pending ? 'disabled' : ''}>Sign out</button>` : `<p class="account-switch">${signup ? 'Already have an account?' : 'New to Mindora?'} <button type="button" data-account-action="${signup ? 'signin' : 'signup'}" ${view.pending ? 'disabled' : ''}>${signup ? 'Sign in' : 'Create account'}</button></p>`}
+    ${profile ? `<button type="button" class="account-guest account-signout" data-account-action="signout" ${view.pending ? 'disabled' : ''}>${t('Sign out', 'Выйти', 'Шығу')}</button>` : `<p class="account-switch">${signup ? t('Already have an account?', 'Уже есть аккаунт?', 'Аккаунтыңыз бар ма?') : t('New to Mindora?', 'Впервые в Mindora?', 'Mindora-ға алғаш келдіңіз бе?')} <button type="button" data-account-action="${signup ? 'signin' : 'signup'}" ${view.pending ? 'disabled' : ''}>${signup ? t('Sign in', 'Войти', 'Кіру') : t('Create account', 'Создать аккаунт', 'Аккаунт құру')}</button></p>`}
     <button type="button" class="account-guest" data-account-action="close">${t('Back to home', 'На главную', 'Басты бетке')}</button></footer></form>`;
 }
 
@@ -385,7 +393,7 @@ export function mountAccount() {
       const input = dialog.querySelector(confirm ? '#account-confirm' : '#account-password');
       input.type = view[key] ? 'text' : 'password';
       control.setAttribute('aria-pressed', String(view[key]));
-      control.setAttribute('aria-label', `${view[key] ? 'Hide' : 'Show'} ${confirm ? 'confirmation password' : 'password'}`);
+      control.setAttribute('aria-label', passwordVisibilityLabel(view[key], confirm));
     }
   });
   document.addEventListener('click', event => {
