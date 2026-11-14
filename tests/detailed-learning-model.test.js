@@ -121,13 +121,13 @@ function response(value) {
   return Response.json({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(value) } }] });
 }
 
-function modelFixture(minutes, { resultUrl = source, resultContent, fetchedContent, verify = () => {}, mutate = () => {} } = {}) {
+function modelFixture(minutes, { resultUrl = source, resultContent, searchResults, fetchedContent, verify = () => {}, mutate = () => {} } = {}) {
   const content = resultContent ?? 'A for loop visits each item in a sequence and performs its indented action once for each item.';
   const calls = [];
   const fetcher = async (url, options) => {
     const body = JSON.parse(options.body);
     calls.push({ url, body });
-    if (url.endsWith('/v1/tools/search')) return Response.json({ results: [{ url: resultUrl, title: 'A beginner guide', content }] });
+    if (url.endsWith('/v1/tools/search')) return Response.json({ results: searchResults ?? [{ url: resultUrl, title: 'A beginner guide', content }] });
     if (url.endsWith('/v1/tools/fetch')) return fetchedContent === false ? new Response(null, { status: 404 })
       : Response.json({ content: fetchedContent ?? 'English article: a loop repeats the indented action for each item in a sequence.' });
     const input = JSON.parse(body.messages[1].content);
@@ -246,5 +246,73 @@ test('source canonicalization leaves other hosts and non-article paths unchanged
     const plan = await generateDeepSeekPlan(inputFor(5), 'test-only', fixture.fetcher, offlineReaders);
     assert.equal(plan.steps[0].resource.url, resultUrl);
     assert.equal(fixture.calls.some(call => call.url.endsWith('/v1/tools/fetch')), false);
+  }
+});
+
+const chatgptSearchGuide = 'https://help.openai.com/en/articles/9237897-searching-the-web-with-chatgpt';
+const workspaceGuide = 'https://help.openai.com/en/articles/10093903-manage-chatgpt-search';
+const searchScreenshots = [
+  { url: 'https://images.example.com/view-all-tools.webp', alt: 'ChatGPT compose box with the tools button highlighted' },
+  { url: 'https://images.example.com/search-picker.webp', alt: 'ChatGPT source picker with Search listed under Sources' },
+];
+
+test('ordinary ChatGPT web search lessons recover real guide images despite admin-only search results and invalid model IDs', async () => {
+  const markdown = '# Searching the web with ChatGPT\n\nOpen the tools menu and select Search. Send your question, then open the citations to check the response.\n\n'
+    + searchScreenshots.map(({ alt, url }) => `![${alt}](${url})`).join('\n\n');
+  for (const [language, goal] of [
+    ['ru', 'Научиться пользоваться веб-поиском в ChatGPT со скриншотами'],
+    ['en', 'Learn to search the web with ChatGPT and check its sources'],
+    ['kk', 'ChatGPT арқылы интернеттен ақпарат іздеуді үйрену'],
+  ]) {
+    const reads = [];
+    const fixture = modelFixture(5, {
+      searchResults: [
+        { url: workspaceGuide, title: 'Workspace admin', content: 'Enterprise admins can manage workplace search in workspace settings.' },
+        { url: 'https://help.openai.com/fr-fr/articles/9237897-guide', title: 'Localized duplicate', content: 'Never use this content.' },
+        { url: 'https://help.openai.com/en/articles/9237897?x=1', title: 'English duplicate', content: 'Never use this content either.' },
+      ],
+      verify: (body, input) => {
+        assert.deepEqual(input.materials.map(item => item.url), [chatgptSearchGuide]);
+        assert.match(input.materials[0].content, /open the citations/);
+        assert.deepEqual(input.materials[0].images.map(item => item.caption), searchScreenshots.map(item => item.alt));
+        assert.match(body.messages[0].content, /first guided step.*sourceId 0/);
+      },
+      mutate: composed => {
+        composed.guided[0].sourceId = 99;
+        composed.guided[0].imageIds = [900, -1, '1'];
+      },
+    });
+    const plan = await generateDeepSeekPlan({ goal, language, minutes: 5 }, 'test-only', fixture.fetcher, {
+      readPage: async url => { reads.push(url); return null; },
+      readRenderedPage: async url => url === chatgptSearchGuide ? { url, body: markdown, contentType: 'text/markdown' } : null,
+    });
+    assert.equal(reads[0], chatgptSearchGuide);
+    assert.equal(reads.filter(url => url.includes('9237897')).length, 1);
+    assert.equal(fixture.calls.some(call => call.url.endsWith('/v1/tools/fetch') && call.body.url.includes('9237897')), false);
+    assert.equal(plan.steps[0].resource.url, chatgptSearchGuide);
+    assert.equal(plan.steps[0].resource.imageSourceUrl, chatgptSearchGuide);
+    assert.deepEqual(plan.steps[0].resource.images, searchScreenshots);
+    assert.deepEqual(restorePlan({ plan }).plan, plan);
+  }
+});
+
+test('workspace and chat history topics and an unavailable consumer guide keep the general research path', async () => {
+  for (const goal of [
+    'Manage web search for a ChatGPT Enterprise workspace',
+    'Find previous chats using ChatGPT search',
+    'Learn to search the web with ChatGPT',
+  ]) {
+    const fixture = modelFixture(5, {
+      resultUrl: workspaceGuide,
+      verify: (_, input) => assert.deepEqual(input.materials.map(item => item.url), [workspaceGuide]),
+    });
+    const reads = [];
+    const plan = await generateDeepSeekPlan({ goal, language: 'en', minutes: 5 }, 'test-only', fixture.fetcher, {
+      ...offlineReaders,
+      readPage: async url => { reads.push(url); return null; },
+    });
+    assert.equal(reads.includes(chatgptSearchGuide), goal === 'Learn to search the web with ChatGPT');
+    assert.equal(plan.steps[0].resource.url, workspaceGuide);
+    assert.deepEqual(plan.steps[0].resource.images, []);
   }
 });
