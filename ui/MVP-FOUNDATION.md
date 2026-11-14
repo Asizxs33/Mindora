@@ -5,11 +5,11 @@ This document describes the implemented UI, its content contract and the remaini
 ## Product flow
 
 1. A new learner sees Mino, one goal field and a 5/10/20 minute choice. Two ready-made courses provide immediate practice.
-2. Account onboarding uses three screens: name with optional profile details → interests → credentials. Existing sign-in, verification, profile and sign-out endpoints remain in use. Guest learning remains available when authentication is not configured.
-3. Returning learners get a primary Continue action. The saved AI lesson is available in My courses, alongside the design and spreadsheet courses. Changing the goal is a secondary disclosure.
+2. Account onboarding uses three screens: name with optional profile details → interests → credentials. Existing sign-in, verification, profile and sign-out endpoints remain in use. The latest backend requires a verified account to start courses; if authentication is not configured, the UI reports unavailability rather than granting guest access.
+3. Returning learners get a primary Continue action. My courses includes the account's saved AI lessons and started design/spreadsheet courses, with cloud loading, retry, conflict and import actions. Changing the goal is a secondary disclosure.
 4. A ready-made course has four steps: learn → quiz → guided practice → independent project. The course path exposes the next step and keeps later steps locked according to the existing controller.
 5. Each AI teaching task uses understand → example → quick check → practice. The final task is independent. A wrong checkpoint answer shows an explanation and allows another attempt.
-6. Drafts and lesson position use the existing browser storage. Existing account/cloud draft behavior is preserved. A return after the existing inactivity threshold opens the existing short recap for ready-made courses.
+6. Drafts and lesson position use account-scoped browser storage and the backend owner's new cloud synchronization. Separate courses retain separate progress. Concurrent changes trigger an explicit conflict choice. A return after the existing inactivity threshold opens the existing short recap for ready-made courses.
 7. Completed ready-made courses offer a named downloadable certificate. AI lessons show actual submitted work and feedback, without inventing a qualification or certificate.
 
 ## Visual system
@@ -94,18 +94,18 @@ To connect every template to generated lessons, the backend owner should:
 1. Introduce a versioned block schema; validate types, sizes, media sources and answer keys server-side.
 2. Reuse stable block IDs and store answers by block ID, including `choice`, `selected`, `order`, `matches` and `value`.
 3. Add block-level progression to the controller while retaining migration for existing v1/v2 saved plans.
-4. Reconcile cloud and browser drafts using server timestamps. The current AI plan has no last-used timestamp, so the home screen prioritizes a saved AI plan; users can choose another course in My courses.
+4. Retain the implemented revision-based cloud reconciliation and account-scoped local storage. The home screen currently prioritizes the selected AI plan; users can choose another saved lesson in My courses. If automatic most-recent-course selection is wanted, add a dedicated last-opened timestamp across both course kinds.
 5. Grade deterministic questions on the server if they award credit. Route written practice to the review endpoint. Do not trust client answer keys as proof of completion.
 6. Extend the inactive-return recap to generated plans. Existing recap behavior covers the ready-made courses.
 7. Issue AI course certificates only after defining server-side completion criteria.
 
 ## Account and storage boundary
 
-The UI continues to call `/api/account` and existing draft endpoints. It never stores passwords or pretends that guest browser storage is an account. `available: false` means the auth service needs deployment configuration.
+The UI continues to call `/api/account`, `/api/learning-courses`, `/api/learning-workspace` and existing draft endpoints. It never stores passwords or pretends that browser storage is an account. `available: false` means the auth service needs deployment configuration. Starting a course is intentionally blocked until a real account is available.
 
 Required backend setup is documented in the existing [backend handoff](https://github.com/Asizxs33/Mindora/blob/feat/account-onboarding/docs/BACKEND-HANDOFF.md). Environment names include `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_COOKIE_SECRET` and `DEEPSEEK_API_KEY`; actual values must remain in the deployment secret store.
 
-Suggested logical records for the next backend iteration: users/profile; course versions and ordered blocks; user enrollments; per-block attempts; saved work; issued certificates. Store the content version on an enrollment so a new deployment can update the UI without silently invalidating a learner's work. Do not reset progress on every commit.
+The merged backend already provides profile, account-owned learning course and built-in workspace stores. For the next block-based iteration, add explicit course content versions, ordered blocks and per-block attempts. Store the content version on an enrollment so a new deployment can update the UI without silently invalidating a learner's work. Do not reset progress on every commit.
 
 ## Extension checklist
 
@@ -120,4 +120,6 @@ Suggested logical records for the next backend iteration: users/profile; course 
 
 ## Delivery
 
-Work is isolated on `design/orange-mentors`; backend/core files are unchanged. The checkpoint is `9c21927`. The final UI commit follows it. Deploy the design project `mindora-design`, leaving the team's main production project under its existing release workflow.
+Work is isolated on `design/orange-mentors`. The checkpoint is `9c21927`; the template/UI foundation is `63e8bf6`. The final integration includes upstream `bbb508e` (account saving and updated AI behavior). Relative to that upstream, changes remain in `ui/`; backend/core functionality is retained. Deploy the design project `mindora-design`, leaving the team's main production project under its existing release workflow.
+
+At delivery, `mindora-design` has no auth/AI environment configured. The frontend and template studio can be previewed, but real registration, synchronized courses and AI generation require the backend environment above. Do not report these external services as live based only on UI tests.

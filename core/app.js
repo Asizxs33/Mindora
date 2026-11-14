@@ -2,6 +2,10 @@ import { COURSES, DESIGN_QUIZ, evaluatePoster } from './engine.js';
 import { budgetCsv, budgetSession, budgetDraftKey, createBudgetDraft, evaluateBudgetSession, normalizeMinutes, readBudgetQuiz, readBudgetResume } from './budget-session.js';
 import { createCloudDrafts } from './cloud-drafts.js';
 import { createPlanController } from './plan-controller.js';
+import { createLearningLibrary } from './learning-library.js';
+import { createBuiltinSync } from './builtin-sync.js';
+import { restorePlan } from './learning-plan.js';
+import { createWorkspaceStorage } from './workspace-storage.js';
 import { dayKey, dailyCourse, learningStats } from './progress.js';
 import { posterLayout, posterSvg } from './poster.js';
 import { mountShell, renderShell } from '../ui/shell.js';
@@ -16,17 +20,37 @@ import { resumeCursor, needsRecap, certificateEligible } from './resume.js';
 import { recapView, recapQuestion } from '../ui/recap.js';
 import { certificateView, refreshCertificatePreview } from '../ui/certificate.js';
 import { downloadCertificate } from './certificate.js';
-import { getAccountState } from '../ui/account.js';
+import { getAccountState, openAccount, closeAccount, expireAccountSession } from '../ui/account.js';
+import { learningLibraryView, learningSyncView, loginRequiredView } from '../ui/learning-library.js';
+import { showWorkspaceConflict } from '../ui/workspace-conflict.js';
 
 const $=s=>document.querySelector(s);
-const KEY='mindora.workspace.v1';
+const LEGACY_KEY='mindora.workspace.v1';
+let accountOwner = getAccountState().user?.id || null;
+let accountReady = Boolean(accountOwner);
+let accountEpoch = 0;
+let KEY = accountOwner ? `${LEGACY_KEY}.${encodeURIComponent(accountOwner)}` : `${LEGACY_KEY}.guest`;
+const makeWorkspaceStorage = () => createWorkspaceStorage({
+  readValue: () => localStorage.getItem(KEY),
+  writeValue: value => localStorage.setItem(KEY, value),
+});
+let workspaceStorage = makeWorkspaceStorage();
+let legacyLesson = null;
+let legacyWorkspace = null;
+try {
+  const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
+  legacyLesson = restorePlan(legacy?.learningPlan);
+  if (legacy?.version === 1 && (legacy.active || Object.keys(legacy.drafts || {}).length || Object.values(legacy.progress || {}).some(Boolean))) {
+    legacyWorkspace = legacy;
+  }
+} catch { /* Old browser data is optional. */ }
 const empty={version:1,minutes:10,active:null,goals:{},progress:{design:0,budget:0},drafts:{},works:{},notes:{},sessions:{},certificates:{},practiceCount:0,studyDays:[]};
-function readState(){try{const v=JSON.parse(localStorage.getItem(KEY));if(!v||v.version!==1)return structuredClone(empty);return {...empty,...v,active:['design','budget'].includes(v.active)?v.active:null,minutes:[5,10,20].includes(v.minutes)?v.minutes:10,progress:{design:Math.min(4,Math.max(0,Number(v.progress?.design)||0)),budget:Math.min(4,Math.max(0,Number(v.progress?.budget)||0))},goals:v.goals||{},drafts:v.drafts||{},works:v.works||{},notes:v.notes||{}};}catch{return structuredClone(empty);}}
+function readState(){try{const v=JSON.parse(workspaceStorage.read());if(!v||v.version!==1)return structuredClone(empty);return {...empty,...v,active:['design','budget'].includes(v.active)?v.active:null,minutes:[5,10,20].includes(v.minutes)?v.minutes:10,progress:{design:Math.min(4,Math.max(0,Number(v.progress?.design)||0)),budget:Math.min(4,Math.max(0,Number(v.progress?.budget)||0))},goals:v.goals||{},drafts:v.drafts||{},works:v.works||{},notes:v.notes||{}};}catch{return structuredClone(empty);}}
 const state = readState();
 state.language = languageCode(state.language);
 setLanguage(state.language);
 const resume = readBudgetResume(state);
-let view = state.learningPlanOpen && state.learningPlan ? 'learning-plan' : resume?.view || 'discover';
+let view = accountOwner ? state.learningPlanOpen && state.learningPlan ? 'learning-plan' : resume?.view || 'discover' : 'discover';
 let step = resume?.step ?? 0;
 let quizIndex = 0;
 let quizChoice = null;
@@ -34,10 +58,97 @@ let quizFeedback = false;
 let checks = null;
 let challengeSeed = 0;
 
-const plans = createPlanController({ state, save, render, isOpen: () => view === 'learning-plan' });
+let pendingLearning = null;
+let library;
+let builtins;
+const builtinFields = ['minutes', 'active', 'goals', 'progress', 'drafts', 'works', 'notes', 'sessions', 'certificates', 'practiceCount', 'studyDays', 'budgetQuiz', 'budgetActivity'];
+const builtinData = source => Object.fromEntries(builtinFields.filter(key => source[key] !== undefined).map(key => [key, source[key]]));
+let builtinSnapshot = JSON.stringify(builtinData(state));
+const plans = createPlanController({ state, save: saveLearning, render, isOpen: () => view === 'learning-plan' && Boolean(accountOwner),
+    canLearn: () => ensureLearning(), beforeGenerate: () => library.flush(), onGenerated: course => library.accept(course), onUnauthorized: expiredSession, accountId: () => accountOwner });
 if (view === 'learning-plan' && !state.learningPlan) view = 'discover';
 
+library = createLearningLibrary({
+  getCurrent() {
+    const meta = state.learningCourse;
+    return meta && state.learningPlan ? { ...meta, saved: state.learningPlan } : null;
+  },
+  setCurrent(course, ownerId) {
+    const saved = restorePlan(course.saved);
+    if (!saved || ownerId !== accountOwner) return;
+    state.learningPlan = saved;
+    state.learningCourse = { id: course.id, revision: course.revision, ownerId, dirty: false };
+    plans.reset();
+    saveLocal();
+    if (view === 'learning-plan') render();
+  },
+  updateMeta(patch) { if (state.learningCourse) { Object.assign(state.learningCourse, patch); saveLocal(); } },
+  onChange() {
+    if (view === 'courses') render();
+    else {
+      const panel = document.querySelector('[data-learning-sync-panel]');
+      if (panel) panel.innerHTML = syncView();
+    }
+  },
+  onUnauthorized: expiredSession,
+});
+
+builtins = createBuiltinSync({
+  getCurrent() {
+    return accountOwner ? { revision: null, dirty: false, ...state.builtinSync, ownerId: accountOwner, data: builtinData(state) } : null;
+  },
+  setCurrent(workspace, ownerId) {
+    if (ownerId !== accountOwner) return;
+    for (const field of builtinFields) delete state[field];
+    Object.assign(state, builtinData(empty), workspace.data);
+    builtinSnapshot = JSON.stringify(builtinData(state));
+    state.builtinSync = { revision: workspace.revision, dirty: false };
+    saveLocal();
+  },
+  updateMeta(patch) { state.builtinSync = { revision: null, ...state.builtinSync, ...patch }; saveLocal(); },
+  onChange() {
+    const panel = document.querySelector('[data-builtin-sync-panel]');
+    if (panel) panel.innerHTML = builtinSyncView();
+  },
+  onUnauthorized: expiredSession,
+});
+
+function ensureLearning(resumeAction) {
+  if (accountOwner && getAccountState().user?.id === accountOwner && accountReady) return true;
+  if (resumeAction) pendingLearning = resumeAction;
+  if (accountOwner && !accountReady) return false;
+  openAccount('signup');
+  return false;
+}
+
+function expiredSession() {
+  pendingLearning = () => go('courses');
+  expireAccountSession();
+  openAccount('signin');
+}
+
+function syncView() {
+  const data = library.screen();
+  return learningSyncView({ status: data.status, error: data.syncError, conflict: data.conflict });
+}
+
+function builtinSyncView() {
+  const data = builtins.screen();
+  return learningSyncView({ status: data.status, error: data.syncError, conflict: data.conflict, builtin: true });
+}
+
+function canImportBuiltin() {
+  return accountReady && legacyWorkspace && !state.builtinSync?.revision && !state.builtinSync?.dirty
+    && !Object.values(state.progress).some(Boolean) && !Object.keys(state.drafts).length;
+}
+
+function saveLearning() {
+  saveLocal();
+  if (!workspaceStorage.conflicted) library?.changed();
+}
+
 const cloud = createCloudDrafts({
+  expectedOwner: () => accountOwner,
   getWorkspace() {
     if (view !== 'lesson' || state.active !== 'budget' || step < 2) return null;
     const drafts = Object.fromEntries(Object.entries(state.drafts).filter(([key]) => key.startsWith('budget-')));
@@ -109,6 +220,7 @@ function restoreLesson(cursor) {
 }
 
 function resumeCourse(id = state.active, requestedStep = null) {
+  if (!ensureLearning(() => resumeCourse(id, requestedStep))) return;
   if (!COURSES[id]) return go('discover');
   pendingPractice = false;
   state.active = id;
@@ -136,13 +248,32 @@ function openCertificate(id = state.active) {
   state.active = id; save(); go('certificate');
 }
 let saveWarning=false;
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch{if(!saveWarning){saveWarning=true;toast('Your browser could not save progress. Keep this tab open.');}}}
+function saveLocal() {
+  try {
+    if (!workspaceStorage.write(JSON.stringify(state))) showWorkspaceConflict($('#main'));
+  } catch {
+    if (!saveWarning) {
+      saveWarning = true;
+      toast('Your browser could not save progress. Keep this tab open.');
+    }
+  }
+}
+function save() {
+  saveLocal();
+  if (!accountReady || workspaceStorage.conflicted) return;
+  const snapshot = JSON.stringify(builtinData(state));
+  if (snapshot === builtinSnapshot) return;
+  builtinSnapshot = snapshot;
+  builtins.changed();
+}
 function toast(value){$('#toast').textContent=message(value);$('#toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').classList.remove('visible'),4200);}
 function modal(type, data) {
   $("#modal-content").innerHTML = dialogContent(type, data);
   if (!$("#modal").open) $("#modal").showModal();
 }
 function go(next, cursor = null) {
+  if (['path', 'lesson', 'learning-plan', 'recap', 'result', 'work', 'certificate'].includes(next)
+    && !ensureLearning(() => go(next, cursor))) return;
   view = next;
   const learningPlanOpen = next === 'learning-plan';
   if (Boolean(state.learningPlanOpen) !== learningPlanOpen) {
@@ -169,7 +300,7 @@ function go(next, cursor = null) {
   window.scrollTo({top:0,behavior:'instant'});
   $('#main').focus({preventScroll:true});
 }
-function selectCourse(id,goal){if(!COURSES[id])return;state.active=id;state.goals[id]=goal||state.goals[id]||(id==='design'?'Сделать постер для кофейни':'Собрать таблицу ежемесячных расходов');save();go('path');}
+function selectCourse(id,goal){if(!COURSES[id]||!ensureLearning(()=>selectCourse(id,goal)))return;state.active=id;state.goals[id]=goal||state.goals[id]||(id==='design'?'Сделать постер для кофейни':'Собрать таблицу ежемесячных расходов');save();go('path');}
 function openStep(index){if(!state.active)return go('discover');if(!Number.isInteger(index)||index<0||index>3||index>state.progress[state.active])return toast('Finish this step to unlock the next one.');resumeCourse(state.active,index);}
 function finishStep(){const id=state.active;const days = new Set(Array.isArray(state.studyDays) ? state.studyDays : []);days.add(dayKey());state.studyDays = [...days];state.progress[id]=Math.max(state.progress[id],step+1);rememberPosition();save();if(step===3){state.practiceCount=(Number(state.practiceCount)||0)+1;certificateData(id);save();go('result');}else{openStep(step+1);}}
 
@@ -178,8 +309,9 @@ function render() {
   let html;
   switch (view) {
     case 'discover': html = dashboard(state); break;
-    case 'courses': html = coursesPage(state); break;
-    case 'learning-plan': html = learningPlanView(plans.screen()); break;
+    case 'courses': html = learningLibraryView({ ...library.screen(), available: getAccountState().available,
+      hasLocalLesson: Boolean(legacyLesson) && !state.importedLegacyLesson, hasLocalBuiltin: canImportBuiltin() }) + coursesPage(state); break;
+    case 'learning-plan': html = accountOwner ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({ ...plans.screen(), accountSaved: Boolean(state.learningCourse) }) : loginRequiredView(); break;
     case 'path': html = pathView(state); break;
     case 'recap': html = recapView(state.active, recap); break;
     case 'certificate': html = certificateView(certificateData(state.active)); break;
@@ -202,6 +334,11 @@ function render() {
     default: html = sidePage(view, state);
   }
   renderShell(view, state, stats, html);
+  if (accountOwner && ['courses', 'path', 'lesson', 'recap', 'result', 'work', 'certificate'].includes(view)) {
+    const main = $('#main');
+    if (main.insertAdjacentHTML) main.insertAdjacentHTML(view === 'lesson' ? 'beforeend' : 'afterbegin', `<div data-builtin-sync-panel>${builtinSyncView()}</div>`);
+  }
+  if (workspaceStorage.conflicted) showWorkspaceConflict($('#main'));
   cloud.render();
 }
 
@@ -246,6 +383,7 @@ function checkWork(){
   render();$('#checks-container')?.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function mixPractice() {
+  if (!ensureLearning(mixPractice)) return;
   if (state.active && needsRecap(state, state.active)) { resumeCourse(); pendingPractice = true; return; }
   if (!state.active || state.progress[state.active] < 2) {
     return toast('Пройди урок и ответь на вопросы, чтобы открыть практику.');
@@ -283,6 +421,7 @@ function download(id) {
 }
 
 function startCurrentStep(practice = false, id = state.active || 'design') {
+  if (!ensureLearning(() => startCurrentStep(practice, id))) return;
   if (state.active !== id) selectCourse(id);
   const current = Math.min(state.progress[id], 3);
   if (practice && current >= 2) mixPractice();
@@ -292,6 +431,7 @@ function startCurrentStep(practice = false, id = state.active || 'design') {
 function dashboardAction(action, id) {
   const stats = learningStats(state);
   switch (action) {
+    case 'reload-workspace': if (workspaceStorage.conflicted) window.location.reload(); break;
     case 'daily': {
       const id = dailyCourse(state);
       startCurrentStep(state.progress[id] === 4, id);
@@ -327,9 +467,9 @@ document.addEventListener('submit', event => {
   event.preventDefault();
   const goal = $('#goal-input').value.trim();
   if (!goal) return;
-  changeMinutes($('#time-select')?.value ?? state.minutes);
-  go('learning-plan');
-  void plans.generate(goal, state.minutes);
+  const minutes = normalizeMinutes($('#time-select')?.value ?? state.minutes);
+  const start = () => { changeMinutes(minutes); go('learning-plan'); void plans.generate(goal, minutes); };
+  if (ensureLearning(start)) start();
 });
 
 function updateBudgetDraft(field, value) {
@@ -392,12 +532,46 @@ document.addEventListener('click', event => {
   const button = event.target.closest('button,[data-home]');
   if (!button || button.disabled) return;
   const { view: destination, course, step: requestedStep, choice, color, action, id } = button.dataset;
+  if (button.dataset.learningOpen) {
+    if (ensureLearning()) void library.load(button.dataset.learningOpen).then(ok => { if (ok) go('learning-plan'); });
+    return;
+  }
+  if (button.hasAttribute('data-learning-refresh')) { if (ensureLearning()) void library.refresh(); return; }
+  if (button.hasAttribute('data-learning-import')) {
+    if (legacyLesson && ensureLearning()) void library.importLocal(legacyLesson).then(ok => {
+      if (ok) { state.importedLegacyLesson = true; saveLocal(); go('learning-plan'); }
+    });
+    return;
+  }
+  if (button.hasAttribute('data-builtin-import')) {
+    if (ensureLearning() && canImportBuiltin()) {
+      Object.assign(state, builtinData(legacyWorkspace));
+      save();
+      render();
+      void builtins.flush();
+    }
+    return;
+  }
+  if (button.dataset.builtinSync) {
+    if (!ensureLearning()) return;
+    if (button.dataset.builtinSync === 'retry') void builtins.retry();
+    if (button.dataset.builtinSync === 'load-latest') void builtins.loadLatest().then(ok => { if (ok) go('courses'); });
+    return;
+  }
+  if (button.dataset.learningSync) {
+    if (!ensureLearning()) return;
+    const methods = { retry: 'flush', 'load-latest': 'loadLatest', 'save-copy': 'saveCopy' };
+    const method = methods[button.dataset.learningSync];
+    if (method) void library[method]();
+    return;
+  }
   if (button.matches('[data-home]')) {
     event.preventDefault();
     rememberPosition();
     return go('discover');
   }
   if (destination || course) {
+    if (course && !ensureLearning(() => { selectCourse(course); if (button.hasAttribute('data-start')) resumeCourse(course); })) return;
     rememberPosition();
     if ($('#modal').open) $('#modal').close();
     if (destination) return go(destination);
@@ -474,9 +648,22 @@ document.addEventListener('click', event => {
 window.addEventListener('mindora:learn-page', event => {
   if (event.detail?.courseId === state.active) rememberPosition(event.detail.page);
 });
-window.addEventListener('pagehide', () => rememberPosition(undefined, false));
+window.addEventListener('pagehide', () => {
+  rememberPosition(undefined, false);
+  if (accountReady) { void library.flush(); void builtins.flush(); }
+});
+window.addEventListener('storage', event => {
+  if (event.key !== KEY && event.key !== null) return;
+  try {
+    if (event.storageArea && event.storageArea !== localStorage) return;
+    if (workspaceStorage.hasConflict()) showWorkspaceConflict($('#main'));
+  } catch { /* The existing save warning handles unavailable browser storage. */ }
+});
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) rememberPosition();
+  if (document.hidden) {
+    rememberPosition();
+    if (accountReady) { void library.flush(); void builtins.flush(); }
+  }
   else if (view === 'lesson' && needsRecap(state, state.active)) resumeCourse();
 });
 document.addEventListener('input', event => {
@@ -486,10 +673,55 @@ document.addEventListener('input', event => {
     refreshCertificatePreview(certificateData(state.active));
   }
 });
-window.addEventListener('mindora:account-changed', () => { void cloud.init(); });
+window.addEventListener('mindora:account-changed', () => {
+  const account = getAccountState();
+  const owner = account.user?.id || null;
+  if (owner === accountOwner && accountReady) { void cloud.init(); return; }
+  const version = ++accountEpoch;
+  accountReady = false;
+  if (owner !== accountOwner) {
+    const language = state.language;
+    accountOwner = owner;
+    KEY = owner ? `${LEGACY_KEY}.${encodeURIComponent(owner)}` : `${LEGACY_KEY}.guest`;
+    workspaceStorage = makeWorkspaceStorage();
+    const restored = readState();
+    for (const key of Object.keys(state)) delete state[key];
+    Object.assign(state, restored, { language });
+    builtinSnapshot = JSON.stringify(builtinData(state));
+    for (const field of ['sessions', 'certificates']) if (!state[field] || typeof state[field] !== 'object' || Array.isArray(state[field])) state[field] = {};
+    plans.reset();
+    view = owner ? 'courses' : 'discover';
+    checks = null;
+    quizIndex = 0; quizChoice = null; quizFeedback = false; step = 0;
+    saveWarning = false;
+    render();
+  }
+  void Promise.all([library.setUser(account.user), builtins.setUser(account.user)]).then(() => {
+    if (version !== accountEpoch || owner !== accountOwner) return;
+    accountReady = Boolean(owner);
+    if (owner && pendingLearning) {
+      const next = pendingLearning;
+      pendingLearning = null;
+      closeAccount();
+      next();
+    } else if (owner && view === 'courses') {
+      if (state.learningPlanOpen && state.learningPlan && state.learningCourse?.ownerId === owner) go('learning-plan');
+      else {
+        const resume = readBudgetResume(state);
+        if (resume?.view === 'lesson' && !builtins.screen().conflict) resumeCourse(state.active, resume.step);
+        else render();
+      }
+    }
+  });
+  void cloud.init();
+});
 mountShell();
 
 $('#modal').addEventListener('click',e=>{if(e.target===$('#modal')){const r=$('#modal').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('#modal').close();}});
 if (view === 'lesson') resumeCourse(state.active, step);
 else render();
 void cloud.init();
+if (accountOwner) {
+  void library.setUser(getAccountState().user);
+  void builtins.setUser(getAccountState().user);
+}

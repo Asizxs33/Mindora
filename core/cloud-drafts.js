@@ -1,11 +1,11 @@
 import { renderCloudPanel } from '../ui/cloud-drafts.js';
 import { message } from '../ui/messages.js';
 
-async function request(path, method = 'GET', body) {
+async function request(path, method = 'GET', body, ownerId) {
   const response = await fetch(`/api/${path}`, {
     method,
     credentials: 'same-origin',
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(ownerId ? { 'X-Mindora-Account': ownerId } : {}) },
     body: body ? JSON.stringify(body) : undefined,
     signal: AbortSignal.timeout(15000),
   });
@@ -14,7 +14,7 @@ async function request(path, method = 'GET', body) {
   return result;
 }
 
-export function createCloudDrafts({ getWorkspace, restoreWorkspace, hasLocalDraft }) {
+export function createCloudDrafts({ getWorkspace, restoreWorkspace, hasLocalDraft, expectedOwner }) {
   let user = null;
   let available;
   let busy = false;
@@ -79,9 +79,11 @@ export function createCloudDrafts({ getWorkspace, restoreWorkspace, hasLocalDraf
   document.addEventListener('click', event => {
     const action = event.target.closest('[data-cloud-action]')?.dataset.cloudAction;
     if (!['load', 'save'].includes(action) || !user) return;
+    const ownerId = expectedOwner?.();
+    if (expectedOwner && (!ownerId || ownerId !== user.id)) return;
     void run(async version => {
       if (action === 'load') {
-        const { draft } = await request('budget-draft');
+        const { draft } = await request('budget-draft', 'GET', undefined, ownerId);
         if (version !== accountVersion) return;
         if (!draft) {
           status = 'В аккаунте пока нет черновика.';
@@ -97,12 +99,12 @@ export function createCloudDrafts({ getWorkspace, restoreWorkspace, hasLocalDraf
         if (!workspace) return;
         let expectedRevision = revision;
         if (conflict) {
-          const { draft } = await request('budget-draft');
+          const { draft } = await request('budget-draft', 'GET', undefined, ownerId);
           if (version !== accountVersion) return;
           if (draft && !window.confirm(message('Заменить сохранённый в аккаунте черновик текущей работой?'))) return;
           expectedRevision = draft?.revision ?? null;
         }
-        const { draft } = await request('budget-draft', 'PUT', { workspace, revision: expectedRevision });
+        const { draft } = await request('budget-draft', 'PUT', { workspace, revision: expectedRevision }, ownerId);
         if (version !== accountVersion) return;
         revision = draft.revision;
         conflict = false;

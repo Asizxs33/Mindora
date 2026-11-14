@@ -203,6 +203,39 @@ test('restored detailed and legacy lessons retain completed answers and feedback
   }
 });
 
+test('completed detailed and legacy tasks retain neutral source links without restoring image captions', () => {
+  for (const legacy of [false, true]) {
+    for (const illustrated of [false, true]) {
+      const saved = savedAt();
+      if (legacy) {
+        delete saved.plan.formatVersion;
+        delete saved.plan.steps[0].teaching;
+        delete saved.study;
+      }
+      if (!illustrated) saved.plan.steps[0].resource.images = [];
+      saved.answers = ['My guided answer', 'My independent answer'];
+      for (const completed of [1, 2]) {
+        saved.completed = completed;
+        const restored = restorePlan(JSON.parse(JSON.stringify(saved)));
+        assert.ok(restored);
+        const history = view(restored).document.querySelector('.ai-lesson-history');
+        const link = history.querySelector('.source-link');
+        if (illustrated) {
+          assert.equal(link, null);
+        } else {
+          assert.equal(link.getAttribute('href'), plan.steps[0].resource.url);
+          assert.equal(link.textContent.trim(), 'Open lesson material');
+          assert.equal(link.getAttribute('target'), '_blank');
+          assert.equal(link.getAttribute('rel'), 'noopener noreferrer');
+        }
+        assert.ok(!history.textContent.includes('Foreign source title'));
+        assert.ok(!history.textContent.includes('Image 1:'));
+        assert.equal(history.querySelector('figcaption'), null);
+      }
+    }
+  }
+});
+
 test('lesson navigation and headings follow the selected English, Russian, or Kazakh interface', () => {
   const previousDocument = globalThis.document;
   globalThis.document = { documentElement: {} };

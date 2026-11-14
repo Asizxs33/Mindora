@@ -19,7 +19,7 @@ The goal and 5/10/20-minute selection still produce one practical lesson. New le
 3. Local knowledge check: three options and corrective feedback. A correct answer unlocks practice.
 4. Practice: the learner's own result and optional recovery when AI review is unavailable.
 
-The final task remains independent practice. Navigation, choice checks, and reloading a saved lesson make no new AI requests. Only generation and written-answer reviews use the existing quota. Time includes reading, checking and practice; it is an estimate rather than a countdown.
+The final task remains independent practice. Only generation and written-answer reviews call DeepSeek. Time includes reading, checking and practice. It is an estimate rather than a countdown.
 
 ## Integration contract
 
@@ -30,7 +30,7 @@ The final task remains independent practice. Navigation, choice checks, and relo
 - Images resolve only from retrieved source IDs. No raw source-language captions are displayed. The model may not invent screenshots.
 - Local checks compare a selection against an AI-authored answer key. They provide practice feedback, not independent expert certification. Written feedback also does not certify mastery.
 
-The main design files, built-in poster/spreadsheet courses, account schema, billing and quota settings are outside this change.
+The main design files, built-in poster/spreadsheet courses, account schema and billing are outside this change.
 
 ## Validation
 

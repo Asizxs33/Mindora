@@ -5,6 +5,8 @@ import vm from 'node:vm';
 import * as engine from '../core/engine.js';
 import * as progress from '../core/progress.js';
 import * as budget from '../core/budget-session.js';
+import * as learningModel from '../core/learning-plan.js';
+import { createWorkspaceStorage } from '../core/workspace-storage.js';
 import { resumeCursor, needsRecap, certificateEligible, RECAP_AFTER_MS } from '../core/resume.js';
 import { recapQuestion } from '../ui/recap.js';
 
@@ -13,7 +15,9 @@ import { recapQuestion } from '../ui/recap.js';
 // vm.Script avoids experimental VM modules or a DOM package for this small harness.
 const controller = readFileSync(new URL('../core/app.js', import.meta.url), 'utf8')
   .replace(/^import .+ from .+;\r?$/gm, '');
-const KEY = 'mindora.workspace.v1';
+const planController = readFileSync(new URL('../core/plan-controller.js', import.meta.url), 'utf8')
+  .replace(/^import .+ from .+;\r?$/gm, '').replace('export function createPlanController', 'function createPlanController');
+const KEY = 'mindora.workspace.v1.test-user';
 const NOW = Date.UTC(2026, 10, 14, 12);
 const clone = value => JSON.parse(JSON.stringify(value));
 
@@ -49,36 +53,53 @@ function node() {
   };
 }
 
-function app(initial, { now = NOW, account = { user: null, profile: null }, storage: priorStorage } = {}) {
-  let time = now, current, deck = null, uuidCount = 0;
-  const storage = new Map(priorStorage || [[KEY, JSON.stringify(initial)]]);
+function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profile: null }, storage: priorStorage, realPlans = false, failStorageWrites = false, reconcile = Promise.resolve() } = {}) {
+  let time = now, current, deck = null, uuidCount = 0, reloads = 0, conflictNotice = false, accountOpens = 0;
+  const storage = priorStorage || new Map([[KEY, JSON.stringify(initial)]]);
   const presentation = new Map();
   const elements = new Map(['#main', '#toast', '#modal', '#modal-content', '#checks-container', '#certificate-name'].map(selector => [selector, node()]));
   const document = {
     ...emitter(), hidden: false,
     querySelector(selector) { return selector === '[data-learn-deck]' ? deck : elements.get(selector) || null; },
+    getElementById(id) { return elements.get(`#${id}`) || null; },
   };
-  const window = { ...emitter(), scrollTo() {} };
+  const window = { ...emitter(), scrollTo() {}, location: { reload() { reloads++; } } };
   const downloads = [];
-  const storePort = map => ({ getItem: key => map.get(key) ?? null, setItem: (key, value) => map.set(key, String(value)), removeItem: key => map.delete(key) });
+  const generations = [];
+  const storePort = map => ({
+    getItem: key => map.get(key) ?? null,
+    setItem(key, value) {
+      if (map === storage && failStorageWrites) throw new Error('Storage unavailable');
+      map.set(key, String(value));
+    },
+    removeItem: key => map.delete(key),
+  });
   class Clock extends Date {
     constructor(...args) { super(...(args.length ? args : [time])); }
     static now() { return time; }
   }
   const screen = kind => (...args) => ({ kind, args: clone(args) });
   const context = vm.createContext({
-    ...engine, ...progress, ...budget, resumeCursor, certificateEligible, recapQuestion,
+    ...engine, ...progress, ...budget, ...learningModel, resumeCursor, certificateEligible, recapQuestion,
     languageCode: value => value || 'en', setLanguage() {}, message: value => value,
     createCloudDrafts: () => ({ render() {}, async init() {} }),
-    createPlanController: () => ({ screen: () => ({}), async generate() {} }),
+    createPlanController: () => ({ screen: () => ({}), reset() {}, async generate(goal, minutes) { generations.push({ goal, minutes }); } }),
+    createLearningLibrary: () => ({ screen: () => ({ user: account.user, courses: [] }), async setUser() { await reconcile; return true; }, changed() {}, async flush() { return true; } }),
+    createBuiltinSync: () => ({ screen: () => ({}), async setUser() { return true; }, changed() {}, async flush() { return true; } }),
+    learningLibraryView: () => '', learningSyncView: () => '', loginRequiredView: () => '',
+    createWorkspaceStorage,
+    showWorkspaceConflict() { conflictNotice = true; },
     learningPlanView: screen('learning-plan'),
     needsRecap: (state, id) => needsRecap(state, id, time),
     Date: Clock, console, structuredClone, document, window,
+    AbortSignal: { timeout: () => undefined },
+    fetch: async () => ({ ok: true, json: async () => ({ review: { observation: 'Your result is complete.', nextAction: 'Try another example.' } }) }),
     localStorage: storePort(storage), sessionStorage: storePort(presentation),
     setTimeout: () => 1, clearTimeout() {},
     crypto: { randomUUID: () => `${String(++uuidCount).padStart(8, '0')}-0000-4000-8000-000000000000` },
     mountShell() {},
     renderShell(view, state, stats, html) {
+      conflictNotice = false;
       current = { view, state: clone(state), html };
       deck = view === 'lesson' && html.args[1].step === 0
         ? { dataset: { index: presentation.get(`mindora.reading.${state.active}.v1`) || '0' } } : null;
@@ -94,14 +115,26 @@ function app(initial, { now = NOW, account = { user: null, profile: null }, stor
     posterLayout() { throw new Error('Unexpected poster layout call in controller-flow test'); },
     posterSvg() { throw new Error('Unexpected poster download call in controller-flow test'); },
     getAccountState: () => clone(account),
+    openAccount() { accountOpens++; }, closeAccount() {}, expireAccountSession() { account.user = null; window.dispatch('mindora:account-changed'); },
     downloadCertificate: data => downloads.push(clone(data)),
   });
+  if (realPlans) new vm.Script(planController, { filename: 'core/plan-controller.js' }).runInContext(context);
   new vm.Script(controller, { filename: 'core/app.js' }).runInContext(context);
   return {
     get current() { return current; },
     get lesson() { return current.html.args[1]; },
     get recap() { return current.html.args[1]; },
+    get reloads() { return reloads; },
+    get conflictNotice() { return conflictNotice; },
+    get accountOpens() { return accountOpens; },
     saved: () => JSON.parse(storage.get(KEY)), storage, presentation, downloads,
+    generations,
+    signIn(user) { account.user = user; window.dispatch('mindora:account-changed'); },
+    startGoal(goal, minutes) {
+      const input = node(); input.value = goal; elements.set('#goal-input', input);
+      const select = node(); select.value = String(minutes); elements.set('#time-select', select);
+      document.dispatch('submit', { target: { id: 'goal-form' } });
+    },
     element: selector => elements.get(selector),
     advance(ms) { time += ms; },
     click(dataset, { disabled = false, attributes = [] } = {}) {
@@ -114,6 +147,9 @@ function app(initial, { now = NOW, account = { user: null, profile: null }, stor
       document.dispatch('input', { target });
     },
     change(id, value) { document.dispatch('change', { target: { id, value } }); },
+    answer(value) { document.dispatch('input', { target: { form: { id: 'learning-step-form' }, name: 'answer', value, dataset: {}, closest: () => null } }); },
+    submitAnswer(value) { document.dispatch('submit', { target: { id: 'learning-step-form', elements: { answer: { value } } } }); },
+    storageChanged(key = KEY) { window.dispatch('storage', { key }); },
     readPage(page, courseId = current.state.active) {
       if (deck) deck.dataset.index = String(page);
       window.dispatch('mindora:learn-page', { detail: { courseId, page } });
@@ -123,10 +159,117 @@ function app(initial, { now = NOW, account = { user: null, profile: null }, stor
   };
 }
 
+test('starting either built-in course requires authentication and does not expose prior account work', () => {
+  const run = app(seed({ progress: { design: 4, budget: 4 } }), { account: { user: null, profile: null } });
+  run.click({ action: 'resume-course', id: 'design' });
+  run.click({ course: 'budget' }, { attributes: ['data-start'] });
+  assert.equal(run.current.view, 'discover');
+  assert.equal(run.accountOpens, 2);
+  assert.deepEqual(run.current.state.progress, { design: 0, budget: 0 });
+});
+
+test('a guest goal waits for account restoration, then resumes with the selected time', async () => {
+  let ready;
+  const reconcile = new Promise(resolve => { ready = resolve; });
+  const run = app(seed(), { account: { user: null, profile: null }, reconcile });
+  run.startGoal('Learn to use ChatGPT', 20);
+  assert.equal(run.accountOpens, 1);
+  assert.deepEqual(run.generations, []);
+  run.signIn({ id: 'test-user' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(run.generations, [], 'do not race generation against restoring the old saved lesson');
+  ready();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(run.generations, [{ goal: 'Learn to use ChatGPT', minutes: 20 }]);
+  assert.equal(run.current.view, 'learning-plan');
+});
+
+test('switching accounts selects separate local workspaces and signout hides learning', async () => {
+  const run = app(seed({ notes: { design: 'First account note' } }));
+  run.signIn({ id: 'second-user' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(run.current.state.notes, {});
+  run.input('note', 'Second account note', { note: 'design' });
+  assert.equal(run.saved().notes.design, 'First account note');
+  assert.equal(JSON.parse(run.storage.get('mindora.workspace.v1.second-user')).notes.design, 'Second account note');
+  run.signIn(null);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'discover');
+  assert.deepEqual(run.current.state.notes, {});
+});
+
 test('automatic budget reload requires the overdue recap and preserves the reading page', () => {
   const run = app(seed({ active: 'budget', budgetActivity: { view: 'lesson', step: 0 }, sessions: { budget: { lastSeen: NOW - RECAP_AFTER_MS - 1, cursor: { step: 0, page: 2 } } } }));
   assert.equal(run.current.view, 'recap');
   assert.equal(run.saved().sessions.budget.cursor.page, 2);
+});
+
+test('an older tab cannot overwrite a completed AI task through the real app save path', async () => {
+  const url = 'https://docs.python.org/3/tutorial/';
+  const plan = learningModel.normalizePlan({
+    title: 'Python loops', outcome: 'Write a loop.',
+    steps: [0, 1].map(index => ({ title: `Task ${index + 1}`, instruction: 'Visit every name.', task: 'Print three names.', criterion: 'Three names appear.', sourceUrl: url })),
+  }, { goal: 'Learn Python loops', minutes: 5, language: 'en' }, new Map([[url, { url, title: 'Python tutorial' }]]));
+  const initial = seed({ learningPlanOpen: true, learningPlan: { plan, study: [{ page: 1 }] } });
+  const first = app(initial, { realPlans: true });
+  const older = app(null, { storage: first.storage, realPlans: true });
+  first.answer('Ada, Lin, Sam');
+  first.submitAnswer('Ada, Lin, Sam');
+  await new Promise(resolve => setImmediate(resolve));
+  first.click({ learningStep: 'continue' });
+  const newerSave = first.storage.get(KEY);
+  assert.equal(first.saved().learningPlan.completed, 1);
+
+  // The browser may not have delivered the storage event before this input.
+  older.answer('My unsaved text');
+  older.click({ learningPage: 'back' });
+  assert.equal(first.storage.get(KEY), newerSave, 'the stale tab must not replace newer answers or completion');
+  assert.equal(older.current.state.learningPlan.answers[0], 'My unsaved text', 'retain the conflicting draft in memory');
+  assert.equal(older.reloads, 0, 'do not reload or discard the draft automatically');
+  assert.equal(older.conflictNotice, true, 'keep the conflict notice visible after navigation rerenders');
+  older.click({ action: 'reload-workspace' });
+  assert.equal(older.reloads, 1, 'reload only after the learner explicitly chooses it');
+  const reloaded = app(null, { storage: first.storage, realPlans: true });
+  assert.equal(reloaded.current.state.learningPlan.completed, 1);
+  assert.equal(reloaded.current.state.learningPlan.answers[0], 'Ada, Lin, Sam');
+  assert.equal(reloaded.conflictNotice, false);
+});
+
+test('a storage event pauses the stale tab without redrawing its current input', () => {
+  const first = app(seed());
+  const older = app(null, { storage: first.storage });
+  const currentScreen = older.current;
+  first.input('note', 'Newer work', { note: 'design' });
+  older.storageChanged('unrelated-key');
+  assert.equal(older.conflictNotice, false);
+  older.storageChanged();
+  assert.equal(older.conflictNotice, true);
+  assert.equal(older.current, currentScreen, 'the focused draft is not redrawn');
+  older.input('note', 'My conflicting draft', { note: 'design' });
+  older.change('profile-minutes', '20');
+  assert.equal(first.saved().notes.design, 'Newer work');
+  assert.equal(first.saved().minutes, 10);
+  assert.equal(older.reloads, 0);
+});
+
+test('clearing storage in another tab cannot resurrect an old workspace', () => {
+  const run = app(seed({ notes: { design: 'Old private draft' } }));
+  run.storage.delete(KEY);
+  run.storageChanged(null);
+  run.change('profile-minutes', '20');
+  assert.equal(run.conflictNotice, true);
+  assert.equal(run.storage.has(KEY), false);
+});
+
+test('unavailable storage keeps the existing one-time save warning', () => {
+  const run = app(seed(), { failStorageWrites: true });
+  run.input('note', 'Still in memory', { note: 'design' });
+  assert.match(run.element('#toast').textContent, /could not save progress/);
+  run.element('#toast').textContent = 'Another notice';
+  run.input('note', 'Still editable', { note: 'design' });
+  assert.equal(run.element('#toast').textContent, 'Another notice');
+  assert.equal(run.conflictNotice, false);
+  assert.deepEqual(run.saved().notes, {});
 });
 
 test('time modes retain separate quiz positions and finish after one or four questions', () => {

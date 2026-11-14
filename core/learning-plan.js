@@ -5,7 +5,13 @@ export const PLAN_DURATIONS = Object.freeze({
   10: Object.freeze([2, 3, 5]),
   20: Object.freeze([3, 5, 5, 7]),
 });
-const TASK_LENGTH_LIMIT = 900;
+export const PLAN_TEXT_LIMITS = Object.freeze({
+  title: 90,
+  outcome: 450,
+  instruction: 900,
+  task: 900,
+  criterion: 320,
+});
 
 export function planInput(goal, minutes, language) {
   if (typeof goal !== 'string' || !Number.isInteger(minutes) || !Object.hasOwn(PLAN_DURATIONS, minutes)) return null;
@@ -47,8 +53,8 @@ function sourceImages(images) {
 
 export function taskReviewInput(raw) {
   const goal = text(raw?.goal, 180);
-  const task = text(raw?.task, TASK_LENGTH_LIMIT);
-  const criterion = text(raw?.criterion, 320);
+  const task = text(raw?.task, PLAN_TEXT_LIMITS.task);
+  const criterion = text(raw?.criterion, PLAN_TEXT_LIMITS.criterion);
   const answer = text(raw?.answer, 1500);
   return goal && task && criterion && answer
     ? { goal, task, criterion, answer, language: languageCode(raw.language, 'ru') }
@@ -91,15 +97,15 @@ export function normalizePlan(raw, input, sources) {
   if (raw.formatVersion !== undefined && raw.formatVersion !== 2) return null;
   const detailed = raw.formatVersion === 2;
   const durations = PLAN_DURATIONS[input.minutes];
-  const title = text(raw.title, 90);
-  const outcome = text(raw.outcome, 450);
+  const title = text(raw.title, PLAN_TEXT_LIMITS.title);
+  const outcome = text(raw.outcome, PLAN_TEXT_LIMITS.outcome);
   if (!durations || !title || !outcome || raw.steps.length !== durations.length) return null;
   const steps = [];
   for (const [id, item] of raw.steps.entries()) {
-    const title = text(item?.title, 90);
-    const instruction = text(item?.instruction, 900);
-    const task = text(item?.task, TASK_LENGTH_LIMIT);
-    const criterion = text(item?.criterion, 320);
+    const title = text(item?.title, PLAN_TEXT_LIMITS.title);
+    const instruction = text(item?.instruction, PLAN_TEXT_LIMITS.instruction);
+    const task = text(item?.task, PLAN_TEXT_LIMITS.task);
+    const criterion = text(item?.criterion, PLAN_TEXT_LIMITS.criterion);
     if (!title || !instruction || !task || !criterion) return null;
     const teaching = detailed && id < durations.length - 1 ? normalizeTeaching(item.teaching) : null;
     if (detailed && id < durations.length - 1 && !teaching) return null;

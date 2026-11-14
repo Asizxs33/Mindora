@@ -104,7 +104,9 @@ export function dashboard(state) {
 
 export function coursesPage(state) {
   const ids = startedCourses(state);
-  const saved = state.learningPlan;
+  // Account courses are already rendered by learningLibraryView above this section.
+  const saved = state.learningCourse ? null : state.learningPlan;
+  if (!ids.length && state.learningCourse) return `<button type="button" class="secondary new-course-button" data-home>${icon('plus', 18)} ${t('Learn something new', 'Изучить новое', 'Жаңа нәрсе үйрену')}</button>`;
   let personalCourse = '';
   if (saved) {
     const total = saved.plan.steps.length;

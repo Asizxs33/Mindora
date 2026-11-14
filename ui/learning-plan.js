@@ -62,11 +62,17 @@ function historyView({ plan, answers, reviews, completed }) {
     <ol class="ai-lesson-history-list" lang="${esc(plan.language)}">${steps.map((step, index) => `<li>
       <h3>${esc(step.title)}</h3>
       <p class="ai-lesson-history-task">${esc(step.task)}</p>
+      ${sourceMaterialLink(step.resource)}
       <h4 lang="${esc(currentLanguage())}">${t('Your answer', 'Твой ответ', 'Жауабың')}</h4>
       <div class="ai-lesson-submission learning-answer">${esc(answers[index])}</div>
       ${reviews[index] ? reviewView(reviews[index], true) : ''}
     </li>`).join('')}</ol>
   </details>`;
+}
+
+function sourceMaterialLink(resource) {
+  if (!resource || resource.images?.length) return '';
+  return '<p class="small-note"><a class="source-link" href="' + esc(resource.url) + '" target="_blank" rel="noopener noreferrer" lang="' + esc(currentLanguage()) + '">' + t('Open lesson material', 'Открыть материал урока', 'Сабақ материалын ашу') + ' ' + icon('arrow', 14) + '</a></p>';
 }
 
 function explanationView(step, mentor) {
@@ -150,7 +156,7 @@ function screenView(saved, busy, reviewError) {
   </section>`;
 }
 
-function lessonView(saved, busy, reviewError) {
+function lessonView(saved, busy, reviewError, accountSaved) {
   const { plan, completed } = saved;
   return `<header class="ai-lesson-heading" lang="${esc(plan.language)}">
     <div class="ai-lesson-heading-meta" lang="${esc(currentLanguage())}"><span>${icon('book', 18)} ${t('My lesson', 'Моё занятие', 'Сабағым')}</span><span>${icon('clock', 16)} ${t(`${plan.minutes} minutes`, `${plan.minutes} минут`, `${plan.minutes} минут`)}</span></div>
@@ -159,7 +165,7 @@ function lessonView(saved, busy, reviewError) {
   </header>
   ${completed === plan.steps.length ? resultView(saved) : screenView(saved, busy, reviewError)}
   ${historyView(saved)}
-  <p class="small-note ai-lesson-storage-note">${t('Answers and feedback stay in this browser.', 'Ответы и разборы сохраняются в этом браузере.', 'Жауаптар мен талдау осы браузерде сақталады.')}</p>`;
+  <p class="small-note ai-lesson-storage-note">${accountSaved ? t('Saving status is shown above. You can continue on another device after saving.', 'Статус сохранения показан выше. После сохранения можно продолжить на другом устройстве.', 'Сақтау күйі жоғарыда көрсетілген. Сақтағаннан кейін басқа құрылғыда жалғастыра аласың.') : t('Answers and feedback stay in this browser.', 'Ответы и разборы сохраняются в этом браузере.', 'Жауаптар мен талдау осы браузерде сақталады.')}</p>`;
 }
 
 function goalForm({ goal, minutes, busy, error }) {
@@ -175,9 +181,9 @@ function goalForm({ goal, minutes, busy, error }) {
 }
 
 export function learningPlanView(screen) {
-  const { saved, busy, error, reviewError } = screen;
+  const { saved, busy, error, reviewError, accountSaved } = screen;
   return `<div class="learning-plan ai-lesson">
-    ${saved ? lessonView(saved, busy, reviewError) : `<header class="ai-lesson-welcome"><p class="ai-lesson-eyebrow">${t('A little time. A new skill.', 'Немного времени. Новый навык.', 'Аз уақыт. Жаңа дағды.')}</p><h1>${t('What will we learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</h1>${mentorView('mino', busy === 'plan' ? 'thinking' : 'welcome', `<p>${t('Tell me your goal. We’ll learn one idea, see an example, then try it together.', 'Расскажи о своей цели. Разберём идею, посмотрим пример и попробуем вместе.', 'Мақсатыңды айт. Бір ойды түсініп, мысалды қарап, бірге орындап көреміз.')}</p>`)}</header>`}
+    ${saved ? lessonView(saved, busy, reviewError, accountSaved) : `<header class="ai-lesson-welcome"><p class="ai-lesson-eyebrow">${t('A little time. A new skill.', 'Немного времени. Новый навык.', 'Аз уақыт. Жаңа дағды.')}</p><h1>${t('What will we learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</h1>${mentorView('mino', busy === 'plan' ? 'thinking' : 'welcome', `<p>${t('Tell me your goal. We’ll learn one idea, see an example, then try it together.', 'Расскажи о своей цели. Разберём идею, посмотрим пример и попробуем вместе.', 'Мақсатыңды айт. Бір ойды түсініп, мысалды қарап, бірге орындап көреміз.')}</p>`)}</header>`}
     ${saved ? `<details class="ai-lesson-settings"${busy === 'plan' || error ? ' open' : ''}><summary>${icon('edit', 18)} <span>${t('Change goal or lesson time', 'Изменить цель или время занятия', 'Мақсатты немесе сабақ уақытын өзгерту')}</span>${icon('chevron', 18)}</summary><div class="ai-lesson-settings-body">${goalForm(screen)}</div></details>` : `<section class="game-card simple-panel">${goalForm(screen)}</section>`}
   </div>`;
 }

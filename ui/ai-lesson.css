@@ -72,7 +72,7 @@
 .ai-lesson-check-feedback p { margin-bottom: 0; }
 .ai-lesson-criterion { padding: 16px 19px; margin-bottom: 25px; border-radius: 12px; background: #f6f5f3; font-size: 15px; line-height: 1.65; }
 .ai-lesson-criterion p { margin-bottom: 0; color: #605852; }
-.ai-lesson-submission { padding: 20px; border: 1px solid var(--lesson-line); border-radius: 12px; margin: 12px 0 22px; }
+.ai-lesson-submission { overflow-wrap: anywhere; padding: 20px; border: 1px solid var(--lesson-line); border-radius: 12px; margin: 12px 0 22px; }
 .ai-lesson-feedback { padding: 22px; border-radius: 14px; margin-block: 22px; background: var(--lesson-tint); color: #66442e; line-height: 1.7; }
 .ai-lesson-feedback h3, .ai-lesson-feedback h4 { display: flex; align-items: center; gap: 8px; }
 .ai-lesson-feedback p { margin-block: 12px 0; }
