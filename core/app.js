@@ -176,6 +176,7 @@ function expiredSession() {
 }
 
 function syncView() {
+  if (!accountOwner) return '';
   const data = library.screen();
   return learningSyncView({ status: data.status, error: data.syncError, conflict: data.conflict });
 }
