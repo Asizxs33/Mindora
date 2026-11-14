@@ -27,6 +27,7 @@
 | Поиск по цели и настройки | `form#goal-form`, `#goal-input`, `#time-select`, `#profile-minutes` |
 | Язык интерфейса | `select#interface-language` со значениями `en`, `ru`, `kk`. |
 | ИИ-маршрут | `form#learning-plan-form` с полями `goal`, `minutes`. `form#learning-step-form` с полем `answer`. Кнопки `data-learning-step="edit"` и `data-learning-step="continue"`. Сохрани `#learning-review-status` и `#learning-plan-complete` с `tabindex="-1"` для перехода фокуса. |
+| Подробный ИИ-урок | `data-learning-page="back|next|check"` переключает экран и проверяет выбор; `data-learning-choice="0|1|2"` выбирает ответ. Сохрани `#learning-page-title` с `tabindex="-1"`, состояния `disabled`, историю выполненных работ. Разметка: `ui/learning-plan.js`, стили: `ui/ai-lesson.css`. Контроллер и состояние остаются в `core/`. Подробнее: [DETAILED-LESSONS.md](DETAILED-LESSONS.md). |
 | Урок, квиз, практика | `data-step` для этапов 0–3, `data-choice` для ответа, `data-action` и `data-id` для соответствующих кнопок. Сохрани `disabled` у заблокированных этапов и состояние проверки. |
 | Постер | `#poster-form` и исходные имена полей `title`, `subtitle`, `cta`, `titleSize`, `subtitleSize`, `textColor`, `data-color`, `data-poster-stage`, `data-poster-preview`, `#title-size`, `#subtitle-size` |
 | Таблица и сохранённые работы | `#budget-formula`, `#budget-answer`, `data-expense`, `data-budget-total`, `#checks-container`, `data-note`, кнопки скачивания с `data-action="download"` и `data-id` |

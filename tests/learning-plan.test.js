@@ -16,6 +16,12 @@ const draft = {
     title: `Шаг ${index + 1}`, instruction: 'Прочитай пример цикла.',
     task: 'Напиши свой цикл и запиши вывод.', criterion: 'Для трёх элементов вывод содержит три строки.',
     sourceId: index === 0 ? 0 : 999, minutes: 999,
+    teaching: {
+      why: 'Цикл выполняет одно действие для каждого элемента списка.',
+      example: { input: "for name in ['A', 'B']:\n    print(name)", output: 'A\nB', explanation: 'Каждая итерация печатает один элемент.' },
+      checkpoint: { question: 'Сколько строк напечатает этот цикл?', choices: ['Две', 'Одну', 'Ни одной'], correctIndex: 0, explanation: 'В списке два элемента, действие выполняется два раза.' },
+      takeaway: 'Число итераций соответствует числу элементов списка.',
+    },
   })),
 };
 
@@ -172,11 +178,16 @@ test('illustrations bind to retrieved sources and survive reload without crossin
   const unsafe = structuredClone(plan);
   unsafe.steps[0].resource.images.push({ url: 'javascript:alert(1)', alt: 'Unsafe' });
   assert.deepEqual(restorePlan({ plan: unsafe }).plan.steps[0].resource.images, [first]);
-  const rendered = learningPlanView({ goal: plan.goal, minutes: plan.minutes, saved: restorePlan({ plan }) });
+  const restored = restorePlan({ plan });
+  const rendered = learningPlanView({ goal: plan.goal, minutes: plan.minutes, saved: restored });
   assert.match(rendered, /<img src="https:\/\/docs\.python\.org\/first\.png" alt="First example"/);
   assert.ok(rendered.indexOf(steps[0].instruction) < rendered.indexOf('<figure'));
-  assert.ok(rendered.indexOf('<figure') < rendered.indexOf(steps[0].task));
+  assert.ok(!rendered.includes(steps[0].task), 'practice is revealed after the explanation, on its own screen');
   assert.match(rendered, /referrerpolicy="no-referrer"/);
+  restored.study[0].page = 1;
+  const practice = learningPlanView({ goal: plan.goal, minutes: plan.minutes, saved: restored });
+  assert.ok(practice.includes(steps[0].task));
+  assert.ok(!practice.includes('<figure'), 'source images stay with the explanation');
 });
 
 test('the agent selects a discovered illustration by ID and cannot invent its URL', async () => {
