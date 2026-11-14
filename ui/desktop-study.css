@@ -79,3 +79,253 @@
   .desktop-study-main .learning-hub-guide .guided-dialogue { display:none; }
   .desktop-study-main .learning-hub-label { font-size:12px; }
 }
+
+/* Desktop polish using Unslop by Damir Sokolovsky (CC BY 4.0).
+   https://github.com/heydamir/unslop
+   Keep the mobile layout and all controller hooks unchanged. */
+@media (min-width:921px) {
+  body.quiet-shell:not(.is-guided):not(.is-learning) {
+    --ink:#292724;
+    --muted:#696560;
+    --line:#e7e5e1;
+    --accent:#b7470a;
+    --accent-dark:#953b09;
+    --accent-soft:#fcf1e8;
+    --sidebar:240px;
+    --header:72px;
+    color:var(--ink);
+    background:#fff;
+  }
+
+  /* Quiet navigation leaves the current lesson as the strongest action. */
+  body.quiet-shell:not(.is-guided):not(.is-learning) .topbar { padding-inline:28px; border-color:var(--line); }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .brand-wordmark { font-size:28px; letter-spacing:-.5px; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .sidebar { padding:24px 16px; background:#fcfcfb; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) #navigation { gap:4px; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .sidebar .nav-item { min-height:44px; gap:12px; padding:8px 12px; border-radius:10px; font-size:14px; font-weight:500; color:var(--muted); box-shadow:none; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .sidebar .nav-item:hover { background:#f3f2ef; color:var(--ink); }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .sidebar .nav-item.active { border-color:#eedbc9; background:var(--accent-soft); color:var(--accent-dark); font-weight:600; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .sidebar .nav-symbol { width:24px; height:24px; border-radius:0; background:transparent; color:inherit; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .sidebar .nav-symbol svg { width:20px; height:20px; stroke-width:1.7; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .top-actions .roadmap-metrics { border-color:var(--line); border-radius:10px; background:#fff; box-shadow:none; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .top-actions .roadmap-metric { background:transparent; font-variant-numeric:tabular-nums; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .top-actions .roadmap-metric span { color:var(--muted); }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .language-picker .profile-select { min-height:40px; border-color:var(--line); border-radius:10px; }
+
+  /* Controls retain their native focus, disabled and feedback states. */
+  body.quiet-shell:not(.is-guided):not(.is-learning) :is(.primary,.secondary) { min-height:44px; padding:10px 16px; border-radius:10px; font-size:14px; font-weight:600; box-shadow:none; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .primary { border:1px solid transparent; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .secondary { background:#fff; border:1px solid #dcd9d3; color:var(--ink); }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .secondary:hover:not(:disabled) { background:#f6f5f2; border-color:#b9b3aa; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .text-link { font-weight:500; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) #main :is(h1,h2,h3) { letter-spacing:0; font-weight:600; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) #main :is(progress,.profile-stats strong,.course-home-percent) { font-variant-numeric:tabular-nums; }
+
+  body.quiet-shell:not(.is-guided):not(.is-learning) #main.has-desktop-study[data-page] { max-width:1280px; padding:32px 32px 64px; }
+  .desktop-study-layout { grid-template-columns:minmax(0,1fr) 264px; gap:40px; }
+  .desktop-study-rail {
+    top:calc(var(--header) + 32px);
+    gap:0;
+    border-inline-start:1px solid var(--line);
+    padding-inline-start:20px;
+  }
+  .study-side-card {
+    padding:16px 0;
+    border:0;
+    border-bottom:1px solid var(--line);
+    border-radius:0;
+    background:transparent;
+  }
+  .study-side-card:first-child { padding-top:0; }
+  .study-side-card:last-child { border-bottom:0; }
+  .study-side-card h2 { font-size:16px; line-height:1.5; }
+  .study-side-card p { color:var(--muted); font-size:13px; line-height:1.6; }
+  .study-side-card > header { margin-bottom:8px; }
+  .study-side-card .roadmap-quest { grid-template-columns:24px minmax(0,1fr); gap:8px 12px; padding:16px 0; border-color:var(--line); }
+  .study-side-card .roadmap-symbol { width:24px; height:28px; background:transparent; color:var(--muted); border-radius:0; }
+  .study-side-card .roadmap-symbol svg { width:18px; height:18px; }
+  .study-side-card .roadmap-quest h3 { font-size:14px; line-height:1.5; }
+  .study-side-card .roadmap-quest progress { height:6px; margin:8px 0; }
+  .study-side-card .roadmap-quest small { font-size:12px; line-height:1.5; color:var(--muted); }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .study-side-card .roadmap-quest > .primary { min-height:36px; margin-top:0; padding:6px 12px; border-color:#ddd8cf; background:#f7f6f3; color:#51483e; font-size:12px; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .study-side-card .roadmap-quest > .primary:hover:not(:disabled) { background:#eeece6; border-color:#b9b3aa; }
+  .study-streak-card,.study-pace-card { grid-template-columns:24px minmax(0,1fr); gap:12px; }
+  .study-card-symbol,.study-pace-card .study-card-symbol { width:24px; height:28px; background:transparent; border-radius:0; color:var(--muted); }
+  .study-card-symbol svg { width:20px; height:20px; }
+
+  /* A course reads like a learning notebook: title, pace, next action, route. */
+  .desktop-study-main .roadmap-heading { padding:0 0 20px; gap:16px; border-bottom:1px solid var(--line); border-radius:0; background:#fff; color:var(--ink); }
+  .desktop-study-main .roadmap-heading h1 { max-width:25em; font-size:28px; line-height:1.25; color:var(--ink); text-wrap:pretty; }
+  .desktop-study-main .roadmap-heading-progress { gap:12px; font-size:13px; color:var(--muted); }
+  .desktop-study-main .roadmap-heading-progress > strong { color:var(--ink); }
+  .desktop-study-main .roadmap-heading-progress progress { height:6px; background:#eeece7; accent-color:var(--accent); }
+  .desktop-study-main .roadmap-heading-progress progress::-webkit-progress-bar { background:#eeece7; }
+  .desktop-study-main .roadmap-heading-progress progress::-webkit-progress-value { background:var(--accent); }
+  .desktop-study-main .roadmap-heading-progress progress::-moz-progress-bar { background:var(--accent); }
+  .desktop-study-main .roadmap-course-scale { padding:16px 0 20px; gap:8px 20px; color:var(--muted); }
+  .desktop-study-main .roadmap-course-scale > span:first-child { color:var(--muted); font-weight:500; }
+  .desktop-study-main .roadmap-course-scale small { color:var(--muted); }
+  .desktop-study-main .roadmap-resume { padding:0 0 16px; gap:12px 16px; margin-bottom:8px; border:0; border-radius:0; background:none; }
+  .desktop-study-main .roadmap-resume > span { color:var(--muted); font-size:14px; line-height:1.5; }
+  .desktop-study-main .roadmap-about { margin:0; border-bottom:1px solid var(--line); color:var(--muted); }
+  .desktop-study-main .roadmap-about > summary { min-height:48px; font-weight:500; }
+  .desktop-study-main .roadmap-tutor { max-width:none; margin:20px 0 0; gap:12px; }
+  .desktop-study-main .roadmap-tutor .roadmap-guide { --character-size:64px; }
+  .desktop-study-main .roadmap-tutor-speech { flex:0 1 auto; padding:12px 16px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+  .desktop-study-main .roadmap-tutor-speech::before { left:-7px; border-width:0 0 1px 1px; border-color:var(--line); background:#fff; }
+  .desktop-study-main .roadmap-tutor-speech p { color:var(--muted); font-size:14px; line-height:1.5; }
+
+  /* Keep the continuous route and four kinds; status is a separate badge. */
+  .desktop-study-main .roadmap-stages { --roadmap-node:64px; --roadmap-milestone-space:96px; max-width:520px; margin:8px auto 0; padding-top:32px; }
+  .desktop-study-main .roadmap-stage { min-height:calc(var(--roadmap-node) + 100px + var(--roadmap-stage-head)); padding-bottom:24px; }
+  .desktop-study-main .roadmap-stage:last-child { min-height:0; }
+  .desktop-study-main .roadmap-stage-stop { gap:12px; padding-inline:12px; }
+  .desktop-study-main .roadmap-stage-connector path { stroke:#e3e0da; stroke-width:4px; }
+  .desktop-study-main .roadmap-stage.is-completed .roadmap-stage-connector path { stroke:#c7d8be; }
+  .desktop-study-main .roadmap-stage .roadmap-stage-node { border-width:1px; border-bottom-width:3px; border-radius:50%; box-shadow:none; transition:background-color .16s,color .16s,border-color .16s,transform .16s; }
+  .desktop-study-main .roadmap-stage-node .icon { width:28px; height:28px; }
+  .desktop-study-main .roadmap-stage-status { width:24px; height:24px; border-width:2px; right:-4px; bottom:-5px; }
+  .desktop-study-main .roadmap-stage-status .icon { width:12px; height:12px; }
+  .desktop-study-main .roadmap-stage.is-ready .roadmap-stage-node,.desktop-study-main .roadmap-stage.is-active .roadmap-stage-node { background:var(--accent); border-color:var(--accent-dark); color:#fff; box-shadow:0 0 0 5px var(--accent-soft); }
+  .desktop-study-main .roadmap-stage.is-completed .roadmap-stage-node { background:#edf5e8; border-color:#bdd2af; color:#486b37; }
+  .desktop-study-main .roadmap-stage-node:hover:not(:disabled) { transform:none; border-color:currentColor; }
+  .desktop-study-main .roadmap-stage-node:focus-visible { outline:3px solid var(--accent-dark); outline-offset:8px; }
+  .desktop-study-main .roadmap-stage-text { max-width:216px; padding:0 4px; }
+  .desktop-study-main .roadmap-stage-text :is(h2,h3) { font-size:14px; line-height:1.5; font-weight:500; color:#625d57; text-wrap:pretty; }
+  .desktop-study-main .roadmap-stage.is-ready .roadmap-stage-text :is(h2,h3),.desktop-study-main .roadmap-stage.is-active .roadmap-stage-text :is(h2,h3) { color:var(--accent-dark); font-weight:600; }
+  .desktop-study-main .roadmap-stage.is-completed .roadmap-stage-text :is(h2,h3) { color:#486b37; }
+  .desktop-study-main .roadmap-stage-kind-label { margin-bottom:4px; font-size:12px; line-height:1.4; letter-spacing:0; text-transform:none; font-weight:500; }
+  .desktop-study-main .roadmap-start-bubble { padding:6px 12px; border-width:1px; border-radius:8px; background:#fff; font-size:12px; font-weight:600; box-shadow:none; animation:none; }
+  html:not([data-character-animations='off']) .desktop-study-main .roadmap-start-bubble { animation:none; }
+  .desktop-study-main .roadmap-start-bubble::after { border-width:0 1px 1px 0; background:#fff; }
+  .desktop-study-main .roadmap-milestone { top:0; left:18%; width:64%; gap:8px; padding:0 8px; }
+  .desktop-study-main .roadmap-milestone-label { color:var(--muted); font-size:12px; font-weight:500; text-transform:none; letter-spacing:0; }
+  .desktop-study-main .roadmap-milestone h2 { color:var(--ink); font-size:16px; line-height:1.4; }
+  .desktop-study-main .roadmap-milestone.is-current .roadmap-milestone-label { color:var(--accent-dark); }
+
+  /* A single workspace for the goal, its pace, and Mino. */
+  body.quiet-shell.has-course-home:not(.is-guided) #main { max-width:1100px; padding:48px 40px 64px; }
+  .course-home {
+    --mino-space:clamp(160px, 20vw, 260px);
+    --goal-inset:32px;
+  }
+  .course-home .course-home-heading {
+    display:block;
+    position:relative;
+    margin:0;
+    padding:32px var(--mino-space) 24px var(--goal-inset);
+    border-top:1px solid #e5dccf;
+    background:#f7f4ee;
+  }
+  .course-home .course-home-copy { align-items:flex-start; text-align:left; gap:12px; }
+  .course-home .course-home-copy h1 {
+    max-width:18em;
+    font-family:Georgia, "Times New Roman", serif;
+    font-size:clamp(32px, 4vw, 46px);
+    line-height:1.13;
+  }
+  .course-home .course-home-desktop-intro { max-width:36em; font-size:16px; line-height:1.6; }
+  .course-home .course-home-greeting { padding:0; border:0; border-radius:0; background:transparent; color:var(--muted); font-size:14px; }
+  .course-home .course-home-greeting::before { content:none; }
+  .course-home .course-home-heading .course-home-mino {
+    --character-size:clamp(120px, 16vw, 210px);
+    --character-height:var(--character-size);
+    position:absolute;
+    right:calc((var(--mino-space) - var(--character-size)) / 2);
+    top:40px;
+    width:var(--character-size);
+    height:var(--character-size);
+    background:none;
+  }
+  .course-home .course-home-composer {
+    max-width:none;
+    padding:0 var(--mino-space) 36px var(--goal-inset);
+    gap:16px;
+    border-bottom:1px solid #e5dccf;
+    background:#f7f4ee;
+  }
+  .course-home .course-home-composer > label { font-size:14px; font-weight:500; }
+  .course-home .course-home-composer #goal-input { height:56px; padding:12px 16px; border-width:1px; border-color:#c9c5bd; border-radius:10px; font-size:16px; }
+  .course-home .course-home-composer #goal-input:focus { border-color:var(--accent); }
+  .course-home .course-home-form-actions { grid-template-columns:minmax(104px, 144px) minmax(0,1fr); align-items:end; gap:12px; }
+  .course-home .course-home-time { gap:8px; background:transparent; }
+  .course-home .course-home-time > span { font-size:13px; font-weight:500; }
+  .course-home .course-home-time select { min-height:48px; padding:10px 12px; border-color:#c9c5bd; border-radius:10px; background:#fff; font-size:14px; font-weight:500; }
+  .course-home .course-home-form-actions .primary { min-height:48px; font-size:15px; }
+  .course-home .course-home-shortcuts { max-width:none; gap:12px; margin-top:16px; }
+  .course-home .topic-shortcut { min-height:44px; padding:10px 16px; border:1px solid var(--line); border-radius:10px; background:#fafaf8; color:var(--muted); font-size:14px; font-weight:500; }
+  .course-home .topic-shortcut:hover { background:#f2f1ed; color:var(--ink); }
+
+  /* Saved courses remain full, readable rows with a quieter repeated action. */
+  .course-library-heading { gap:24px; margin-bottom:32px; }
+  .course-library-heading h1 { font-size:32px; line-height:1.25; }
+  .course-library .learning-library-heading h2 { color:var(--muted); font-size:16px; line-height:1.5; }
+  .course-library .learning-library-card {
+    padding:20px 16px;
+    gap:16px 24px;
+    align-items:center;
+  }
+  .course-library .learning-library-card .course-cover { --cover-size:88px; align-self:center; }
+  .course-library .learning-library-card h3 { max-width:33em; font-size:20px; line-height:1.35; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .learning-library-card > .secondary {
+    border-color:transparent;
+    background:transparent;
+    color:var(--ink);
+  }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .learning-library-card > .secondary:hover:not(:disabled) {
+    border-color:var(--line);
+    background:#f4f1eb;
+  }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .learning-library-card[data-course-state="active"] > .secondary {
+    border-color:var(--accent-dark);
+    background:var(--accent);
+    color:#fff;
+  }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .learning-library-card[data-course-state="active"] > .secondary:hover:not(:disabled) {
+    background:var(--accent-dark);
+  }
+  .course-library .phone-catalog > summary { font-weight:500; }
+  .course-library .ready-course {
+    padding:16px 0;
+    border:0;
+    border-block-start:1px solid var(--line);
+    border-radius:0;
+    box-shadow:none;
+  }
+  .course-library .ready-course .ready-course-meta {
+    grid-column:2;
+    padding-top:0;
+    border:0;
+  }
+  .course-library .ready-course-copy strong { font-weight:600; }
+  .course-library .ready-course-meta > svg { background:transparent; color:var(--muted); }
+
+  .simple-profile { max-width:760px; }
+  .simple-profile-heading h1 { font-size:32px; line-height:1.25; }
+  .simple-profile .account-profile-card { border-color:var(--line); border-radius:14px; padding:24px; }
+  .simple-profile .account-profile-card h2 { font-size:24px; }
+  .simple-profile .profile-overview { background:#fafaf8; border-color:var(--line); border-radius:14px; }
+  .simple-profile .profile-links { border-color:var(--line); border-radius:14px; }
+  .simple-profile .profile-link-icon { background:#f5f4f1; color:var(--muted); border-radius:10px; }
+  .simple-profile .profile-settings h2 { font-size:16px; line-height:1.5; }
+  .simple-profile .profile-links strong { font-weight:500; }
+}
+
+@media (min-width:921px) and (prefers-reduced-motion:no-preference) {
+  .desktop-study-main .roadmap-stage-node:active:not(:disabled) { transform:translateY(1px); }
+}
+
+@media (min-width:921px) and (max-width:1199px) {
+  body.quiet-shell:not(.is-guided):not(.is-learning) { --sidebar:208px; }
+  body.quiet-shell:not(.is-guided):not(.is-learning) #main.has-desktop-study[data-page] { padding:28px 24px 56px; }
+  .desktop-study-layout { grid-template-columns:minmax(0,1fr) 224px; gap:24px; }
+  .desktop-study-rail { padding-inline-start:12px; }
+  .desktop-study-main .roadmap-heading h1 { font-size:24px; }
+  .desktop-study-main .roadmap-stage-stop { padding-inline:4px; }
+  .desktop-study-main .roadmap-stage { min-height:calc(var(--roadmap-node) + 112px + var(--roadmap-stage-head)); }
+  .desktop-study-main .roadmap-stage-text :is(h2,h3) { font-size:13px; }
+  .desktop-study-main .roadmap-stages { --roadmap-milestone-space:112px; }
+  .course-home { --mino-space:152px; --goal-inset:24px; }
+  .course-home .course-home-copy h1 { font-size:34px; }
+  .course-home .course-home-heading .course-home-mino { --character-size:120px; }
+}

@@ -3,6 +3,7 @@ import { COURSES, escapeHtml } from '../core/engine.js';
 import { resumeCursor } from '../core/resume.js';
 import { learningStats } from '../core/progress.js';
 import { icon } from './icons.js';
+import { courseCover } from './course-cover.js';
 import { timeOptions } from './budget-session.js';
 import { character } from './characters.js';
 import { t, currentLanguage } from './language.js';
@@ -29,7 +30,7 @@ export function brandNav(icon, view, place, signedIn = false) {
   const profileViews = ['profile', 'practice', 'achievements', 'community'];
   const courses = ['courses', 'book', mobile ? t('Courses','Курсы','Курстар') : t('My courses','Мои курсы','Курстарым')];
   const items = mobile ? [courses, profile] : [
-    ['discover', 'home', t('Learn','Обучение','Оқу')],
+    ['discover', 'path', t('Learn','Обучение','Оқу')],
     courses,
     ['work', 'work', t('My work','Мои работы','Жұмыстарым')],
     ...(signedIn ? [['quests', 'gift', t('Rewards','Награды','Марапаттар')]] : []),
@@ -66,7 +67,7 @@ export function phoneCourseLibrary(libraryHtml, readyHtml) {
   return `<section class="phone-library course-library"><header class="course-library-heading"><h1>${t('My courses', 'Мои курсы', 'Курстарым')}</h1><button type="button" class="secondary course-library-create" data-view="new-course">${icon('plus', 18)} ${t('Create a course', 'Создать курс', 'Курс жасау')}</button></header>
     <div class="course-library-search"><label class="visually-hidden" for="course-search">${t('Find a course', 'Найти курс', 'Курс іздеу')}</label>${icon('search',20)}<input id="course-search" type="search" data-course-search placeholder="${t('Find a course', 'Найти курс', 'Курс іздеу')}" autocomplete="off"><button type="button" class="icon-button" data-course-search-clear aria-label="${t('Clear search', 'Очистить поиск', 'Іздеуді тазалау')}" hidden>${icon('close',18)}</button></div>
     <p class="course-search-status" role="status" data-course-search-status></p>
-    <section class="course-saved-section"><h2 class="course-section-title">${t('Continue learning', 'Продолжить обучение', 'Оқуды жалғастыру')}</h2><div data-course-library>${libraryHtml}</div></section>
+    <section class="course-saved-section"><h2 class="course-section-title">${t('Saved courses', 'Сохранённые курсы', 'Сақталған курстар')}</h2><div data-course-library>${libraryHtml}</div></section>
     <section class="phone-catalog" aria-labelledby="course-catalog-title"><h2 class="course-section-title" id="course-catalog-title">${t('Explore mini-courses', 'Готовые мини-курсы', 'Дайын шағын курстар')}</h2>${readyHtml}</section>
   </section>`;
 }
@@ -80,13 +81,13 @@ export function courseHomeView(state, { current = null, libraryHtml = '', readyH
       <div class="course-home-copy">
         <p class="course-home-greeting" data-mentor-message>${guest ? t('Hi! I’m Mino.', 'Привет! Я Мино.', 'Сәлем! Мен Миномын.') : completed === total ? t('You did it!', 'У тебя получилось!', 'Жарайсың!') : t('Tell me your goal.', 'Расскажи о своей цели.', 'Мақсатыңды айтшы.')}</p>
         <h1 id="course-home-title"><span class="course-home-mobile-title">${t('What will you learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</span><span class="course-home-desktop-title">${t('What do you want to learn?', 'Чему ты хочешь научиться?', 'Не үйренгің келеді?')}</span></h1>
-        <p class="course-home-desktop-intro">${t('Choose a goal and tell us how much time you have.', 'Выбери цель и укажи, сколько времени у тебя есть.', 'Мақсатыңды таңдап, қанша уақытың барын көрсет.')}</p>
+        <p class="course-home-desktop-intro">${t('Start with something you’d like to do yourself.', 'Напиши, что хочешь научиться делать самостоятельно.', 'Өз бетіңше не істей білгің келетінін жаз.')}</p>
       </div>
       ${character('mino', completed === total ? 'trophy' : 'idea', 'course-home-mino')}
     </header>
     <form id="goal-form" class="course-home-composer">
       <label class="visually-hidden" for="goal-input">${t('What do you want to learn?', 'Чему хочешь научиться?', 'Не үйренгің келеді?')}</label>
-      <input id="goal-input" name="goal" value="${escapeHtml(state.homeGoal || '')}" placeholder="${t('For example, make my first video', 'Например, сделать первое видео', 'Мысалы, алғашқы видеомды жасау')}" minlength="3" maxlength="180" required autocomplete="off" enterkeyhint="go">
+      <input id="goal-input" name="goal" value="${escapeHtml(state.homeGoal || '')}" placeholder="${t('For example, edit a video on my phone', 'Например, смонтировать видео на телефоне', 'Мысалы, телефонда видео өңдеу')}" minlength="3" maxlength="180" required autocomplete="off" enterkeyhint="go">
       <div class="course-home-form-actions"><label class="course-home-time" for="time-select"><span>${t('Per lesson', 'На занятие', 'Бір сабаққа')}</span><select id="time-select" name="minutes">${[5, 10, 20].map(value => `<option value="${value}"${value === state.minutes ? ' selected' : ''}>${value} ${t('min', 'мин', 'мин')}</option>`).join('')}</select></label><button type="submit" class="primary">${t('Create a path', 'Создать путь', 'Оқу жолын құру')}${icon('arrow', 18)}</button></div>
     </form>
     ${composerOnly ? '' : `<div class="course-home-shortcuts topic-shortcuts">
@@ -176,7 +177,7 @@ export function readyCoursesView(extraCourses = [], minutes = 10) {
     ...extraCourses,
   ];
   const mentorNames = { mino: 'Mino', mia: 'Mia', sam: 'Sam', artist: 'Ari', copywriter: 'Nora', smm: 'Zoe' };
-  return `<section class="ready-courses" aria-labelledby="ready-courses-title"><h2 id="ready-courses-title">${t('Ready mini-courses', 'Готовые мини-курсы', 'Дайын шағын курстар')}</h2><fieldset class="course-pace"><legend>${t('Time for your next lesson','Время на новое занятие','Келесі сабаққа арналған уақыт')}</legend><div>${[5,10,20].map(value => `<button type="button" data-course-minutes="${value}" aria-pressed="${minutes === value}"><strong>${value}</strong> ${t('min','мин','мин')}</button>`).join('')}</div></fieldset><p class="course-pace-note">${t('A little learning, at your pace. Your unfinished lessons stay saved.', 'Учись в своём темпе. Начатые занятия остаются сохранёнными.', 'Өз қарқыныңмен үйрен. Бастаған сабақтарың сақталады.')}</p><div class="ready-course-grid">${courses.map(course => `<button type="button" class="ready-course" data-course-topic="${escapeHtml(course.topic || course.id)}" ${course.builtin ? `data-course="${escapeHtml(course.id)}" data-course-path` : `data-starter-course="${escapeHtml(course.id)}" data-starter-minutes="${course.minutes}"`}><span class="ready-course-symbol" aria-hidden="true">${icon(course.id === 'everyday-english' ? 'globe' : course.id === 'ai-prompts' ? 'message' : course.id === 'clear-writing' ? 'document' : course.icon, 32)}</span><span class="ready-course-copy"><strong>${escapeHtml(course.title)}</strong><span>${escapeHtml(course.description || '')}</span></span><span class="ready-course-meta"><span>${icon('clock', 14)} ${course.minutes} ${t('min', 'мин', 'мин')}<span class="ready-course-mentor"> · ${escapeHtml(mentorNames[course.mentor] || course.mentor)}</span></span>${icon('arrow', 17)}</span></button>`).join('')}</div></section>`;
+  return `<section class="ready-courses" aria-labelledby="ready-courses-title"><h2 id="ready-courses-title">${t('Ready mini-courses', 'Готовые мини-курсы', 'Дайын шағын курстар')}</h2><fieldset class="course-pace"><legend>${t('Time for your next lesson','Время на новое занятие','Келесі сабаққа арналған уақыт')}</legend><div>${[5,10,20].map(value => `<button type="button" data-course-minutes="${value}" aria-pressed="${minutes === value}"><strong>${value}</strong> ${t('min','мин','мин')}</button>`).join('')}</div></fieldset><p class="course-pace-note">${t('You can finish an unfinished lesson later.', 'Начатое занятие можно закончить позже.', 'Бастаған сабағыңды кейін аяқтай аласың.')}</p><div class="ready-course-grid">${courses.map(course => `<button type="button" class="ready-course" data-course-topic="${escapeHtml(course.topic || course.id)}" ${course.builtin ? `data-course="${escapeHtml(course.id)}" data-course-path` : `data-starter-course="${escapeHtml(course.id)}" data-starter-minutes="${course.minutes}"`}>${courseCover(course)}<span class="ready-course-copy"><strong>${escapeHtml(course.title)}</strong><span>${escapeHtml(course.description || '')}</span></span><span class="ready-course-meta"><span>${icon('clock', 14)} ${course.minutes} ${t('min', 'мин', 'мин')}<span class="ready-course-mentor"> · ${escapeHtml(mentorNames[course.mentor] || course.mentor)}</span></span>${icon('arrow', 17)}</span></button>`).join('')}</div></section>`;
 }
 
 export function coursesPage(state, { showHeading = true, showCurrentLesson = true, showReadyCourses = false, readyCourses = [] } = {}) {

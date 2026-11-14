@@ -55,9 +55,20 @@
 .roadmap-custom-goal { margin-top: 17px; }
 .roadmap-wizard-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-block-start: 26px; padding-block-start: 17px; border-top: 1px solid var(--line); }
 .roadmap-wizard-actions .primary { min-width: 145px; }
-.roadmap-feedback { display: flex; align-items: center; gap: 9px; margin-block: 12px; padding: 10px 13px; border-radius: 10px; background: var(--accent-soft); color: #813600; font-size: .91rem; }
-.roadmap-feedback.has-error { background: #fff0ef; color: #981f27; }
-.roadmap-feedback.reading svg { animation: roadmap-pulse 1.5s ease-in-out infinite alternate; }
+.roadmap-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-block: 12px;
+  padding: 10px 12px;
+  border-inline-start: 2px solid #9b9489;
+  background: #f5f4f0;
+  color: #534d44;
+  font-size: .91rem;
+  line-height: 1.5;
+}
+.roadmap-feedback > svg { flex: none; margin-top: 2px; }
+.roadmap-feedback.has-error { border-color: #ac4a42; background: #fcf0ee; color: #822b27; }
 @keyframes roadmap-pulse { to { opacity: .42; transform: scale(.88); } }
 .roadmap-empty { display: grid; justify-items: center; gap: 13px; text-align: center; }
 .roadmap-empty p { max-width: 380px; color: var(--muted); }
@@ -268,7 +279,20 @@
 .roadmap-resume { display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin:0 0 18px; }
 .roadmap-resume .primary { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:10px 16px; font-size:13px; }
 .roadmap-resume > span { flex:1 1 140px; color:#7b6553; font-size:13px; line-height:1.4; overflow-wrap:anywhere; }
-.roadmap-source-notice { margin: 0 0 17px; padding: 12px 14px; border-radius: 12px; background: #faf6ef; color: #786653; font-size: 12px; line-height: 1.5; }
+.roadmap-source-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-inline-start: 2px solid #ac803c;
+  background: #faf5eb;
+  color: #604d31;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.roadmap-source-notice > svg { flex: none; margin-top: 1px; }
+.roadmap-source-notice strong { display: block; font-weight: 700; }
 .roadmap-sources h3 { margin: 17px 0 8px; color: #514337; font-size: 14px; }
 .roadmap-sources ul { display: grid; gap: 9px; margin: 0; padding-left: 18px; }
 .roadmap-sources a { color: #9b4512; font-size: 13px; overflow-wrap: anywhere; text-underline-offset: 3px; }

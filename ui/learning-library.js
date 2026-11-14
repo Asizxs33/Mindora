@@ -1,18 +1,29 @@
 import { escapeHtml as esc } from '../core/engine.js';
 import { currentLanguage, t } from './language.js';
 import { icon } from './icons.js';
+import { courseCover } from './course-cover.js';
 
 function courseCard(course, loading, isRoadmap) {
   const total = Number.isInteger(course.totalSteps) && course.totalSteps > 0 ? course.totalSteps : 0;
   const completed = Number.isInteger(course.completed) ? Math.min(total, Math.max(0, course.completed)) : 0;
   const done = total > 0 && completed === total;
+  const state = done ? 'done' : completed > 0 ? 'active' : total ? 'new' : 'unknown';
+  const status = done ? t('Completed', 'Пройден', 'Аяқталды')
+    : completed > 0 ? t('In progress', 'В процессе', 'Оқып жүрсің')
+    : total ? t('Not started', 'Не начат', 'Басталмаған') : '';
   const pathLabel = t('Open path', 'Открыть путь', 'Оқу жолын ашу');
   const progressLabel = isRoadmap ? t('Completed lessons', 'Пройденные занятия', 'Аяқталған сабақтар') : t('Completed tasks', 'Выполненные задания', 'Орындалған тапсырмалар');
-  return `<li class="learning-library-card">
-    <div class="learning-library-card-summary"><h3 lang="${esc(course.language || currentLanguage())}">${esc(course.title)}</h3>
-    ${Number.isFinite(course.minutes) ? `<p class="learning-library-duration">${course.minutes} ${isRoadmap ? t('min per lesson', 'мин на занятие', 'мин сабаққа') : t('min', 'мин', 'мин')}</p>` : ''}
-    ${total ? `<div class="learning-library-progress"><progress max="${total}" value="${completed}" aria-label="${progressLabel}"></progress><span>${done ? t('Completed', 'Завершено', 'Аяқталды') : `${completed}/${total}`}</span></div>` : ''}</div>
-    <button type="button" class="secondary" ${isRoadmap ? 'data-learning-roadmap' : 'data-learning-open'}="${esc(course.id)}"${loading ? ' disabled' : ''}>${pathLabel} ${icon('arrow', 18)}</button>
+  return `<li class="learning-library-card" data-course-state="${state}">
+    ${courseCover(course)}
+    <div class="learning-library-card-summary">
+      <h3 lang="${esc(course.language || currentLanguage())}">${esc(course.title)}</h3>
+      ${Number.isFinite(course.minutes) ? `<p class="learning-library-duration">${icon('clock', 15)} ${course.minutes} ${isRoadmap ? t('min per lesson', 'мин на занятие', 'мин сабаққа') : t('min', 'мин', 'мин')}</p>` : ''}
+      ${total ? `<div class="learning-library-progress">
+        <div class="learning-library-progress-caption"><span>${icon(done ? 'check' : completed ? 'play' : 'book', 14)} ${status}</span><span>${completed}/${total}</span></div>
+        <progress max="${total}" value="${completed}" aria-label="${progressLabel}"></progress>
+      </div>` : ''}
+    </div>
+    <button type="button" class="secondary" ${isRoadmap ? 'data-learning-roadmap' : 'data-learning-open'}="${esc(course.id)}"${loading ? ' disabled' : ''}>${pathLabel} ${icon('arrow', 17)}</button>
   </li>`;
 }
 
@@ -33,7 +44,7 @@ export function learningLibraryView({ user, available = true, loading = false, e
   const heading = primaryHeading ? 'h1' : 'h2';
   return `<section class="learning-library${primaryHeading ? ' learning-library-primary' : ''}" aria-labelledby="learning-library-title" aria-busy="${Boolean(loading)}">
     <header class="learning-library-heading"><${heading} id="learning-library-title">${primaryHeading ? t('My courses', 'Мои курсы', 'Курстарым') : t('Your saved lessons', 'Сохранённые занятия', 'Сақталған сабақтар')}</${heading}><button type="button" class="secondary" data-learning-refresh${loading ? ' disabled' : ''}>${t('Refresh', 'Обновить', 'Жаңарту')}</button></header>
-    ${loading ? `<p class="learning-library-status" role="status">${t('Loading your lessons…', 'Загружаем занятия…', 'Сабақтар жүктеліп жатыр…')}</p>` : error ? `<p class="learning-library-status is-error" role="status">${t('We couldn’t load your lessons. Try refreshing in a moment.', 'Не удалось загрузить занятия. Попробуй обновить список чуть позже.', 'Сабақтарды жүктеу мүмкін болмады. Біраздан кейін тізімді жаңартып көр.')}</p>` : ''}
+    ${loading ? `<p class="learning-library-status" role="status">${icon('clock', 18)}<span>${t('Loading saved courses…', 'Загружаем сохранённые курсы…', 'Сақталған курстар жүктеліп жатыр…')}</span></p>` : error ? `<p class="learning-library-status is-error" role="status">${icon('alert', 18)}<span>${t('Couldn’t load your courses. Select Refresh to try again.', 'Не удалось загрузить курсы. Нажми «Обновить», чтобы попробовать снова.', 'Курстар жүктелмеді. Қайталап көру үшін «Жаңарту» түймесін бас.')}</span></p>` : ''}
     ${hasLocalLesson ? `<div class="learning-library-import"><h3>${t('A lesson from this browser', 'Занятие из этого браузера', 'Осы браузердегі сабақ')}</h3><p>${t('This lesson is saved only on this device. Add it to your account to keep learning on other devices.', 'Это занятие сохранено только на этом устройстве. Добавь его в аккаунт, чтобы продолжать на других устройствах.', 'Бұл сабақ тек осы құрылғыда сақталған. Басқа құрылғыларда жалғастыру үшін оны аккаунтыңа қос.')}</p><button type="button" class="secondary" data-learning-import${loading ? ' disabled' : ''}>${t('Save to my account', 'Сохранить в аккаунт', 'Аккаунтқа сақтау')}</button></div>` : ''}
     ${hasLocalBuiltin ? `<div class="learning-library-import"><h3>${t('Course progress from this browser', 'Прогресс курсов из этого браузера', 'Осы браузердегі курс үлгерімі')}</h3><button type="button" class="secondary" data-builtin-import>${t('Save course progress to my account', 'Сохранить прогресс курсов в аккаунте', 'Курс үлгерімін аккаунтқа сақтау')}</button></div>` : ''}
     ${courses.length || roadmaps.length ? `<ul class="learning-library-list">${roadmaps.map(course => courseCard(course, loading, true)).join('')}${courses.map(course => courseCard(course, loading, false)).join('')}</ul>` : showEmpty && !loading && !error ? `<div class="learning-library-empty">${icon('book', 24)}<p>${t('Your first personal course will appear here when you create it.', 'Первый персональный курс появится здесь, когда ты его создашь.', 'Алғашқы жеке курсыңды жасағаннан кейін ол осы жерде пайда болады.')}</p></div>` : ''}
