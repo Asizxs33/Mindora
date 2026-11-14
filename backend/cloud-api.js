@@ -16,7 +16,7 @@ export function json(data, status = 200, cookies = []) {
   return response;
 }
 
-function config() {
+export function cloudSettings() {
   const { DATABASE_URL, NEON_AUTH_BASE_URL, NEON_AUTH_COOKIE_SECRET } = process.env;
   if (!DATABASE_URL || !NEON_AUTH_BASE_URL || !NEON_AUTH_COOKIE_SECRET) return null;
   return { databaseUrl: DATABASE_URL, baseUrl: NEON_AUTH_BASE_URL.replace(/\/$/, ''), cookieSecret: NEON_AUTH_COOKIE_SECRET };
@@ -27,7 +27,14 @@ export function allowedOrigin(request) {
   return origin === new URL(request.url).origin;
 }
 
-export async function readBody(request) {
+// A stale tab must not act on a different shared-cookie account. The header is
+// only a consistency check; identity always comes from the verified session.
+export function matchesLearningAccount(request, user) {
+  return typeof user?.id === 'string' && Boolean(user.id) && request.headers.get('X-Mindora-Account') === user.id;
+}
+
+export async function readBody(request, maxBytes = 16_384) {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 98_304) return null;
   if (!request.headers.get('content-type')?.startsWith('application/json') || !request.body) return null;
   const reader = request.body.getReader();
   const decoder = new TextDecoder();
@@ -38,7 +45,7 @@ export async function readBody(request) {
       const { value, done } = await reader.read();
       if (done) break;
       bytes += value.byteLength;
-      if (bytes > 16_384) {
+      if (bytes > maxBytes) {
         await reader.cancel();
         return null;
       }
@@ -64,7 +71,7 @@ async function neonAuth(request, settings, path, body) {
   return handleAuthProxyRequest({ request: authRequest, path, baseUrl: settings.baseUrl, cookieSecret: settings.cookieSecret });
 }
 
-async function session(request, settings) {
+export async function accountSession(request, settings) {
   const response = await neonAuth(request, settings, 'get-session');
   if (!response.ok && response.status !== 401) throw new Error('Neon Auth session request failed: ' + response.status);
   const data = response.ok ? await response.json() : null;
@@ -91,9 +98,9 @@ function publicUser(user, profile = null) {
 }
 
 export async function accountApi(request, dependencies = {}) {
-  const settings = dependencies.settings ?? config();
+  const settings = dependencies.settings ?? cloudSettings();
   if (!settings) return json({ available: false, user: null, profile: null }, request.method === 'GET' ? 200 : 503);
-  const readSession = dependencies.session ?? session;
+  const readSession = dependencies.session ?? accountSession;
   const auth = dependencies.auth ?? neonAuth;
   const store = () => (dependencies.store ?? profileStore)(settings.databaseUrl);
   let cookies = [];
@@ -176,13 +183,16 @@ export async function accountApi(request, dependencies = {}) {
 }
 
 export async function budgetDraftApi(request, dependencies = {}) {
-  const settings = dependencies.settings ?? config();
+  const settings = dependencies.settings ?? cloudSettings();
   if (!settings) return json({ error: messages.unavailable }, 503);
   if (!['GET', 'PUT'].includes(request.method)) return json({ error: 'Метод недоступен.' }, 405);
   if (request.method === 'PUT' && !allowedOrigin(request)) return json({ error: 'Источник запроса не разрешён.' }, 403);
   try {
-    const { user, cookies } = await (dependencies.session ?? session)(request, settings);
+    const { user, cookies } = await (dependencies.session ?? accountSession)(request, settings);
     if (!user) return json({ error: messages.unauthorized }, 401, cookies);
+    if (request.headers.has('X-Mindora-Account') && !matchesLearningAccount(request, user)) {
+      return json({ error: 'Аккаунт изменился. Войди снова.', code: 'ACCOUNT_CHANGED' }, 401, cookies);
+    }
     const store = (dependencies.store ?? draftStore)(settings.databaseUrl);
     if (request.method === 'GET') return json({ draft: await store.read(user.id) }, 200, cookies);
 

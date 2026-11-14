@@ -8,6 +8,8 @@ import { learningPlanView } from '../ui/learning-plan.js';
 
 // Provider fixtures remain offline; public-page integration is tested separately.
 const offlineReader = { readPage: async () => null, readRenderedPage: async () => null };
+const accountSettings = { databaseUrl: 'test-only', baseUrl: 'https://auth.example.org', cookieSecret: 'test-only' };
+const accountSession = async () => ({ user: { id: 'account-a' }, cookies: [] });
 
 const source = 'https://docs.python.org/3/tutorial/controlflow.html';
 const draft = {
@@ -114,15 +116,15 @@ test('task review requests thinking mode and returns only shaped feedback', asyn
   })), /Incomplete DeepSeek review/);
 });
 
-test('task review validates submissions and uses the AI quota on guest requests', async () => {
+test('task review validates submissions and keeps the AI quota for signed-in requests', async () => {
   const input = { goal: 'Python', task: 'Напиши цикл', criterion: 'Выведи три строки', answer: 'Вывод: a, b, c', language: 'kk' };
   const request = (body, origin = 'https://mindora.test') => new Request('https://mindora.test/api/task-review', {
-    method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify(body),
+    method: 'POST', headers: { origin, 'content-type': 'application/json', 'X-Mindora-Account': 'account-a' }, body: JSON.stringify(body),
   });
   const feedback = { observation: 'Указаны три значения.', nextAction: 'Проверь разделение на строки.' };
   let calls = 0;
   const configured = {
-    apiKey: 'test-only', databaseUrl: 'test-only', reserve: async () => true,
+    apiKey: 'test-only', settings: accountSettings, session: accountSession, reserve: async () => true,
     review: async raw => { calls++; assert.deepEqual(raw, input); return feedback; },
   };
   assert.equal((await taskReviewApi(request({ ...input, answer: ' ' }), configured)).status, 400);
@@ -147,10 +149,18 @@ test('a localized plan preserves its language through generation and browser res
 test('the endpoint validates input and limits provider requests before calling DeepSeek', async () => {
   let calls = 0;
   const request = (minutes, origin = 'https://mindora.test') => new Request('https://mindora.test/api/learning-plan', {
-    method: 'POST', headers: { origin, 'content-type': 'application/json' },
+    method: 'POST', headers: { origin, 'content-type': 'application/json', 'X-Mindora-Account': 'account-a' },
     body: JSON.stringify({ goal: 'Освоить циклы', minutes }),
   });
-  const configured = { apiKey: 'test-only', databaseUrl: 'test-only', generate: async () => { calls++; return { title: 'Маршрут' }; } };
+  const configured = {
+    apiKey: 'test-only', settings: accountSettings, session: accountSession,
+    generate: async input => {
+      calls++;
+      return normalizePlan({ ...draft, formatVersion: 2, steps: draft.steps.slice(0, 2).map(step => ({ ...step, sourceUrl: source })) },
+        input, new Map([[source, { url: source, title: 'Python tutorial' }]]));
+    },
+    store: () => ({ create: async (_userId, id, saved) => ({ id, saved, revision: 1, updatedAt: '2026-11-14T00:00:00.000Z' }) }),
+  };
   assert.equal((await planApi(request(99), configured)).status, 400);
   assert.equal((await planApi(request(5, 'https://other.test'), configured)).status, 403);
   assert.equal((await planApi(request(5), { ...configured, apiKey: '' })).status, 503);

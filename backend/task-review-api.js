@@ -1,5 +1,5 @@
 import { normalizeTaskReview, taskReviewInput } from '../core/learning-plan.js';
-import { allowedOrigin, json, readBody } from './cloud-api.js';
+import { accountSession, allowedOrigin, cloudSettings, json, matchesLearningAccount, readBody } from './cloud-api.js';
 import { reserveGeneration } from './plan-quota.js';
 import { LANGUAGES, languageCode } from '../core/language.js';
 
@@ -44,24 +44,30 @@ export async function reviewWithDeepSeek(input, apiKey, fetcher = fetch) {
 
 export async function taskReviewApi(request, {
   apiKey = process.env.DEEPSEEK_API_KEY,
-  databaseUrl = process.env.DATABASE_URL,
+  settings = cloudSettings(),
+  session = accountSession,
   reserve = reserveGeneration,
   review = reviewWithDeepSeek,
 } = {}) {
   if (request.method !== 'POST') return json({ error: 'Метод недоступен.' }, 405);
   if (!allowedOrigin(request)) return json({ error: 'Источник запроса не разрешён.' }, 403);
-  const input = taskReviewInput(await readBody(request));
-  if (!input) return json({ error: 'Запиши ответ до 1500 символов.' }, 400);
-  if (!apiKey || !databaseUrl) return json({ error: 'ИИ-разбор пока недоступен.' }, 503);
-
+  if (!settings) return json({ error: 'ИИ-разбор пока недоступен.' }, 503);
+  let cookies = [];
   try {
-    if (!await reserve(request, databaseUrl, apiKey)) {
-      return json({ error: 'Дневной лимит ИИ исчерпан. Можно продолжить занятие.' }, 429);
+    const current = await session(request, settings);
+    cookies = current.cookies;
+    if (!current.user) return json({ error: 'Войди в аккаунт Mindora.', code: 'UNAUTHORIZED' }, 401, cookies);
+    if (!matchesLearningAccount(request, current.user)) return json({ error: 'Аккаунт изменился. Войди снова.', code: 'ACCOUNT_CHANGED' }, 401, cookies);
+    const input = taskReviewInput(await readBody(request));
+    if (!input) return json({ error: 'Запиши ответ до 1500 символов.' }, 400, cookies);
+    if (!apiKey) return json({ error: 'ИИ-разбор пока недоступен.' }, 503, cookies);
+    if (!await reserve(request, settings.databaseUrl, apiKey)) {
+      return json({ error: 'Дневной лимит ИИ исчерпан. Можно продолжить занятие.' }, 429, cookies);
     }
-    return json({ review: await review(input, apiKey) });
+    return json({ review: await review(input, apiKey) }, 200, cookies);
   } catch (error) {
     console.warn('Mindora task review failed', error.name, Number(error.providerStatus) || '');
-    if (error.providerStatus === 429) return json({ error: 'DeepSeek занят. Попробуй немного позже.' }, 429);
-    return json({ error: 'Не удалось разобрать ответ. Можно повторить или продолжить занятие.' }, 502);
+    if (error.providerStatus === 429) return json({ error: 'DeepSeek занят. Попробуй немного позже.' }, 429, cookies);
+    return json({ error: 'Не удалось разобрать ответ. Можно повторить или продолжить занятие.' }, 502, cookies);
   }
 }

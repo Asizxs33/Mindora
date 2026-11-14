@@ -1,7 +1,7 @@
 import { lessonPages, normalizeTaskReview, planInput, restorePlan, taskReviewInput } from './learning-plan.js';
 import { message } from '../ui/messages.js';
 
-export function createPlanController({ state, save, render, isOpen }) {
+export function createPlanController({ state, save, render, isOpen, canLearn = () => true, beforeGenerate, onGenerated, onUnauthorized = () => {}, accountId = () => null }) {
   state.learningPlan = restorePlan(state.learningPlan);
   let goal = state.learningPlan?.plan.goal ?? '';
   let minutes = state.learningPlan?.plan.minutes ?? state.minutes;
@@ -9,6 +9,15 @@ export function createPlanController({ state, save, render, isOpen }) {
   let error = '';
   let reviewError = '';
   let reviewErrorFor = null;
+  let epoch = 0;
+
+  function reset() {
+    epoch++;
+    state.learningPlan = restorePlan(state.learningPlan);
+    goal = state.learningPlan?.plan.goal ?? '';
+    minutes = state.learningPlan?.plan.minutes ?? state.minutes;
+    busy = null; error = ''; reviewError = ''; reviewErrorFor = null;
+  }
 
   function refresh() {
     if (isOpen()) render();
@@ -44,7 +53,7 @@ export function createPlanController({ state, save, render, isOpen }) {
   }
 
   async function generate(nextGoal, nextMinutes) {
-    if (busy) return;
+    if (busy || !canLearn()) return;
     goal = nextGoal;
     minutes = nextMinutes;
     const input = planInput(goal, minutes, state.language);
@@ -59,7 +68,7 @@ export function createPlanController({ state, save, render, isOpen }) {
       refresh();
       return;
     }
-    if ((state.learningPlan?.answers.some(answer => answer.trim())
+    if (!onGenerated && (state.learningPlan?.answers.some(answer => answer.trim())
       || state.learningPlan?.study.some(entry => entry.page > 0 || entry.choice !== null || entry.checked))
       && !window.confirm(message('Новый маршрут заменит текущий маршрут и его ответы. Построить новый?'))) {
       refresh();
@@ -68,37 +77,45 @@ export function createPlanController({ state, save, render, isOpen }) {
     busy = 'plan';
     error = '';
     const previous = state.learningPlan;
+    const version = epoch;
     refresh();
     try {
+      if (beforeGenerate && !await beforeGenerate()) {
+        error = 'Сначала сохрани текущее занятие в аккаунте.';
+        return;
+      }
+      if (version !== epoch) return;
       const response = await fetch('/api/learning-plan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(accountId() ? { 'X-Mindora-Account': accountId() } : {}) },
         body: JSON.stringify(input),
         signal: AbortSignal.timeout(57000),
       });
       const result = await response.json();
-      if (state.learningPlan !== previous) return;
+      if (version !== epoch || state.learningPlan !== previous) return;
+      if (response.status === 401) onUnauthorized();
       if (!response.ok) throw new Error(result.error || 'Не удалось построить маршрут.');
       const saved = restorePlan({ plan: result.plan, answers: [], completed: 0 });
       if (!saved) throw new Error('Не удалось прочитать маршрут. Попробуй ещё раз.');
-      state.learningPlan = saved;
+      if (onGenerated) {
+        if (!result.course?.id || !await onGenerated(result.course)) throw new Error('Не удалось сохранить занятие в аккаунте.');
+      } else state.learningPlan = saved;
       reviewError = '';
       reviewErrorFor = null;
-      save();
+      if (!onGenerated) save();
     } catch (failure) {
-      if (state.learningPlan !== previous) return;
+      if (version !== epoch || state.learningPlan !== previous) return;
       error = failure.name === 'TimeoutError' ? 'Поиск занял слишком много времени. Попробуй ещё раз.'
         : failure instanceof TypeError || failure instanceof SyntaxError ? 'Не удалось связаться с сервисом. Попробуй ещё раз.'
         : failure.message;
     } finally {
-      busy = null;
-      refresh();
+      if (version === epoch) { busy = null; refresh(); }
     }
   }
 
   async function reviewAnswer(answer) {
     const lesson = currentLesson();
-    if (busy || !isOpen() || !atPractice(lesson)) return;
+    if (busy || !canLearn() || !isOpen() || !atPractice(lesson)) return;
     const { saved, index, step } = lesson;
     if (saved.reviews[index]) return;
     const { goal, language } = saved.plan;
@@ -109,18 +126,20 @@ export function createPlanController({ state, save, render, isOpen }) {
     reviewError = '';
     reviewErrorFor = null;
     busy = 'review';
-    const stillCurrent = () => state.learningPlan === saved && saved.completed === index && saved.answers[index] === input.answer;
+    const version = epoch;
+    const stillCurrent = () => version === epoch && state.learningPlan === saved && saved.completed === index && saved.answers[index] === input.answer;
     save();
     refresh();
     try {
       const response = await fetch('/api/task-review', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(accountId() ? { 'X-Mindora-Account': accountId() } : {}) },
         body: JSON.stringify(input),
         signal: AbortSignal.timeout(32000),
       });
       const result = await response.json();
       if (!stillCurrent()) return;
+      if (response.status === 401) onUnauthorized();
       if (!response.ok) throw new Error(result.error || 'ИИ-разбор пока недоступен.');
       const review = normalizeTaskReview(result.review);
       if (!review) throw new Error('Не удалось прочитать разбор. Попробуй ещё раз.');
@@ -133,8 +152,7 @@ export function createPlanController({ state, save, render, isOpen }) {
         : failure.message;
       reviewErrorFor = { saved, index };
     } finally {
-      busy = null;
-      refresh();
+      if (version === epoch) { busy = null; refresh(); }
       if (stillCurrent() && isOpen()) document.getElementById('learning-review-status')?.focus();
     }
   }
@@ -208,5 +226,5 @@ export function createPlanController({ state, save, render, isOpen }) {
     }
   });
 
-  return { generate, screen: () => ({ goal, minutes, busy, error, reviewError: activeReviewError(), saved: state.learningPlan }) };
+  return { generate, reset, screen: () => ({ goal, minutes, busy, error, reviewError: activeReviewError(), saved: state.learningPlan }) };
 }

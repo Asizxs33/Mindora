@@ -1,4 +1,5 @@
 import { character, mountCharacters } from './characters.js';
+import { t } from './language.js';
 
 // Account state is held in memory. Credentials and profile drafts are never stored locally.
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -80,7 +81,8 @@ async function loadSession() {
   }
 }
 
-function closeAccount() {
+export function closeAccount() {
+  if (!dialog) return;
   view.draft.password = '';
   view.draft.confirm = '';
   view.showPassword = false;
@@ -129,7 +131,7 @@ function accountFields() {
 }
 
 function content() {
-  if (view.mode === 'profile' && loadingSession && !session.user) return `<div class="account-loading" data-account-loading role="status">${character('mino', 'thinking', 'account-mino')}<h1 id="account-heading" tabindex="-1">Finding your account…</h1><p>This will only take a moment.</p><button type="button" class="account-guest" data-account-action="close">Continue learning</button></div>`;
+  if (view.mode === 'profile' && loadingSession && !session.user) return `<div class="account-loading" data-account-loading role="status">${character('mino', 'thinking', 'account-mino')}<h1 id="account-heading" tabindex="-1">Finding your account…</h1><p>This will only take a moment.</p><button type="button" class="account-guest" data-account-action="close">${t('Back to home', 'На главную', 'Басты бетке')}</button></div>`;
   const signup = view.mode === 'signup', profile = view.mode === 'profile';
   const titles = ['Let’s get to know you.', 'What interests you?', 'Your learning starts here.'];
   const descriptions = ['A name is all you need for this step.', 'Pick a few things you’d like to explore.', 'Create an account with your email and password.'];
@@ -140,19 +142,19 @@ function content() {
     <div class="account-form-body">${signup ? progress() : ''}
     ${signup && view.step > 0 ? `<button type="button" class="account-back" data-account-action="back" ${view.pending ? 'disabled' : ''}>${arrow} Back</button>` : ''}
     <div class="account-intro"><div><h1 id="account-heading" tabindex="-1">${title}</h1><p>${description}</p></div>${character('mino', profile ? 'explaining' : signup && view.step === 2 ? 'celebrate' : 'welcome', 'account-mino')}</div>
-    <div class="account-error" id="account-error" role="alert" ${view.error ? '' : 'hidden'}>${esc(view.error)}</div><div class="account-notice" id="account-notice" role="status" ${view.notice ? '' : 'hidden'}>${esc(view.notice)}</div><div class="account-service-note" data-account-service ${session.available === false ? '' : 'hidden'}>Accounts are temporarily unavailable. You can still learn as a guest.</div>
+    <div class="account-error" id="account-error" role="alert" ${view.error ? '' : 'hidden'}>${esc(view.error)}</div><div class="account-notice" id="account-notice" role="status" ${view.notice ? '' : 'hidden'}>${esc(view.notice)}</div><div class="account-service-note" data-account-service ${session.available === false ? '' : 'hidden'}>${t('Accounts are temporarily unavailable. Please try again shortly.', 'Вход в аккаунт временно недоступен. Попробуй чуть позже.', 'Аккаунтқа кіру уақытша қолжетімсіз. Біраздан кейін қайталап көр.')}</div>
     <fieldset class="account-inputs" ${view.pending ? 'disabled' : ''}><legend class="account-sr-only">${title}</legend>
     ${profile ? `<p class="account-email-label">${esc(session.user?.email || '')}</p>${aboutFields()}<h2 class="account-section-title">Your interests</h2>${interestFields()}` : signup ? view.step === 0 ? aboutFields() : view.step === 1 ? interestFields() : accountFields() : accountFields()}
     </fieldset></div>
     <footer class="account-footer"><button type="submit" class="account-primary" ${view.pending ? 'disabled' : ''}>${primary}${view.pending ? '<span class="account-spinner" aria-hidden="true"></span>' : ''}</button>
     ${profile ? `<button type="button" class="account-guest account-signout" data-account-action="signout" ${view.pending ? 'disabled' : ''}>Sign out</button>` : `<p class="account-switch">${signup ? 'Already have an account?' : 'New to Mindora?'} <button type="button" data-account-action="${signup ? 'signin' : 'signup'}" ${view.pending ? 'disabled' : ''}>${signup ? 'Sign in' : 'Create account'}</button></p>`}
-    <button type="button" class="account-guest" data-account-action="close">${profile ? 'Back to learning' : 'Continue as a guest'}</button></footer></form>`;
+    <button type="button" class="account-guest" data-account-action="close">${t('Back to home', 'На главную', 'Басты бетке')}</button></footer></form>`;
 }
 
 function render(focus = true) {
   const old = document.activeElement;
   const previous = old && dialog.contains(old) ? { id: old.id, interest: old.dataset.accountInterest, selection: old.selectionStart } : null;
-  dialog.innerHTML = `<div class="account-viewport"><header class="account-header"><a class="account-brand" href="#discover" data-account-action="close" aria-label="Back to Mindora"><img src="${new URL('./assets/brand-mark.svg', import.meta.url).href}" width="38" height="38" alt=""><span>mindora<span>.</span></span></a><button type="button" class="account-close" data-account-action="close" aria-label="Close account and continue learning">${cross}</button></header><main class="account-panel">${content()}</main></div>`;
+  dialog.innerHTML = `<div class="account-viewport"><header class="account-header"><a class="account-brand" href="#discover" data-account-action="close" aria-label="${t('Back to Mindora', 'Вернуться в Mindora', 'Mindora-ға оралу')}"><img src="${new URL('./assets/brand-mark.svg', import.meta.url).href}" width="38" height="38" alt=""><span>mindora<span>.</span></span></a><button type="button" class="account-close" data-account-action="close" aria-label="${t('Close account window', 'Закрыть окно аккаунта', 'Аккаунт терезесін жабу')}">${cross}</button></header><main class="account-panel">${content()}</main></div>`;
   if (!dialog.open) return;
   if (focus) {
     dialog.scrollTop = 0;
@@ -325,6 +327,12 @@ export function openAccount(mode = 'signup') {
 
 export function getAccountState() {
   return { user: session.user ? { ...session.user } : null, profile: session.profile ? { ...session.profile, ...(Array.isArray(session.profile.interests) ? { interests: [...session.profile.interests] } : {}) } : null, available: session.available };
+}
+
+export function expireAccountSession() {
+  ++sessionVersion;
+  session = { available: true, user: null, profile: null };
+  emitSession();
 }
 
 export function mountAccount() {

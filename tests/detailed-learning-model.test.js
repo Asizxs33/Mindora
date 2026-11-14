@@ -162,6 +162,50 @@ test('the composer requests teaching pages within bounded output budgets for eve
   }
 });
 
+test('the composer states accepted lesson and final-task text limits for every session size', async () => {
+  const title = 'T'.repeat(90);
+  const outcome = 'O'.repeat(450);
+  const final = { title: 'F'.repeat(90), task: 'A'.repeat(900), criterion: 'C'.repeat(320) };
+  for (const minutes of [5, 10, 20]) {
+    const fixture = modelFixture(minutes, {
+      verify: body => {
+        const prompt = body.messages[0].content;
+        const lessonContract = prompt.split('\n').find(line => line.startsWith('Return a JSON object'));
+        const finalContract = prompt.split('\n').find(line => line.startsWith('The final object'));
+        assert.match(lessonContract, /title \(up to 90 characters\)/);
+        assert.match(lessonContract, /outcome \(up to 450 characters\)/);
+        assert.match(finalContract, /title \(up to 90 characters\)/);
+        assert.match(finalContract, /task \(up to 900 characters\)/);
+        assert.match(finalContract, /criterion \(up to 320 characters\)/);
+      },
+      mutate: composed => Object.assign(composed, { title, outcome, final }),
+    });
+    const plan = await generateDeepSeekPlan(inputFor(minutes), 'test-only', fixture.fetcher, offlineReaders);
+    assert.equal(plan.title, title);
+    assert.equal(plan.outcome, outcome);
+    assert.equal(plan.steps.at(-1).title, final.title);
+    assert.equal(plan.steps.at(-1).task, final.task);
+    assert.equal(plan.steps.at(-1).criterion, final.criterion);
+  }
+});
+
+test('oversized lesson and final-task text remains invalid instead of being truncated', () => {
+  const oversized = [
+    draft => { draft.title = 'T'.repeat(91); },
+    draft => { draft.outcome = 'O'.repeat(451); },
+    draft => { draft.steps.at(-1).title = 'F'.repeat(91); },
+    draft => { draft.steps.at(-1).task = 'A'.repeat(901); },
+    draft => { draft.steps.at(-1).criterion = 'C'.repeat(321); },
+  ];
+  for (const minutes of [5, 10, 20]) {
+    for (const mutate of oversized) {
+      const draft = lessonDraft(minutes);
+      mutate(draft);
+      assert.equal(normalize(draft, minutes), null);
+    }
+  }
+});
+
 test('the composer rejects a legacy-shaped response instead of silently dropping teaching', async () => {
   const fixture = modelFixture(5, { mutate: composed => { delete composed.guided[0].teaching; } });
   await assert.rejects(generateDeepSeekPlan(inputFor(5), 'test-only', fixture.fetcher, offlineReaders), { name: 'LessonContentInvalid' });
