@@ -5,7 +5,7 @@ import { mountPresentation } from './presentation.js';
 import { languagePicker, t } from './language.js';
 import { mountLessonFlow, syncLessonFlow } from './lesson-flow.js';
 import { mountAccount, getAccountState } from './account.js';
-import { rewardMetrics } from './roadmap.js';
+import { rewardBalance } from './roadmap.js';
 
 const $ = selector => document.querySelector(selector);
 let desktopLayout;
@@ -66,6 +66,8 @@ export function mountShell() {
   document.head.append(courseHomeStyles);
   const mobileStyles = document.createElement('link'); mobileStyles.rel = 'stylesheet';
   mobileStyles.href = new URL('./mobile-profile.css', import.meta.url).href; document.head.append(mobileStyles);
+  const rewardStyles = document.createElement('link'); rewardStyles.rel = 'stylesheet';
+  rewardStyles.href = new URL('./rewards.css', import.meta.url).href; document.head.append(rewardStyles);
   document.querySelector('#app').innerHTML = `<a class="skip-link" href="#main">Skip to learning</a>
   <header class="topbar">
     <a class="brand" data-home href="#discover" aria-label="Mindora home"><img class="brand-mark" src="ui/assets/brand-mark.svg" alt="" width="40" height="40"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
@@ -184,9 +186,8 @@ export function renderShell(view, state, stats, html, rewards) {
   $('#top-navigation').innerHTML = brandNav(icon, view, 'top', signedIn);
   $('#mobile-navigation').classList.remove('has-roadmap');
   $('#mobile-navigation').innerHTML = brandNav(icon, view, 'bottom', signedIn);
-  const headerRewards = ['roadmap'].includes(view) ? rewards : null;
-  $('#top-actions').classList.toggle('has-roadmap-metrics', Boolean(headerRewards));
-  $('#top-actions').innerHTML = guided ? '' : `${rewardMetrics(headerRewards, true)}${languagePicker()}<button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
+  $('#top-actions').classList.toggle('has-reward-balance', Boolean(rewards));
+  $('#top-actions').innerHTML = guided ? '' : `${rewardBalance(rewards)}${languagePicker()}<button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
   $('.skip-link').textContent = t('Skip to learning','К содержимому','Мазмұнға өту');
   $('.modal-close').setAttribute('aria-label', t('Close window','Закрыть окно','Терезені жабу'));
   main.classList.toggle('dashboard-main', view === 'discover');

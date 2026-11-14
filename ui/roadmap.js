@@ -128,6 +128,13 @@ function metricValues(rewards) {
   ];
 }
 
+export function rewardBalance(rewards) {
+  if (!rewards) return '';
+  const label = t('Gems', 'Алмазы', 'Алмас');
+  const description = t(`${rewards.gems} gems. Open the gem shop.`, `${rewards.gems} алмазов. Открыть магазин.`, `${rewards.gems} алмас. Дүкенді ашу.`);
+  return `<button type="button" class="header-balance" data-view="shop" aria-label="${description}" title="${description}">${icon('gem', 23)}<strong>${rewards.gems}</strong><span>${label}</span></button>`;
+}
+
 export function rewardMetrics(rewards, compact = false) {
   if (!rewards) return '';
   return `<div class="roadmap-metrics${compact ? ' is-compact' : ''}">${metricValues(rewards).map(([symbol, value, label, view]) => `<button type="button" class="roadmap-metric roadmap-${symbol}" data-view="${view}" aria-label="${label} ${value}" title="${label}">
@@ -227,7 +234,7 @@ function shopRow(item, rewards) {
   return `<article class="roadmap-shop-item">
     <span class="roadmap-symbol roadmap-${symbol}">${icon(symbol, 27)}</span>
     <div><h2>${title}</h2><p>${detail}</p></div>
-    <button type="button" class="secondary" data-roadmap-buy="${escape(item.id)}"${item.available ? '' : ' disabled'} aria-label="${item.available ? t(`Buy ${title} for ${item.cost} gems`, `Купить «${title}» за ${item.cost} алмазов`, `${title} үшін ${item.cost} алмас төлеу`) : unavailable}">${icon('gem', 18)} ${item.cost}</button>
+    <button type="button" class="secondary reward-cost" data-roadmap-buy="${escape(item.id)}"${item.available ? '' : ' disabled'} aria-label="${item.available ? t(`Buy ${title} for ${item.cost} gems`, `Купить «${title}» за ${item.cost} алмазов`, `${title} үшін ${item.cost} алмас төлеу`) : unavailable}">${icon('gem', 18)} ${item.cost}</button>
     ${item.available ? '' : `<small>${unavailable}</small>`}
   </article>`;
 }
