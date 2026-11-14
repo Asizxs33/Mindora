@@ -78,15 +78,15 @@ try {
  for(const width of [320,390,1440]){
   await p.setViewportSize({width,height:844});
   await p.waitForTimeout(250);
-  assert.equal(await p.locator('.mindora-landing').isVisible(),true);
-  assert.equal(await p.locator('.landing-mino').count(),1);
+  assert.equal(await p.locator(width > 920 ? '.course-home' : '.guided-greeting').isVisible(),true);
+  assert.equal(await p.locator(width > 920 ? '.course-home-mino' : '.guided-mino').count(),1);
   assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-  assert.equal(await p.locator('.sidebar').isVisible(),false);
+  assert.equal(await p.locator('.sidebar').isVisible(),width > 920);
   assert.equal(await p.locator('.mobile-navigation').isVisible(),false);
-  await p.screenshot({path:join(tmpdir(),'mindora-landing-'+width+'.png'),fullPage:true});
+  await p.screenshot({path:join(tmpdir(),'mindora-welcome-'+width+'.png'),fullPage:true});
  }
  await p.setViewportSize({width:390,height:844});
- await p.locator('.landing-start [data-view="new-course"]').click();
+ await p.locator('.guided-footer [data-view="new-course"]').click();
  await p.locator('#goal-input').fill('Learn spreadsheet formulas for my weekly report');
  await p.locator('#time-select').selectOption('5');
  await p.locator('#goal-form button[type="submit"]').click();
@@ -131,6 +131,6 @@ try {
  assert.equal(calls.filter(r=>r.path==='/api/account'&&r.method==='POST').length,0);
  assert.ok(calls.some(r=>r.path==='/api/learning-plan'&&r.guest==='1'));
  assert.deepEqual(errors,[]);
- console.log('PASS public landing at 320/390/1440, real UI guest roadmap -> generated lesson -> close/reopen cursor -> complete -> next stage. API fixtures explicitly.');
+ console.log('PASS desktop goal screen and mobile greeting at 320/390/1440, real UI guest roadmap -> generated lesson -> close/reopen cursor -> complete -> next stage. API fixtures explicitly.');
  await first.ctx.close();
 }finally{await browser.close();}

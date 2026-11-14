@@ -1,0 +1,188 @@
+@media (max-width: 920px) {
+  body.quiet-shell #main[data-page="profile"] {
+    padding: 16px 18px calc(86px + env(safe-area-inset-bottom));
+  }
+  body.quiet-shell:not(.is-guided):not(.is-learning) .mobile-navigation {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 40;
+    width: 100%;
+  }
+  .simple-profile.mobile-profile { max-width: 480px; margin-inline: auto; }
+  .mobile-profile .simple-profile-heading { margin-bottom: 14px; }
+  .mobile-profile .simple-profile-heading h1 { font-size: 26px; line-height: 1.2; }
+  .simple-profile.mobile-profile .account-profile-card {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 4px 12px;
+    margin: 0 0 14px;
+    padding: 16px;
+    border-radius: 16px;
+  }
+  .mobile-profile .account-profile-card .profile-avatar { width: 44px; height: 44px; }
+  .mobile-profile .account-profile-card h2 { font-size: 21px; }
+  .mobile-profile .account-profile-card p { margin: 0; font-size: 13px; }
+  .profile-account-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .mobile-profile .profile-account-actions > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    flex: 1;
+    width: auto;
+    min-height: 44px;
+    margin: 0;
+    padding: 8px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.3;
+  }
+  .mobile-profile .profile-account-actions > button[hidden] { display: none; }
+  .mobile-profile .profile-account-actions .profile-signout {
+    flex: none;
+    min-width: 80px;
+    border: 1px solid #e9ded5;
+    color: #934439;
+    background: #fff;
+  }
+  .mobile-profile-preferences {
+    border: 1px solid #e7dfd7;
+    border-radius: 16px;
+    padding-inline: 13px;
+    background: #fff;
+  }
+  .mobile-preference-row {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 58px;
+    color: #534437;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .mobile-preference-row + .mobile-preference-row { border-top: 1px solid #eee7df; }
+  .mobile-preference-icon { display: flex; align-items: center; color: #917253; }
+  .mobile-preference-row .profile-select {
+    width: 122px;
+    min-height: 44px;
+    padding: 7px 9px;
+    border-color: transparent;
+    background: #faf7f3;
+    font-size: 14px;
+  }
+  .mobile-preference-row .motion-switch { margin-right: 3px; }
+  .profile-more {
+    margin-top: 14px;
+    border: 1px solid #e7dfd7;
+    border-radius: 16px;
+    background: #fff;
+  }
+  .profile-more > summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 54px;
+    padding: 12px 14px;
+    color: #65513f;
+    font-size: 14px;
+    font-weight: 650;
+    list-style: none;
+    cursor: pointer;
+  }
+  .profile-more > summary::-webkit-details-marker { display: none; }
+  .profile-more > summary > span { flex: 1; min-width: 0; }
+  .profile-more[open] > summary > svg:last-child { transform: rotate(180deg); }
+  .mobile-profile-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    padding: 12px 14px;
+    border-top: 1px solid #eee7df;
+    color: #7d6e61;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .mobile-profile-stats strong { color: #493728; }
+  .mobile-profile-tools { padding-inline: 14px; }
+  .mobile-profile-tools > button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 50px;
+    padding: 11px 0;
+    border: 0;
+    border-top: 1px solid #eee7df;
+    border-radius: 0;
+    background: transparent;
+    color: #6d5742;
+    text-align: left;
+    font: inherit;
+    font-size: 14px;
+  }
+  .mobile-profile-tools > button > span { flex: 1; color: #493728; }
+  .mobile-profile-tools > button > svg:last-child { color: #ac9d90; }
+  body:has(.mobile-profile) .top-actions .header-account { display: none; }
+  .course-library .learning-library-heading > h2 { display: none; }
+  .course-library .learning-library-heading { justify-content: flex-end; margin-bottom: 10px; }
+  .phone-course-nav button { font-size: 13px; gap: 5px; padding-inline: 3px; }
+  #main[data-page="new-course"] .course-home-greeting { display: none; }
+  #main[data-page="new-course"] .course-home-heading { grid-template-columns: minmax(0, 1fr) 72px; gap: 10px; }
+  #main[data-page="new-course"] .course-home-heading .course-home-mino { width: 72px; height: 72px; --character-size: 72px; --character-height: 72px; }
+  .roadmap-tutor, .learning-hub-guide { display: none; }
+  .phone-course-nav ~ .roadmap-layout .roadmap-stages { --roadmap-node: 66px; padding-top: 34px; }
+  .phone-course-nav ~ .roadmap-layout .roadmap-stage { min-height: 132px; padding-bottom: 18px; }
+  .phone-course-nav ~ .roadmap-layout .roadmap-stage-stop { gap: 11px; }
+  .phone-course-nav ~ .roadmap-layout .roadmap-stage h2 { font-size: 13px; line-height: 1.4; }
+  .learning-hub .learning-hub-heading { padding: 0 0 12px; border-radius: 0; border-bottom: 1px solid #e7dbce; background: #fff; color: #3b2c21; }
+  .phone-course-nav ~ .learning-hub .learning-hub-heading > .icon-button { display: none; }
+  .learning-hub .learning-hub-heading h1 { color: #3b2c21; font-size: 21px; }
+  .learning-hub .learning-hub-heading > div > span { display: none; }
+  .learning-hub .learning-hub-progress { margin-block: 0; }
+  .learning-hub .learning-hub-progress > span { font-size: 12px; }
+  .learning-hub .learning-hub-progress > strong { display: none; }
+  .learning-hub .learning-hub-journey { display: block; margin-top: 0; }
+  .learning-hub .learning-hub-path { --route-row: 132px; --route-node: 66px; padding-top: 37px; }
+  .learning-hub .learning-hub-stop { gap: 10px; }
+  .learning-hub .learning-hub-label { font-size: 13px; line-height: 1.4; }
+  .learning-hub:has(.learning-hub-node[aria-current]) .learning-hub-actions { display: none; }
+}
+@media (max-width: 920px) {
+  .roadmap-wizard-progress { margin-bottom: 14px; }
+  .roadmap-wizard-intro { display: block; margin-bottom: 16px; }
+  .roadmap-wizard-intro .roadmap-guide { display: none; }
+  .roadmap-wizard-intro > div:last-child { padding: 0; border: 0; border-radius: 0; background: none; }
+  .roadmap-wizard-intro > div:last-child::before { display: none; }
+  .roadmap-wizard-intro p { display: none; }
+  .roadmap-wizard-intro h1 { font-size: 23px; }
+  .roadmap-experience { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+  .roadmap-experience .roadmap-option { margin: 0; }
+  .roadmap-experience .roadmap-option-content { display: flex; justify-content: center; min-height: 64px; padding: 8px; text-align: center; font-size: 12px; }
+  .roadmap-experience .roadmap-option-content > svg, .roadmap-experience .roadmap-option-mark { display: none; }
+  .roadmap-directions .roadmap-custom-goal { display: none; }
+  .roadmap-directions:has(input[value="custom"]:checked) .roadmap-custom-goal { display: flex; }
+  .roadmap-directions .roadmap-option-content { padding: 10px 12px; gap: 9px; }
+  .roadmap-directions .roadmap-option-content small { font-size: 12px; line-height: 1.4; }
+  .roadmap-diagnostic { padding: 13px; margin-top: 15px; }
+  .roadmap-diagnostic .field { gap: 7px; }
+  .roadmap-diagnostic textarea { min-height: 70px; height: 70px; font-size: 16px; }
+  .roadmap-diagnostic:has(input[name="diagnosticUnknown"]:checked) textarea { display: none; }
+  .roadmap-extra-context { margin-top: 12px; }
+  .roadmap-extra-context > summary { display: flex; align-items: center; min-height: 44px; color: #7c6653; font-size: 13px; cursor: pointer; }
+  .roadmap-extra-context .roadmap-evidence > span { display: none; }
+  .roadmap-extra-context .roadmap-evidence { margin-top: 5px; }
+  .roadmap-wizard-actions { margin-top: 18px; padding-top: 12px; }
+}
+
+@media (max-width: 360px) {
+  .mobile-preference-row { gap: 8px; font-size: 13px; }
+  .mobile-preference-row .profile-select { width: 112px; font-size: 13px; }
+}
+ 

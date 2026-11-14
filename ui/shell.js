@@ -1,5 +1,4 @@
-import { landingView } from './landing.js';
-import { brandNav, courseNames } from './dashboard.js';
+import { brandNav, courseHomeView, courseNames } from './dashboard.js';
 import { icon } from './icons.js';
 import { mountCharacters } from './characters.js';
 import { mountPresentation } from './presentation.js';
@@ -55,8 +54,6 @@ function restoreQuizFocus(main, remembered) {
 }
 
 export function mountShell() {
-  const landingStyles = document.createElement('link'); landingStyles.rel = 'stylesheet';
-  landingStyles.href = new URL('./landing.css', import.meta.url).href; document.head.append(landingStyles);
   const guidedStyles = document.createElement('link'); guidedStyles.rel = 'stylesheet';
   guidedStyles.href = new URL('./guided-start.css', import.meta.url).href; document.head.append(guidedStyles);
   const roadmapStyles = document.createElement('link');
@@ -67,6 +64,8 @@ export function mountShell() {
   courseHomeStyles.rel = 'stylesheet';
   courseHomeStyles.href = new URL('./course-home.css', import.meta.url).href;
   document.head.append(courseHomeStyles);
+  const mobileStyles = document.createElement('link'); mobileStyles.rel = 'stylesheet';
+  mobileStyles.href = new URL('./mobile-profile.css', import.meta.url).href; document.head.append(mobileStyles);
   document.querySelector('#app').innerHTML = `<a class="skip-link" href="#main">Skip to learning</a>
   <header class="topbar">
     <a class="brand" data-home href="#discover" aria-label="Mindora home"><img class="brand-mark" src="ui/assets/brand-mark.svg" alt="" width="40" height="40"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
@@ -154,8 +153,9 @@ function updateAccountLinks() {
   document.querySelectorAll('[data-account-summary]').forEach(slot => {
     const name = slot.querySelector('[data-account-name]');
     const detail = slot.querySelector('[data-account-description]');
-    if (name) name.textContent = user ? (profile?.name || user.name || t('Your account','Твой аккаунт','Аккаунтың')) : t('Make yourself at home','Добро пожаловать','Қош келдің');
-    if (detail) detail.textContent = user ? user.email : t('Create your profile and choose what you enjoy.','Создай профиль и выбери, что тебе интересно.','Профиль жасап, қызығушылығыңды таңда.');
+    const compact = Boolean(slot.closest('.mobile-profile'));
+    if (name) name.textContent = user ? (profile?.name || user.name || t('Your account','Твой аккаунт','Аккаунтың')) : compact ? t('Guest','Гость','Қонақ') : t('Make yourself at home','Добро пожаловать','Қош келдің');
+    if (detail) detail.textContent = user ? user.email : compact ? t('Saved on this device','Сохраняется на этом устройстве','Осы құрылғыда сақталады') : t('Create your profile and choose what you enjoy.','Создай профиль и выбери, что тебе интересно.','Профиль жасап, қызығушылығыңды таңда.');
     const button = slot.querySelector('[data-account-open]');
     if (button) { button.dataset.accountOpen = user ? 'profile' : 'signup'; button.innerHTML = `${icon(user ? 'edit' : 'plus', 17)}<span>${user ? t('Edit profile','Изменить профиль','Профильді өзгерту') : t('Create account','Создать аккаунт','Аккаунт жасау')}</span>`; }
     slot.querySelector('[data-account-secondary]')?.toggleAttribute('hidden', Boolean(user));
@@ -170,7 +170,7 @@ export function renderShell(view, state, stats, html, rewards) {
   const quizFocus = rememberQuizFocus(main, view);
   const disclosureSelectors = view === 'lesson' ? ['.style-disclosure', '.practice-hint']
     : view === 'courses' ? ['.phone-catalog']
-    : view === 'profile' ? ['.profile-rewards', '.profile-draft'] : [];
+    : view === 'profile' ? ['.profile-rewards', '.profile-draft', '.profile-more'] : [];
   const expandedPanels = sameView
     ? disclosureSelectors.filter(selector => main.querySelector(`${selector}[open]`)) : [];
   const owner = getAccountState().user?.id || '';
@@ -178,7 +178,7 @@ export function renderShell(view, state, stats, html, rewards) {
   const guestGreeting = !signedIn && html.includes('data-guided-step="0"');
   const originalHtml = html;
   resizeGreeting = guestGreeting ? () => renderShell(view, state, stats, originalHtml, rewards) : null;
-  if (guestGreeting) html = landingView();
+  if (guestGreeting && desktopLayout.matches) html = courseHomeView(state, { guest: true });
   const guided = html.includes('data-guided-step=');
   $('#navigation').innerHTML = brandNav(icon, view, 'side', signedIn);
   $('#top-navigation').innerHTML = brandNav(icon, view, 'top', signedIn);
@@ -194,7 +194,6 @@ export function renderShell(view, state, stats, html, rewards) {
   main.dataset.page = view;
   document.body.classList.toggle('is-learning', ['lesson', 'learning-plan', 'recap', 'return-review'].includes(view));
   document.body.classList.toggle('is-guided', guided);
-  document.body.classList.toggle('is-landing', guestGreeting);
   document.body.classList.add('quiet-shell');
   document.body.classList.toggle('has-course-home', html.includes('class="course-home"'));
   if (!updateCourseHome(main, html, sameView && main.dataset.courseHomeOwner === owner)) {
