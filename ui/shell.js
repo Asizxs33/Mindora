@@ -187,7 +187,7 @@ export function renderShell(view, state, stats, html, rewards) {
   $('#mobile-navigation').classList.remove('has-roadmap');
   $('#mobile-navigation').innerHTML = brandNav(icon, view, 'bottom', signedIn);
   $('#top-actions').classList.toggle('has-reward-balance', Boolean(rewards));
-  $('#top-actions').innerHTML = guided ? '' : `${rewardBalance(rewards)}${languagePicker()}<button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
+  $('#top-actions').innerHTML = guided ? '' : `${rewardBalance(rewards)}${languagePicker({ compact: Boolean(rewards) && !desktopLayout.matches })}<button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
   $('.skip-link').textContent = t('Skip to learning','К содержимому','Мазмұнға өту');
   $('.modal-close').setAttribute('aria-label', t('Close window','Закрыть окно','Терезені жабу'));
   main.classList.toggle('dashboard-main', view === 'discover');

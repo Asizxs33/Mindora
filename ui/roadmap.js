@@ -130,18 +130,19 @@ function metricValues(rewards) {
 }
 
 export function rewardBalance(rewards) {
-  if (!rewards) return '';
-  const label = t('Gems', 'Алмазы', 'Алмас');
-  const description = t(`${rewards.gems} gems. Open the gem shop.`, `${rewards.gems} алмазов. Открыть магазин.`, `${rewards.gems} алмас. Дүкенді ашу.`);
-  return `<button type="button" class="header-balance" data-view="shop" aria-label="${description}" title="${description}">${icon('gem', 23)}<strong>${rewards.gems}</strong><span>${label}</span></button>`;
+  return rewards ? `<div class="header-rewards">${rewardMetrics(rewards, true)}</div>` : '';
 }
 
 export function rewardMetrics(rewards, compact = false) {
   if (!rewards) return '';
-  return `<div class="roadmap-metrics${compact ? ' is-compact' : ''}">${metricValues(rewards).map(([symbol, value, label, view]) => `<button type="button" class="roadmap-metric roadmap-${symbol}" data-view="${view}" aria-label="${label} ${value}" title="${label}">
-    ${icon(symbol, compact ? 17 : 22)}
-    <strong>${value}</strong><span aria-hidden="true">${label}</span>
-  </button>`).join('')}</div>`;
+  const phone = compact && typeof window !== 'undefined' && window.matchMedia('(max-width: 920px)').matches;
+  return `<div class="roadmap-metrics${compact ? ' is-compact' : ''}">${metricValues(rewards).map(([symbol, value, label, view]) => {
+    const displayed = phone ? new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value) : value;
+    return `<button type="button" class="roadmap-metric roadmap-${symbol}" data-view="${view}" aria-label="${label} ${value}" title="${label} · ${value}">
+      ${icon(symbol, compact ? 22 : 30)}
+      <strong>${displayed}</strong><span aria-hidden="true">${label}</span>
+    </button>`;
+  }).join('')}</div>`;
 }
 
 function questDefinition(id) {
