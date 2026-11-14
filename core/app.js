@@ -1,5 +1,6 @@
 import { COURSES, DESIGN_QUIZ, matchGoal, evaluatePoster } from './engine.js';
 import { budgetCsv, budgetSession, budgetDraftKey, createBudgetDraft, evaluateBudgetSession, normalizeMinutes, readBudgetQuiz, readBudgetResume } from './budget-session.js';
+import { createCloudDrafts } from './cloud-drafts.js';
 import { dayKey, dailyCourse, learningStats } from './progress.js';
 import { posterLayout, posterSvg } from './poster.js';
 import { mountShell, renderShell } from '../ui/shell.js';
@@ -20,6 +21,29 @@ let quizChoice = null;
 let quizFeedback = false;
 let checks = null;
 let challengeSeed = 0;
+
+const cloud = createCloudDrafts({
+  getWorkspace() {
+    if (view !== 'lesson' || state.active !== 'budget' || step < 2) return null;
+    const drafts = Object.fromEntries(Object.entries(state.drafts).filter(([key]) => key.startsWith('budget-')));
+    return { minutes: state.minutes, goal: state.goals.budget || '', step, progress: Math.min(state.progress.budget, 3), drafts };
+  },
+  hasLocalDraft() {
+    return Object.keys(state.drafts).some(key => key.startsWith('budget-'));
+  },
+  restoreWorkspace(workspace) {
+    for (const key of Object.keys(state.drafts)) {
+      if (key.startsWith('budget-')) delete state.drafts[key];
+    }
+    Object.assign(state.drafts, workspace.drafts);
+    state.active = 'budget';
+    state.minutes = workspace.minutes;
+    state.goals.budget = workspace.goal;
+    state.progress.budget = Math.max(state.progress.budget, workspace.progress);
+    step = workspace.step;
+    go('lesson');
+  },
+});
 
 function quizQuestions() {
   return state.active === 'budget' ? budgetSession(state.minutes).questions : DESIGN_QUIZ;
@@ -108,6 +132,7 @@ function render() {
     default: html = sidePage(view, state);
   }
   renderShell(view, state, stats, html);
+  cloud.render();
 }
 
 function draftKey() {
@@ -344,3 +369,4 @@ mountShell();
 $('#modal').addEventListener('click',e=>{if(e.target===$('#modal')){const r=$('#modal').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('#modal').close();}});
 if (view === 'lesson') loadLessonState();
 render();
+void cloud.init();

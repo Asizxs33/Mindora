@@ -10,9 +10,10 @@ This repository contains a working **interactive product prototype**, not a univ
 
 [Open Mindora on Vercel](https://mindora-livid-eta.vercel.app/).
 
-No registration, API keys, build step, or external JavaScript dependencies are needed.
+Guest lessons run without an account. Install the locked backend dependencies before starting locally.
 
 ```sh
+npm ci
 npm start
 ```
 
@@ -41,6 +42,7 @@ Browser storage is local to a device and origin. Clearing site data removes prog
 
 - `ui/`: page templates, responsive styles, [Lucide](https://lucide.dev/icons/) icons and capybara illustrations. The icon license is in `ui/assets/LUCIDE-LICENSE.txt`.
 - `core/`: navigation and event handling, courses, validation, progress, persistence and export.
+- `api/` and `backend/`: Neon Auth sessions and server-side storage for signed-in budget drafts.
 - `tests/`: validation tests that run without a browser or network.
 - `server.mjs`: local static preview server.
 
@@ -57,6 +59,10 @@ Checks cover unsupported goals, contrast, incomplete and malformed work, strict 
 
 ## Deploy
 
-Import this repository into Vercel with Framework Preset **Other**, no build or install command, and the project root as the output directory. The production branch is `main`.
+Use the **Other** preset. `vercel.json` installs the locked dependencies and builds the browser files into `dist`. Vercel handles the two API routes separately. The production branch is `main`.
+
+The draft sync preview uses a Neon Postgres database with Neon Auth. Connect the database to the intended Vercel environment and set a sensitive `NEON_AUTH_COOKIE_SECRET` (at least 32 random characters). The integration sets `DATABASE_URL` and `NEON_AUTH_BASE_URL`. Preview and Production can use separate Neon databases. The first authenticated draft request creates the table. Draft reads and writes are scoped to the verified session ID, and version checks prevent an unnoticed overwrite.
+
+On the site, open **Профиль** to create an account or sign in. In the budget editor click **Сохранить в аккаунте**. On another device, sign in at the same site and click **Открыть из аккаунта** in the profile. This transfers budget drafts and the open stage. Finished projects, poster work and notes remain local.
 
 Google Fonts supplies Nunito when available; a system-font fallback is provided. No analytics or tracking scripts are included.
