@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="130 40 400 850" class="team-rig-svg" aria-hidden="true" focusable="false" preserveAspectRatio="xMidYMax meet">
+          <title>Copywriting agent</title><g id="character-copywriter" stroke-linecap="round" stroke-linejoin="round" data-rig-part="body">
+      <g id="left-leg" data-pivot="265,610" transform="translate(265 610) rotate(-4)" data-rig-part="left-leg">
+      <path d="M-36-2 L34-2 L31 122 L-32 122Z" fill="#6739ba" />
+      <path d="M9 0 L34-2 L31 122 L8 122Z" fill="#ffffff" opacity=".09" />
+      <g id="left-lower-leg" data-pivot="0,110" transform="translate(0 110) rotate(3)" data-rig-part="left-lower-leg">
+        <path d="M-31-7 L31-7 L33 126 L-31 126Z" fill="#6739ba" />
+        <path d="M7 4 L31-7 L33 126 L7 126Z" fill="#ffffff" opacity=".08" />
+        <circle cx="0" cy="0" r="29" fill="#6739ba" opacity=".92" />
+        <path d="M-34 115 Q-8 99 24 115 L51 129 Q64 135 59 148 Q56 158 37 159 L-35 159 Q-48 155-46 139Z" fill="#e9ddf5" />
+        <path d="M-44 145 Q0 151 59 145 L58 155 Q5 164-39 157Z" fill="#fffaf1" />
+        <path d="M-9 122 L13 126 M-12 132 L9 136" stroke="#fffaf1" stroke-width="5" stroke-linecap="round" />
+      </g>
+    </g><g id="right-leg" data-pivot="337,610" transform="translate(337 610) rotate(5)" data-rig-part="right-leg">
+      <path d="M-36-2 L34-2 L31 122 L-32 122Z" fill="#6739ba" />
+      <path d="M9 0 L34-2 L31 122 L8 122Z" fill="#ffffff" opacity=".09" />
+      <g id="right-lower-leg" data-pivot="0,110" transform="translate(0 110) rotate(-5)" data-rig-part="right-lower-leg">
+        <path d="M-31-7 L31-7 L33 126 L-31 126Z" fill="#6739ba" />
+        <path d="M7 4 L31-7 L33 126 L7 126Z" fill="#ffffff" opacity=".08" />
+        <circle cx="0" cy="0" r="29" fill="#6739ba" opacity=".92" />
+        <path d="M-34 115 Q-8 99 24 115 L51 129 Q64 135 59 148 Q56 158 37 159 L-35 159 Q-48 155-46 139Z" fill="#e9ddf5" />
+        <path d="M-44 145 Q0 151 59 145 L58 155 Q5 164-39 157Z" fill="#fffaf1" />
+        <path d="M-9 122 L13 126 M-12 132 L9 136" stroke="#fffaf1" stroke-width="5" stroke-linecap="round" />
+      </g>
+    </g><g id="left-arm" data-pivot="218,385" transform="translate(218 385) rotate(-52)" data-rig-part="left-arm">
+      <path d="M-31-3 Q0-18 31-3 L29 124 L-29 124Z" fill="#ffc33d" />
+      <path d="M7-6 Q20-9 31-3 L29 124 L8 124Z" fill="#ffffff" opacity=".11" />
+      <g id="left-forearm" data-pivot="0,105" transform="translate(0 105) rotate(18)" data-rig-part="left-forearm">
+        <path d="M-27-7 L27-7 L26 101 Q0 113-26 101Z" fill="#ffc33d" />
+        <path d="M6 3 L27-7 L26 101 L6 105Z" fill="#ffffff" opacity=".11" />
+        <circle cx="0" cy="0" r="29" fill="#ffc33d" />
+        <circle cx="0" cy="0" r="22" fill="#8150ce" opacity=".32" />
+        <ellipse cx="0" cy="111" rx="29" ry="31" fill="#f2b48d" />
+      <g id="prop-notebook" data-pivot="387,525" transform="matrix(0.89879405 0.43837115 -0.43837115 0.89879405 -88.31488499 -530.80858148)" data-rig-part="prop-notebook">
+      <rect x="326" y="459" width="132" height="110" rx="8" fill="#f7e3af" stroke="none" stroke-width="6" />
+      <path d="M343 459 L343 568 M358 485 L433 485 M358 506 L427 506 M358 527 L419 527" stroke="none" stroke-width="4" stroke-linecap="round" />
+      <path d="M450 435 L471 502" stroke="none" stroke-width="8" stroke-linecap="round" /><path d="M451 436 L459 456" stroke="#e76d63" stroke-width="7" stroke-linecap="round" />
+    </g></g>
+    </g><g id="torso" data-pivot="300,470" data-rig-part="torso">
+          <path d="M226 357 Q298 326 374 357 L390 603 Q302 628 210 603Z" fill="#ffc33d" />
+          <path d="M264 354 Q299 371 336 354" fill="none" stroke="#f6ae1c" stroke-width="12" stroke-linecap="round" />
+          <path d="M210 597 Q301 617 390 597 L380 626 Q301 646 220 626Z" fill="#6739ba" />
+          <circle cx="300" cy="616" r="7" fill="#fffaf1" />
+        </g><g id="right-arm" data-pivot="382,385" transform="translate(382 385) rotate(40)" data-rig-part="right-arm">
+      <path d="M-31-3 Q0-18 31-3 L29 124 L-29 124Z" fill="#ffc33d" />
+      <path d="M7-6 Q20-9 31-3 L29 124 L8 124Z" fill="#ffffff" opacity=".11" />
+      <g id="right-forearm" data-pivot="0,105" transform="translate(0 105) rotate(-20)" data-rig-part="right-forearm">
+        <path d="M-27-7 L27-7 L26 101 Q0 113-26 101Z" fill="#ffc33d" />
+        <path d="M6 3 L27-7 L26 101 L6 105Z" fill="#ffffff" opacity=".11" />
+        <circle cx="0" cy="0" r="29" fill="#ffc33d" />
+        <circle cx="0" cy="0" r="22" fill="#8150ce" opacity=".32" />
+        <ellipse cx="0" cy="111" rx="29" ry="31" fill="#f2b48d" />
+      </g>
+    </g><g id="head" data-pivot="300,322" transform="translate(300 322) rotate(-4)" data-rig-part="head">
+      <rect x="-20" y="-34" width="40" height="52" rx="14" fill="#f2b48d" stroke="none" />
+      <path d="M-86-168 Q-83-235 1-235 Q82-232 90-168 L84-28 Q41-12-2-39 L-64-30 Q-91-61-86-168Z" fill="#26284c" stroke="none" />
+    <path d="M65-122 Q105-117 109-80 L105 52 Q94 69 79 49 L73-68Z" fill="#26284c" stroke="none" /><path d="M78-69 L103-58 M76-39 L105-27 M76-7 L107 4 M79 25 L104 35" stroke="#6e5060" stroke-width="7" />
+      <path d="M-76-165 Q-66-205 0-207 Q68-205 77-164 L73-83 Q67-35 0-24 Q-67-34-73-84Z" fill="#f2b48d" stroke="none" />
+      <ellipse cx="-78" cy="-113" rx="12" ry="20" fill="#f2b48d" stroke="#20110f" stroke-width="5" />
+      <ellipse cx="78" cy="-113" rx="12" ry="20" fill="#f2b48d" stroke="#20110f" stroke-width="5" />
+      <path d="M-79-172 Q-63-216 0-217 Q68-216 79-169 Q43-190 17-158 Q-18-181-43-145 Q-64-154-79-137Z" fill="#26284c" stroke="none" />
+      <path d="M-45-143 Q-31-149-18-142 M18-142 Q32-149 45-143" fill="none" stroke="#20110f" stroke-width="5" stroke-linecap="round" data-rig-face="brows" />
+      <ellipse cx="-31" cy="-116" rx="5.5" ry="8" fill="#20110f" data-rig-face="left-eye" /><ellipse cx="31" cy="-116" rx="5.5" ry="8" fill="#20110f" data-rig-face="right-eye" />
+
+      <path d="M0-112 Q-4-95 5-96" fill="none" stroke="#20110f" stroke-width="4" stroke-linecap="round" />
+      <path d="M-19-71 Q1-53 22-73" fill="none" stroke="#20110f" stroke-width="5" stroke-linecap="round" data-rig-face="mouth" />
+      <circle cx="-49" cy="-92" r="8" fill="#ee8b83" opacity=".4" /><circle cx="49" cy="-92" r="8" fill="#ee8b83" opacity=".4" />
+      <circle cx="-83" cy="-87" r="9" fill="#8150ce" /><circle cx="83" cy="-87" r="9" fill="#8150ce" />
+    <path data-rig-face="left-smile" d="M-39 -114 Q-31 -124 -23 -114" fill="none" stroke="#20110f" stroke-width="4" stroke-linecap="round" opacity="0" /><path data-rig-face="right-smile" d="M23 -114 Q31 -124 39 -114" fill="none" stroke="#20110f" stroke-width="4" stroke-linecap="round" opacity="0" /></g>
+    </g>
+        </svg>

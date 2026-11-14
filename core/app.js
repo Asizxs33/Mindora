@@ -5,17 +5,22 @@ import { createPlanController } from './plan-controller.js';
 import { dayKey, dailyCourse, learningStats } from './progress.js';
 import { posterLayout, posterSvg } from './poster.js';
 import { mountShell, renderShell } from '../ui/shell.js';
-import { dashboard, coursesPage, sidePage } from '../ui/dashboard.js';
+import { dashboard, coursesPage, sidePage, courseNames } from '../ui/dashboard.js';
 import { pathView, lesson, result, workView } from '../ui/views.js';
 import { dialogContent, resetWorkCheck, refreshPosterPreview, clearBudgetTotal } from '../ui/feedback.js';
 import { learningPlanView } from '../ui/learning-plan.js';
 import { languageCode } from './language.js';
 import { setLanguage } from '../ui/language.js';
 import { message } from '../ui/messages.js';
+import { resumeCursor, needsRecap, certificateEligible } from './resume.js';
+import { recapView, recapQuestion } from '../ui/recap.js';
+import { certificateView, refreshCertificatePreview } from '../ui/certificate.js';
+import { downloadCertificate } from './certificate.js';
+import { getAccountState } from '../ui/account.js';
 
 const $=s=>document.querySelector(s);
 const KEY='mindora.workspace.v1';
-const empty={version:1,minutes:10,active:null,goals:{},progress:{design:0,budget:0},drafts:{},works:{},notes:{},practiceCount:0,studyDays:[]};
+const empty={version:1,minutes:10,active:null,goals:{},progress:{design:0,budget:0},drafts:{},works:{},notes:{},sessions:{},certificates:{},practiceCount:0,studyDays:[]};
 function readState(){try{const v=JSON.parse(localStorage.getItem(KEY));if(!v||v.version!==1)return structuredClone(empty);return {...empty,...v,active:['design','budget'].includes(v.active)?v.active:null,minutes:[5,10,20].includes(v.minutes)?v.minutes:10,progress:{design:Math.min(4,Math.max(0,Number(v.progress?.design)||0)),budget:Math.min(4,Math.max(0,Number(v.progress?.budget)||0))},goals:v.goals||{},drafts:v.drafts||{},works:v.works||{},notes:v.notes||{}};}catch{return structuredClone(empty);}}
 const state = readState();
 state.language = languageCode(state.language);
@@ -60,6 +65,7 @@ function quizQuestions() {
 }
 
 function rememberQuiz() {
+  rememberPosition();
   if (state.active !== 'budget' || view !== 'lesson' || step !== 1) return;
   state.budgetQuiz = {
     ...state.budgetQuiz,
@@ -81,6 +87,54 @@ function loadLessonState() {
     if (work.checked) checks = evaluateBudgetSession(work, state.minutes);
   }
 }
+// These fields are additive; old workspace saves remain readable.
+for (const field of ['sessions', 'certificates']) if (!state[field] || typeof state[field] !== 'object' || Array.isArray(state[field])) state[field] = {};
+let recap = { phase: 0, choice: null, checked: false }, pendingCursor = null, pendingPractice = false;
+
+function rememberPosition(page, touch = true) {
+  if (view !== 'lesson' || !state.active) return;
+  const readingPage = page ?? Number(document.querySelector('[data-learn-deck]')?.dataset.index || 0);
+  state.sessions[state.active] = { lastSeen: touch ? Date.now() : state.sessions[state.active]?.lastSeen, cursor: { step, page: readingPage, minutes: state.minutes, quizIndex, quizChoice, quizFeedback } };
+  save();
+}
+
+function restoreLesson(cursor) {
+  step = cursor.step; quizIndex = cursor.quizIndex; quizChoice = cursor.quizChoice; quizFeedback = cursor.quizFeedback; checks = null;
+  // UI paging reads only this presentation hint. The persisted cursor lives in core.
+  try { sessionStorage.setItem(`mindora.reading.${state.active}.v1`, String(cursor.page)); } catch { /* Storage may be disabled. */ }
+  if (state.active === 'budget' && step === 1 && !state.budgetQuiz?.[state.minutes]) {
+    state.budgetQuiz = { ...state.budgetQuiz, [state.minutes]: { index: cursor.quizIndex, choice: cursor.quizChoice, feedback: cursor.quizFeedback } };
+  }
+  go('lesson', cursor); rememberPosition(cursor.page);
+}
+
+function resumeCourse(id = state.active, requestedStep = null) {
+  if (!COURSES[id]) return go('discover');
+  pendingPractice = false;
+  state.active = id;
+  let cursor = resumeCursor(state, id);
+  if (requestedStep !== null && requestedStep !== cursor.step) {
+    cursor = { step: requestedStep, page: 0, quizIndex: 0, quizChoice: null, quizFeedback: false };
+  }
+  if (needsRecap(state, id)) {
+    pendingCursor = cursor; recap = { phase: 0, choice: null, checked: false }; save(); go('recap');
+  } else restoreLesson(cursor);
+}
+
+function certificateData(id) {
+  if (!certificateEligible(state, id)) return null;
+  if (!state.certificates[id]) {
+    const account = getAccountState();
+    state.certificates[id] = { name: account.profile?.name || account.user?.name || '', completedAt: state.works[id].savedAt, certificateId: `MD-${id.toUpperCase()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}` };
+    save();
+  }
+  return { ...state.certificates[id], courseTitle: courseNames[id] };
+}
+
+function openCertificate(id = state.active) {
+  if (!certificateData(id)) return toast('Finish the course and final challenge to earn your certificate.');
+  state.active = id; save(); go('certificate');
+}
 let saveWarning=false;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch{if(!saveWarning){saveWarning=true;toast('Your browser could not save progress. Keep this tab open.');}}}
 function toast(value){$('#toast').textContent=message(value);$('#toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').classList.remove('visible'),4200);}
@@ -88,14 +142,19 @@ function modal(type, data) {
   $("#modal-content").innerHTML = dialogContent(type, data);
   if (!$("#modal").open) $("#modal").showModal();
 }
-function go(next) {
+function go(next, cursor = null) {
   view = next;
   const learningPlanOpen = next === 'learning-plan';
   if (Boolean(state.learningPlanOpen) !== learningPlanOpen) {
     state.learningPlanOpen = learningPlanOpen;
     save();
   }
-  if (next === 'lesson') loadLessonState();
+  if (next === 'lesson') {
+    loadLessonState();
+    if (cursor && state.active !== 'budget') {
+      quizIndex = cursor.quizIndex; quizChoice = cursor.quizChoice; quizFeedback = cursor.quizFeedback;
+    }
+  }
   else checks = null;
 
   if (state.active === 'budget' && ['path', 'lesson', 'result'].includes(view)) {
@@ -111,15 +170,8 @@ function go(next) {
   $('#main').focus({preventScroll:true});
 }
 function selectCourse(id,goal){if(!COURSES[id])return;state.active=id;state.goals[id]=goal||state.goals[id]||(id==='design'?'Сделать постер для кофейни':'Собрать таблицу ежемесячных расходов');save();go('path');}
-function openStep(index) {
-  if (!state.active) return go('discover');
-  if (!Number.isInteger(index) || index < 0 || index >= 4 || index > state.progress[state.active]) {
-    return toast('Заверши текущий этап, чтобы открыть следующий.');
-  }
-  step = index;
-  go('lesson');
-}
-function finishStep(){const id=state.active;const days = new Set(Array.isArray(state.studyDays) ? state.studyDays : []);days.add(dayKey());state.studyDays = [...days];state.progress[id]=Math.max(state.progress[id],step+1);save();if(step===3){state.practiceCount=(Number(state.practiceCount)||0)+1;save();go('result');}else{toast('Этап завершён. Прогресс сохранён.');go('path');}}
+function openStep(index){if(!state.active)return go('discover');if(!Number.isInteger(index)||index<0||index>3||index>state.progress[state.active])return toast('Finish this step to unlock the next one.');resumeCourse(state.active,index);}
+function finishStep(){const id=state.active;const days = new Set(Array.isArray(state.studyDays) ? state.studyDays : []);days.add(dayKey());state.studyDays = [...days];state.progress[id]=Math.max(state.progress[id],step+1);rememberPosition();save();if(step===3){state.practiceCount=(Number(state.practiceCount)||0)+1;certificateData(id);save();go('result');}else{openStep(step+1);}}
 
 function render() {
   const stats = learningStats(state);
@@ -129,6 +181,8 @@ function render() {
     case 'courses': html = coursesPage(state); break;
     case 'learning-plan': html = learningPlanView(plans.screen()); break;
     case 'path': html = pathView(state); break;
+    case 'recap': html = recapView(state.active, recap); break;
+    case 'certificate': html = certificateView(certificateData(state.active)); break;
     case 'lesson': {
       const questions = quizQuestions();
       html = lesson(state, {
@@ -192,6 +246,7 @@ function checkWork(){
   render();$('#checks-container')?.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function mixPractice() {
+  if (state.active && needsRecap(state, state.active)) { resumeCourse(); pendingPractice = true; return; }
   if (!state.active || state.progress[state.active] < 2) {
     return toast('Пройди урок и ответь на вопросы, чтобы открыть практику.');
   }
@@ -207,6 +262,7 @@ function mixPractice() {
   }
   save();
   go('lesson');
+  rememberPosition();
   toast('Открыт новый вариант задания.');
 }
 function download(id) {
@@ -230,7 +286,7 @@ function startCurrentStep(practice = false, id = state.active || 'design') {
   if (state.active !== id) selectCourse(id);
   const current = Math.min(state.progress[id], 3);
   if (practice && current >= 2) mixPractice();
-  else openStep(current);
+  else resumeCourse(id);
 }
 
 function dashboardAction(action, id) {
@@ -252,6 +308,7 @@ function dashboardAction(action, id) {
 function changeMinutes(value) {
   const minutes = normalizeMinutes(value);
   if (state.minutes === minutes) return;
+  rememberQuiz();
   state.minutes = minutes;
   save();
   if (view === 'lesson' && state.active === 'budget') loadLessonState();
@@ -333,17 +390,19 @@ document.addEventListener('change', event => {
 
 document.addEventListener('click', event => {
   const button = event.target.closest('button,[data-home]');
-  if (!button) return;
+  if (!button || button.disabled) return;
   const { view: destination, course, step: requestedStep, choice, color, action, id } = button.dataset;
   if (button.matches('[data-home]')) {
     event.preventDefault();
+    rememberPosition();
     return go('discover');
   }
   if (destination || course) {
+    rememberPosition();
     if ($('#modal').open) $('#modal').close();
     if (destination) return go(destination);
     selectCourse(course);
-    if (button.hasAttribute('data-start')) openStep(0);
+    if (button.hasAttribute('data-start')) resumeCourse();
     return;
   }
   if (requestedStep !== undefined) return openStep(Number(requestedStep));
@@ -362,8 +421,25 @@ document.addEventListener('click', event => {
     refreshPosterPreview(work);
     return;
   }
+  if (button.dataset.recapChoice !== undefined && view === 'recap') { recap.choice = Number(button.dataset.recapChoice); recap.checked = false; render(); return; }
   if (dashboardAction(action, id)) return;
   switch (action) {
+    case 'resume-course': resumeCourse(id); break;
+    case 'certificate': openCertificate(id); break;
+    case 'download-certificate': {
+      const data = certificateData(state.active);
+      const name = $('#certificate-name')?.value.trim();
+      if (!data) return;
+      if (!name) { $('#certificate-name')?.focus(); return toast('Add your name for your certificate.'); }
+      state.certificates[state.active].name = name.slice(0, 80); save();
+      downloadCertificate(certificateData(state.active)); toast('Your certificate is ready to download.'); break;
+    }
+    case 'recap-check': if (recap.choice !== null) { recap.checked = true; render(); } break;
+    case 'recap-next':
+      if (recap.phase && (!recap.checked || recap.choice !== recapQuestion(state.active, recap.phase - 1).answer)) return;
+      if (recap.phase === 2) { const cursor = pendingCursor || resumeCursor(state, state.active); const practice = pendingPractice; pendingCursor = null; pendingPractice = false; restoreLesson(cursor); if (practice) mixPractice(); }
+      else { recap = { phase: recap.phase + 1, choice: null, checked: false }; go('recap'); }
+      break;
     case 'about': modal('about'); break;
     case 'close-modal': $('#modal').close(); break;
     case 'finish-learn': finishStep(); break;
@@ -395,9 +471,25 @@ document.addEventListener('click', event => {
   }
 });
 
+window.addEventListener('mindora:learn-page', event => {
+  if (event.detail?.courseId === state.active) rememberPosition(event.detail.page);
+});
+window.addEventListener('pagehide', () => rememberPosition(undefined, false));
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) rememberPosition();
+  else if (view === 'lesson' && needsRecap(state, state.active)) resumeCourse();
+});
+document.addEventListener('input', event => {
+  if (view === 'lesson' && event.target.closest('#main')) rememberPosition();
+  if (view === 'certificate' && event.target.id === 'certificate-name' && certificateEligible(state, state.active)) {
+    state.certificates[state.active].name = event.target.value.slice(0, 80); save();
+    refreshCertificatePreview(certificateData(state.active));
+  }
+});
+window.addEventListener('mindora:account-changed', () => { void cloud.init(); });
 mountShell();
 
 $('#modal').addEventListener('click',e=>{if(e.target===$('#modal')){const r=$('#modal').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('#modal').close();}});
-if (view === 'lesson') loadLessonState();
-render();
+if (view === 'lesson') resumeCourse(state.active, step);
+else render();
 void cloud.init();

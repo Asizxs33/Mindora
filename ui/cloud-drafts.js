@@ -4,8 +4,6 @@ import { message } from './messages.js';
 
 export function renderCloudPanel(slot, { user, available, busy, status }) {
   if (!slot) return;
-  const previous = slot.querySelector('#mindora-account-form');
-  const email = previous?.elements.email.value || '';
   const disabled = busy ? ' disabled' : '';
   const profile = slot.dataset.cloudPanel === 'profile';
   let content = '';
@@ -16,19 +14,16 @@ export function renderCloudPanel(slot, { user, available, busy, status }) {
       <div class="lesson-actions">
         ${profile ? '' : `<button type="button" class="primary" data-cloud-action="save"${disabled}>${t('Save to my account','Сохранить в аккаунте','Аккаунтқа сақтау')}</button>`}
         <button type="button" class="secondary" data-cloud-action="load"${disabled}>${t('Open from my account','Открыть из аккаунта','Аккаунттан ашу')}</button>
-        ${profile ? `<button type="button" class="ghost" data-cloud-action="signout"${disabled}>${t('Sign out','Выйти','Шығу')}</button>` : ''}
+        ${profile ? `<button type="button" class="ghost" data-account-open="profile">${t('Manage account','Настроить аккаунт','Аккаунтты басқару')}</button>` : ''}
       </div>`;
   } else if (profile && available) {
-    content = `<form id="mindora-account-form">
-      <label class="field"><span>${t('Email','Электронная почта','Электрондық пошта')}</span><input name="email" type="email" autocomplete="email" maxlength="254" value="${escapeHtml(email)}" required></label>
-      <label class="field"><span>${t('Password','Пароль','Құпиясөз')}</span><input name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required></label>
+    content = `<p>${t('Sign in to open your saved drafts.','Войди, чтобы открыть сохранённые черновики.','Сақталған нобайларды ашу үшін аккаунтқа кір.')}</p>
       <div class="lesson-actions">
-        <button class="primary" type="submit" value="signin"${disabled}>${t('Sign in','Войти','Кіру')}</button>
-        <button class="secondary" type="submit" value="signup"${disabled}>${t('Create account','Создать аккаунт','Аккаунт ашу')}</button>
-      </div>
-    </form>`;
+        <button class="primary" type="button" data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>
+        <button class="secondary" type="button" data-account-open="signup">${t('Create account','Создать аккаунт','Аккаунт ашу')}</button>
+      </div>`;
   } else if (available) {
-    content = `<p>${t('Sign in to open this draft on another device.','Войди, чтобы открыть этот черновик на другом устройстве.','Осы нобайды басқа құрылғыда ашу үшін аккаунтқа кір.')}</p><button class="secondary" data-view="profile">${t('Sign in','Войти','Кіру')}</button>`;
+    content = `<p>${t('Sign in to open this draft on another device.','Войди, чтобы открыть этот черновик на другом устройстве.','Осы нобайды басқа құрылғыда ашу үшін аккаунтқа кір.')}</p><button type="button" class="secondary" data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
   } else {
     content = `<p>${t('Connecting…','Подключаемся…','Қосылып жатыр…')}</p>`;
   }

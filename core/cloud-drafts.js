@@ -21,14 +21,18 @@ export function createCloudDrafts({ getWorkspace, restoreWorkspace, hasLocalDraf
   let status = '';
   let revision = null;
   let conflict = false;
+  let running = null;
+  let refreshPending = false;
+  let accountVersion = 0;
 
   function render() {
     renderCloudPanel(document.querySelector('[data-cloud-panel]'), { user, available, busy, status });
   }
 
-  async function readAccount() {
+  async function readAccount(version) {
     const account = await request('account');
-    if (account.user?.email !== user?.email) {
+    if (version !== accountVersion) return;
+    if ((account.user?.id ?? account.user?.email) !== (user?.id ?? user?.email)) {
       revision = null;
       conflict = false;
     }
@@ -36,48 +40,49 @@ export function createCloudDrafts({ getWorkspace, restoreWorkspace, hasLocalDraf
     user = account.user;
   }
 
-  async function run(task) {
-    if (busy) return;
+  function run(task) {
+    if (running) return running;
     busy = true;
     status = '';
     render();
-    try {
-      await task();
-    } catch (error) {
-      if (error.status === 401) {
-        user = null;
-        revision = null;
+    const version = accountVersion;
+    running = (async () => {
+      try {
+        await task(version);
+      } catch (error) {
+        if (version === accountVersion) {
+          if (error.status === 401) { user = null; revision = null; conflict = false; }
+          if (error.status === 409) conflict = true;
+          status = error.status ? error.message : 'Не удалось связаться с облаком. Черновик остался в браузере.';
+        }
       }
-      if (error.status === 409) conflict = true;
-      status = error.status ? error.message : 'Не удалось связаться с облаком. Черновик остался в браузере.';
-    } finally {
+      // Auth changes can arrive while a draft request or an earlier session read
+      // is in flight. Drain one fresh read instead of dropping that notification.
+      while (refreshPending) {
+        refreshPending = false;
+        const refreshVersion = accountVersion;
+        try {
+          await readAccount(refreshVersion);
+        } catch {
+          if (refreshVersion === accountVersion) {
+            available = false; user = null; revision = null; conflict = false;
+            status = 'Не удалось связаться с облаком. Черновик остался в браузере.';
+          }
+        }
+      }
       busy = false;
       render();
-    }
+    })().finally(() => { running = null; });
+    return running;
   }
-
-  document.addEventListener('submit', event => {
-    if (event.target.id !== 'mindora-account-form') return;
-    event.preventDefault();
-    const { email, password } = event.target.elements;
-    const data = { email: email.value.trim(), password: password.value, action: event.submitter?.value || 'signin' };
-    void run(async () => {
-      await request('account', 'POST', data);
-      await readAccount();
-      status = user ? 'Вход выполнен.' : 'Аккаунт создан. Проверь почту и затем войди.';
-    });
-  });
 
   document.addEventListener('click', event => {
     const action = event.target.closest('[data-cloud-action]')?.dataset.cloudAction;
-    if (!action || !user) return;
-    void run(async () => {
-      if (action === 'signout') {
-        await request('account', 'POST', { action });
-        await readAccount();
-        status = 'Ты вышел из аккаунта.';
-      } else if (action === 'load') {
+    if (!['load', 'save'].includes(action) || !user) return;
+    void run(async version => {
+      if (action === 'load') {
         const { draft } = await request('budget-draft');
+        if (version !== accountVersion) return;
         if (!draft) {
           status = 'В аккаунте пока нет черновика.';
           return;
@@ -93,10 +98,12 @@ export function createCloudDrafts({ getWorkspace, restoreWorkspace, hasLocalDraf
         let expectedRevision = revision;
         if (conflict) {
           const { draft } = await request('budget-draft');
+          if (version !== accountVersion) return;
           if (draft && !window.confirm(message('Заменить сохранённый в аккаунте черновик текущей работой?'))) return;
           expectedRevision = draft?.revision ?? null;
         }
         const { draft } = await request('budget-draft', 'PUT', { workspace, revision: expectedRevision });
+        if (version !== accountVersion) return;
         revision = draft.revision;
         conflict = false;
         status = 'Сохранено в аккаунте. Можно открыть на другом устройстве.';
@@ -106,13 +113,10 @@ export function createCloudDrafts({ getWorkspace, restoreWorkspace, hasLocalDraf
 
   return {
     render,
-    init: () => run(async () => {
-      try {
-        await readAccount();
-      } catch (error) {
-        available = false;
-        throw error;
-      }
-    }),
+    init() {
+      accountVersion += 1;
+      refreshPending = true;
+      return run(async () => {});
+    },
   };
 }

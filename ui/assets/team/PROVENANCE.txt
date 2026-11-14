@@ -1,0 +1,4 @@
+Source: user-provided team-characters/team-characters SVG rigs (programmer, smm, graphic_designer, artist, copywriter).
+Original SVG geometry and colours retained. SVG tags and attributes checked against a local allowlist; no scripts, event handlers, external URLs or images.
+Prepared for Mindora: full portrait viewBox, unique instance IDs via team-rigs.js, named face hooks, optional happy eye curves. Props reparented to their holding forearms with inverse affine matrices so source positions and articulated motion are preserved.
+Source generate.py was not executed.
