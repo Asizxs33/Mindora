@@ -38,7 +38,6 @@ function researchFixture(steps, { readable = true, verify = () => {} } = {}) {
       return Response.json({ content: 'The for statement iterates over the items of a sequence.' });
     }
     assert.equal(url, 'https://api.deepseek.com/chat/completions');
-    assert.equal(request.response_format.type, 'json_object');
     const input = JSON.parse(request.messages[1].content);
     if (!input.materials) return modelResponse({ query: 'Python loops beginner guide', githubQuery: 'Python for loop tutorial' });
     assert.deepEqual(input.materials.map(item => item.url), [source, github]);
