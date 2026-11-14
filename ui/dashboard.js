@@ -24,10 +24,11 @@ export function badge(icon, name, color, size = 22) {
 export function brandNav(icon, view, place, signedIn = false) {
   const items = [['discover', 'home', t('Learn','Обучение','Оқу')], ['courses', 'book', t('My courses','Мои курсы','Курстарым')], ['work', 'folder', t('My work','Мои работы','Жұмыстарым')], ['profile', 'user', t('Profile','Профиль','Профиль')]];
   if (signedIn) {
-    items.splice(1, 0, ['roadmap', 'path', t('My path','Мой путь','Оқу жолым')]);
+    items.splice(1, 0, ['my-path', 'path', t('My path','Мой путь','Оқу жолым')]);
   }
   return items.map(([key, symbol, name]) => {
-    const active = view === key || (key === 'discover' && ['path', 'lesson', 'learning-plan', 'recap', 'result', 'certificate'].includes(view))
+    const learningViews = ['path', 'course-path', 'roadmap', 'lesson', 'learning-plan', 'recap', 'return-review', 'result', 'certificate'];
+    const active = view === key || (key === (signedIn ? 'my-path' : 'discover') && learningViews.includes(view))
       || (key === 'profile' && ['practice', 'achievements', 'community', 'quests', 'shop'].includes(view));
     return `<button class="nav-item ${active ? 'active' : ''}" data-view="${key}" ${active ? 'aria-current="page"' : ''}>${icon(symbol, place === 'bottom' ? 22 : 23)}<span>${name}</span></button>`;
   }).join('');
@@ -74,7 +75,8 @@ function resumeCard(state) {
 
 export function dashboard(state) {
   const saved = state.learningPlan;
-  const pathLink = state.learningRoadmap ? `<button type="button" class="text-link roadmap-home-link" data-view="roadmap">${icon('path', 18)} ${t("Open my learning path", "Открыть мой путь", "Оқу жолымды ашу")}</button>` : '';
+  const hasPath = state.learningRoadmap || saved || Object.hasOwn(COURSES, state.active);
+  const pathLink = hasPath ? `<button type="button" class="text-link roadmap-home-link" data-view="my-path">${icon('path', 18)} ${t("Open my learning path", "Открыть мой путь", "Оқу жолымды ашу")}</button>` : '';
   const newGoal = `<details class="goal-disclosure"><summary><span>${t("Learn something else", "Выбрать другую цель", "Басқа мақсат таңдау")}</span>${icon('chevron', 18)}</summary>${goalBanner(state.minutes, true)}</details>`;
   if (saved) {
     const total = saved.plan.steps.length;

@@ -294,6 +294,10 @@ test('a ready mini-course creates one account copy and opens its path without AI
   assert.equal(run.current.state.learningPlan.completed, 0);
   assert.equal(run.current.state.learningCourse.ownerId, 'test-user');
   assert.equal(run.current.state.lastLearningType, 'ai');
+  run.click({ view: 'profile' });
+  run.click({ view: 'my-path' });
+  assert.equal(run.current.view, 'course-path');
+  assert.equal(run.current.html.kind, 'quiet-home', 'My path reopens the ready course map');
   run.click({ view: 'learning-plan' });
   assert.equal(run.current.view, 'learning-plan');
 });
@@ -594,6 +598,40 @@ test('an existing roadmap stage resumes the saved lesson and draft without anoth
   assert.equal(reloaded.current.view, 'learning-plan', 'the stage button on restored home must actually open the lesson');
   assert.deepEqual(reloaded.loadedCourses, [id]);
   assert.equal(reloaded.current.state.learningPlan.answers[1], 'My current draft');
+});
+
+test('opening an archived roadmap preserves the other path and reloads the selected path', () => {
+  const first = { ...savedRoadmap('12345678-1234-4000-8000-123456789011'), id: '12345678-1234-4000-8000-123456789001' };
+  first.progress[0].completed = true;
+  const second = { ...savedRoadmap('12345678-1234-4000-8000-123456789012'), id: '12345678-1234-4000-8000-123456789002', title: 'Another learning path' };
+  const run = app(seed({ learningRoadmap: first, learningRoadmaps: [second] }));
+  run.click({ learningRoadmap: second.id });
+  assert.equal(run.current.view, 'roadmap');
+  assert.equal(run.saved().learningRoadmap.id, second.id);
+  assert.deepEqual(run.saved().learningRoadmaps, [first]);
+  const reloaded = app(null, { storage: run.storage });
+  assert.equal(reloaded.current.html.kind, 'roadmap');
+  assert.equal(reloaded.current.html.args[0].roadmap.id, second.id);
+  assert.deepEqual(reloaded.current.state.learningRoadmaps, [first]);
+});
+
+test('a library lesson opens its archived parent path before resuming the same lesson', async () => {
+  const id = '12345678-1234-4000-8000-123456789012';
+  const parent = { ...savedRoadmap(id), id: '12345678-1234-4000-8000-123456789002' };
+  const current = { ...savedRoadmap(), id: '12345678-1234-4000-8000-123456789001' };
+  const course = { id, revision: 2, saved: savedAiCourse(), updatedAt: new Date(NOW).toISOString() };
+  const run = app(seed({ learningRoadmap: current, learningRoadmaps: [parent] }), { realPlans: true, libraryCourses: [course] });
+  run.click({ learningOpen: id });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'roadmap');
+  assert.equal(run.saved().learningRoadmap.id, parent.id);
+  assert.deepEqual(run.loadedCourses, [], 'the library first shows the owning path');
+  run.click({ roadmapAction: 'start', roadmapStage: '0' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'learning-plan');
+  assert.deepEqual(run.loadedCourses, [id]);
+  assert.equal(run.current.state.learningPlan.answers[1], 'My current draft');
+  assert.equal(run.current.state.learningRoadmaps[0].id, current.id);
 });
 
 for (const succeeds of [true, false]) test(`a roadmap request settling on home clears busy controls (${succeeds ? 'success' : 'retry'})`, async () => {

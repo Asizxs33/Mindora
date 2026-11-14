@@ -2,14 +2,16 @@ import { escapeHtml as esc } from '../core/engine.js';
 import { currentLanguage, t } from './language.js';
 import { icon } from './icons.js';
 
-function courseCard(course, loading) {
+function courseCard(course, loading, isRoadmap) {
   const total = Number.isInteger(course.totalSteps) && course.totalSteps > 0 ? course.totalSteps : 0;
   const completed = Number.isInteger(course.completed) ? Math.min(total, Math.max(0, course.completed)) : 0;
   const done = total > 0 && completed === total;
+  const pathLabel = t('Open path', 'Открыть путь', 'Оқу жолын ашу');
+  const progressLabel = isRoadmap ? t('Completed lessons', 'Пройденные занятия', 'Аяқталған сабақтар') : t('Completed tasks', 'Выполненные задания', 'Орындалған тапсырмалар');
   return `<li class="learning-library-card">
     <div class="learning-library-card-summary"><h3 lang="${esc(course.language || currentLanguage())}">${esc(course.title)}</h3>
-    ${total ? `<div class="learning-library-progress"><progress max="${total}" value="${completed}" aria-label="${t('Completed tasks', 'Выполненные задания', 'Орындалған тапсырмалар')}"></progress><span>${done ? t('Completed', 'Завершено', 'Аяқталды') : `${completed}/${total}`}</span></div>` : ''}</div>
-    <button type="button" class="secondary" data-learning-open="${esc(course.id)}"${loading ? ' disabled' : ''}>${done ? t('View my work', 'Посмотреть работу', 'Жұмысымды көру') : completed ? t('Continue lesson', 'Продолжить занятие', 'Сабақты жалғастыру') : t('Open lesson', 'Открыть занятие', 'Сабақты ашу')} ${icon('arrow', 18)}</button>
+    ${total ? `<div class="learning-library-progress"><progress max="${total}" value="${completed}" aria-label="${progressLabel}"></progress><span>${done ? t('Completed', 'Завершено', 'Аяқталды') : `${completed}/${total}`}</span></div>` : ''}</div>
+    <button type="button" class="secondary" ${isRoadmap ? 'data-learning-roadmap' : 'data-learning-open'}="${esc(course.id)}"${loading ? ' disabled' : ''}>${pathLabel} ${icon('arrow', 18)}</button>
   </li>`;
 }
 
@@ -24,7 +26,7 @@ export function loginRequiredView({ available = true } = {}) {
   </section>`;
 }
 
-export function learningLibraryView({ user, available = true, loading = false, error = '', courses = [], hasLocalLesson = false, hasLocalBuiltin = false } = {}, { primaryHeading = false, showEmpty = true } = {}) {
+export function learningLibraryView({ user, available = true, loading = false, error = '', courses = [], roadmaps = [], hasLocalLesson = false, hasLocalBuiltin = false } = {}, { primaryHeading = false, showEmpty = true } = {}) {
   if (!user) return loginRequiredView({ available });
 
   const heading = primaryHeading ? 'h1' : 'h2';
@@ -33,7 +35,7 @@ export function learningLibraryView({ user, available = true, loading = false, e
     ${loading ? `<p class="learning-library-status" role="status">${t('Loading your lessons…', 'Загружаем занятия…', 'Сабақтар жүктеліп жатыр…')}</p>` : error ? `<p class="learning-library-status is-error" role="status">${t('We couldn’t load your lessons. Try refreshing in a moment.', 'Не удалось загрузить занятия. Попробуй обновить список чуть позже.', 'Сабақтарды жүктеу мүмкін болмады. Біраздан кейін тізімді жаңартып көр.')}</p>` : ''}
     ${hasLocalLesson ? `<div class="learning-library-import"><h3>${t('A lesson from this browser', 'Занятие из этого браузера', 'Осы браузердегі сабақ')}</h3><p>${t('This lesson is saved only on this device. Add it to your account to keep learning on other devices.', 'Это занятие сохранено только на этом устройстве. Добавь его в аккаунт, чтобы продолжать на других устройствах.', 'Бұл сабақ тек осы құрылғыда сақталған. Басқа құрылғыларда жалғастыру үшін оны аккаунтыңа қос.')}</p><button type="button" class="secondary" data-learning-import${loading ? ' disabled' : ''}>${t('Save to my account', 'Сохранить в аккаунт', 'Аккаунтқа сақтау')}</button></div>` : ''}
     ${hasLocalBuiltin ? `<div class="learning-library-import"><h3>${t('Course progress from this browser', 'Прогресс курсов из этого браузера', 'Осы браузердегі курс үлгерімі')}</h3><button type="button" class="secondary" data-builtin-import>${t('Save course progress to my account', 'Сохранить прогресс курсов в аккаунте', 'Курс үлгерімін аккаунтқа сақтау')}</button></div>` : ''}
-    ${courses.length ? `<ul class="learning-library-list">${courses.map(course => courseCard(course, loading)).join('')}</ul>` : showEmpty && !loading && !error ? `<div class="learning-library-empty">${icon('book', 24)}<p>${t('Your first personal lesson will appear here when you create it.', 'Первое персональное занятие появится здесь, когда ты его создашь.', 'Алғашқы жеке сабағыңды жасағаннан кейін ол осы жерде пайда болады.')}</p></div>` : ''}
+    ${courses.length || roadmaps.length ? `<ul class="learning-library-list">${roadmaps.map(course => courseCard(course, loading, true)).join('')}${courses.map(course => courseCard(course, loading, false)).join('')}</ul>` : showEmpty && !loading && !error ? `<div class="learning-library-empty">${icon('book', 24)}<p>${t('Your first personal course will appear here when you create it.', 'Первый персональный курс появится здесь, когда ты его создашь.', 'Алғашқы жеке курсыңды жасағаннан кейін ол осы жерде пайда болады.')}</p></div>` : ''}
   </section>`;
 }
 
