@@ -19,11 +19,11 @@ export function translateKnown(value, translations) {
   return Object.hasOwn(translations, value) ? t(...translations[value]) : value;
 }
 
-export function languagePicker() {
+export function languagePicker({ compact = false } = {}) {
   return `<label class="language-picker"><span class="visually-hidden">${t('Language', 'Язык', 'Тіл')}</span>
     <select id="interface-language" class="profile-select">
-      <option value="en" lang="en"${current === 'en' ? ' selected' : ''}>English</option>
-      <option value="ru" lang="ru"${current === 'ru' ? ' selected' : ''}>Русский</option>
-      <option value="kk" lang="kk"${current === 'kk' ? ' selected' : ''}>Қазақша</option>
+      <option value="en" lang="en"${current === 'en' ? ' selected' : ''}>${compact ? 'EN' : 'English'}</option>
+      <option value="ru" lang="ru"${current === 'ru' ? ' selected' : ''}>${compact ? 'RU' : 'Русский'}</option>
+      <option value="kk" lang="kk"${current === 'kk' ? ' selected' : ''}>${compact ? 'ҚАЗ' : 'Қазақша'}</option>
     </select></label>`;
 }

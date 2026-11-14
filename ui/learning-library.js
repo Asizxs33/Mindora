@@ -41,19 +41,19 @@ export function learningLibraryView({ user, available = true, loading = false, e
 }
 
 export function learningSyncView({ status = 'idle', error = '', conflict = false, builtin = false } = {}) {
-  if (status === 'idle' && !error && !conflict) return '';
+  if (['idle', 'saved', 'saving'].includes(status) && !error && !conflict) return '';
   const busy = status === 'loading' || status === 'saving';
   const needsChoice = !busy && (status === 'conflict' || conflict);
-  const failed = !busy && !needsChoice && (status === 'offline' || error);
+  const failed = !busy && !needsChoice && (status === 'offline' || Boolean(error));
+  if (!busy && !needsChoice && !failed) return '';
   const text = needsChoice && builtin
     ? t('Course progress changed on another device. Opening the account version replaces the progress in this browser.', 'Прогресс курсов изменился на другом устройстве. Если открыть версию из аккаунта, она заменит прогресс в этом браузере.', 'Курс үлгерімі басқа құрылғыда өзгерді. Аккаунттағы нұсқаны ашсаң, ол осы браузердегі үлгерімді ауыстырады.')
     : busy ? status === 'loading'
     ? t('Opening your saved lesson…', 'Открываем сохранённое занятие…', 'Сақталған сабақ ашылып жатыр…')
     : t('Saving your progress…', 'Сохраняем прогресс…', 'Үлгерім сақталып жатыр…')
     : needsChoice ? t('This lesson changed on another device. Opening the account version replaces this browser’s copy. Saving your work as a new lesson keeps both versions.', 'Занятие изменилось на другом устройстве. Версия из аккаунта заменит копию в этом браузере. Если сохранить свою работу отдельным занятием, обе версии останутся.', 'Сабақ басқа құрылғыда өзгерді. Аккаунттағы нұсқа осы браузердегі көшірмені ауыстырады. Жұмысыңды бөлек сабақ ретінде сақтасаң, екі нұсқа да қалады.')
-      : failed ? t('Your latest changes haven’t reached your account. Try saving again.', 'Последние изменения ещё не сохранены в аккаунте. Попробуй сохранить ещё раз.', 'Соңғы өзгерістер аккаунтта әлі сақталмады. Қайта сақтап көр.')
-        : t('Saved to your account.', 'Сохранено в аккаунте.', 'Аккаунтта сақталды.');
-  return `<aside class="learning-sync${status === 'saved' || busy ? ' is-transient' : ''}${status === 'saved' ? ' is-saved' : ''}${needsChoice || failed ? ' needs-attention' : ''}" aria-label="${t('Lesson saving', 'Сохранение занятия', 'Сабақты сақтау')}" aria-busy="${busy}">
+      : t('Your latest changes haven’t reached your account. Try saving again.', 'Последние изменения ещё не сохранены в аккаунте. Попробуй сохранить ещё раз.', 'Соңғы өзгерістер аккаунтта әлі сақталмады. Қайта сақтап көр.');
+  return `<aside class="learning-sync${busy ? ' is-transient' : ''}${needsChoice || failed ? ' needs-attention' : ''}" aria-label="${t('Lesson saving', 'Сохранение занятия', 'Сабақты сақтау')}" aria-busy="${busy}">
     <p role="status">${icon(needsChoice || failed ? 'clock' : busy ? 'clock' : 'check', 18)} <span>${text}</span></p>
     ${needsChoice ? `<div class="learning-sync-actions"><button type="button" class="secondary" data-${builtin ? 'builtin' : 'learning'}-sync="load-latest">${t('Open account version', 'Открыть версию из аккаунта', 'Аккаунттағы нұсқаны ашу')}</button>${builtin ? '' : `<button type="button" class="primary" data-learning-sync="save-copy">${t('Save my copy', 'Сохранить мою копию', 'Көшірмемді сақтау')}</button>`}</div>` : failed ? `<button type="button" class="secondary" data-${builtin ? 'builtin' : 'learning'}-sync="retry">${t('Try syncing again', 'Повторить синхронизацию', 'Синхрондауды қайталау')}</button>` : ''}
   </aside>`;
