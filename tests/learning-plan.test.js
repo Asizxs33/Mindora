@@ -116,7 +116,7 @@ test('task review requests thinking mode and returns only shaped feedback', asyn
   })), /Incomplete DeepSeek review/);
 });
 
-test('task review validates submissions and keeps the AI quota for signed-in requests', async () => {
+test('task review validates submissions before calling DeepSeek', async () => {
   const input = { goal: 'Python', task: 'Напиши цикл', criterion: 'Выведи три строки', answer: 'Вывод: a, b, c', language: 'kk' };
   const request = (body, origin = 'https://mindora.test') => new Request('https://mindora.test/api/task-review', {
     method: 'POST', headers: { origin, 'content-type': 'application/json', 'X-Mindora-Account': 'account-a' }, body: JSON.stringify(body),
@@ -124,13 +124,12 @@ test('task review validates submissions and keeps the AI quota for signed-in req
   const feedback = { observation: 'Указаны три значения.', nextAction: 'Проверь разделение на строки.' };
   let calls = 0;
   const configured = {
-    apiKey: 'test-only', settings: accountSettings, session: accountSession, reserve: async () => true,
+    apiKey: 'test-only', settings: accountSettings, session: accountSession,
     review: async raw => { calls++; assert.deepEqual(raw, input); return feedback; },
   };
   assert.equal((await taskReviewApi(request({ ...input, answer: ' ' }), configured)).status, 400);
   assert.equal((await taskReviewApi(request(input, 'https://other.test'), configured)).status, 403);
   assert.equal((await taskReviewApi(request(input), { ...configured, apiKey: '' })).status, 503);
-  assert.equal((await taskReviewApi(request(input), { ...configured, reserve: async () => false })).status, 429);
   assert.equal(calls, 0);
   assert.deepEqual(await (await taskReviewApi(request({ ...input, account: 'ignored' }), configured)).json(), { review: feedback });
   assert.equal(calls, 1);
@@ -146,7 +145,7 @@ test('a localized plan preserves its language through generation and browser res
   assert.equal(restorePlan({ plan, answers: [], completed: 0 }).plan.language, 'kk');
 });
 
-test('the endpoint validates input and limits provider requests before calling DeepSeek', async () => {
+test('the generation endpoint validates input before calling DeepSeek', async () => {
   let calls = 0;
   const request = (minutes, origin = 'https://mindora.test') => new Request('https://mindora.test/api/learning-plan', {
     method: 'POST', headers: { origin, 'content-type': 'application/json', 'X-Mindora-Account': 'account-a' },
@@ -164,10 +163,27 @@ test('the endpoint validates input and limits provider requests before calling D
   assert.equal((await planApi(request(99), configured)).status, 400);
   assert.equal((await planApi(request(5, 'https://other.test'), configured)).status, 403);
   assert.equal((await planApi(request(5), { ...configured, apiKey: '' })).status, 503);
-  assert.equal((await planApi(request(5), { ...configured, reserve: async () => false })).status, 429);
   assert.equal(calls, 0);
-  assert.equal((await planApi(request(5), { ...configured, reserve: async () => true })).status, 200);
+  assert.equal((await planApi(request(5), configured)).status, 200);
   assert.equal(calls, 1);
+});
+
+test('generation and review surface a 429 from DeepSeek', async () => {
+  const unavailable = async () => { throw Object.assign(new Error('DeepSeek is busy'), { providerStatus: 429 }); };
+  const configured = { apiKey: 'test-only', settings: accountSettings, session: accountSession, generate: unavailable, review: unavailable };
+  for (const [api, path, body] of [
+    [planApi, 'learning-plan', { goal: 'Learn Python', minutes: 5 }],
+    [taskReviewApi, 'task-review', { goal: 'Python', task: 'Write a loop', criterion: 'Print two names', answer: 'Ada\nLin' }],
+  ]) {
+    const request = new Request(`https://mindora.test/api/${path}`, {
+      method: 'POST',
+      headers: { origin: 'https://mindora.test', 'content-type': 'application/json', 'X-Mindora-Account': 'account-a' },
+      body: JSON.stringify(body),
+    });
+    const response = await api(request, configured);
+    assert.equal(response.status, 429);
+    assert.deepEqual(await response.json(), { error: 'DeepSeek занят. Попробуй немного позже.' });
+  }
 });
 
 test('illustrations bind to retrieved sources and survive reload without crossing sources', () => {

@@ -2,14 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { planInput, restorePlan } from '../core/learning-plan.js';
 import { accountSession, allowedOrigin, cloudSettings, json, matchesLearningAccount, readBody } from './cloud-api.js';
 import { generateDeepSeekPlan } from './deepseek-plan.js';
-import { reserveGeneration } from './plan-quota.js';
 import { learningCourseStore } from './learning-course-store.js';
 
 export async function planApi(request, {
   apiKey = process.env.DEEPSEEK_API_KEY,
   settings = cloudSettings(),
   session = accountSession,
-  reserve = reserveGeneration,
   generate = generateDeepSeekPlan,
   store = learningCourseStore,
   createId = randomUUID,
@@ -27,9 +25,6 @@ export async function planApi(request, {
     const input = planInput(body?.goal, body?.minutes, body?.language);
     if (!input) return json({ error: 'Напиши цель от 3 до 180 символов и выбери 5, 10 или 20 минут.' }, 400, cookies);
     if (!apiKey) return json({ error: 'Генерация пути пока недоступна.' }, 503, cookies);
-    if (!await reserve(request, settings.databaseUrl, apiKey)) {
-      return json({ error: 'Лимит новых маршрутов на сегодня исчерпан. Попробуй завтра или продолжи сохранённый путь.' }, 429, cookies);
-    }
     const plan = await generate(input, apiKey);
     const saved = restorePlan({ plan });
     if (!saved) throw new Error('Invalid generated course');
