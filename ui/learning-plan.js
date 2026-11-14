@@ -65,7 +65,7 @@ function stepsView({ plan, answers, reviews, completed }, busy, reviewError) {
     return `<li class="game-card simple-panel">
       <h3>${last ? t('Independent task', 'Самостоятельная работа', 'Өздік жұмыс') : esc(step.title)} <span class="tag">${t(`${step.minutes} min`, `${step.minutes} мин`, `${step.minutes} мин`)}</span></h3>
       ${done ? `<details><summary>${t('View my answer', 'Посмотреть ответ', 'Жауапты көру')}</summary><p class="learning-answer">${esc(answers[index])}</p>${review ? reviewView(review) : ''}</details>` : ''}
-      ${done && step.resource ? `<p><a class="source-link" href="${esc(step.resource.url)}" target="_blank" rel="noopener noreferrer">${esc(step.resource.title)} ${icon('arrow', 14)}</a></p>` : ''}
+      ${done && step.resource && !step.resource.images?.length ? `<p><a class="source-link" href="${esc(step.resource.url)}" target="_blank" rel="noopener noreferrer">${t('Lesson material', 'Материал урока', 'Сабақ материалы')} ${icon('arrow', 14)}</a></p>` : ''}
       ${current ? currentTask(step, answers[index], review, busy, reviewError, last) : ''}
       ${!done && !current ? `<p>${t('Opens after the previous task.', 'Откроется после предыдущего задания.', 'Алдыңғы тапсырмадан кейін ашылады.')}</p>` : ''}
     </li>`;
