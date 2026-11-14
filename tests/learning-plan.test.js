@@ -96,6 +96,34 @@ test('a saved plan restores answers and opens the first unfinished task', async 
   }).reviews, [null, null, null]);
 });
 
+test('malformed lesson JSON retries composition without repeating research or creating duplicate courses', async () => {
+  const fixture = researchFixture(draft.steps.slice(0, 2));
+  let compositions = 0, searches = 0, creates = 0;
+  const fetcher = (url, options) => {
+    const request = JSON.parse(options.body);
+    if (url.endsWith('/v1/tools/search')) searches++;
+    if (url.endsWith('/chat/completions') && JSON.parse(request.messages[1].content).materials) {
+      compositions++;
+      if (compositions === 1) return Promise.resolve(Response.json({ choices: [{
+        finish_reason: 'stop', message: { content: '{"guided":[{"task":"print("Hello")"}]}' },
+      }] }));
+    }
+    return fixture(url, options);
+  };
+  const request = new Request('https://mindora.test/api/learning-plan', {
+    method: 'POST', headers: { origin: 'https://mindora.test', 'content-type': 'application/json', 'X-Mindora-Account': 'account-a' },
+    body: JSON.stringify({ goal: 'Освоить циклы', minutes: 5 }),
+  });
+  const response = await planApi(request, {
+    apiKey: 'test-only', settings: accountSettings, session: accountSession,
+    generate: (input, key) => generateDeepSeekPlan(input, key, fetcher, offlineReader),
+    store: () => ({ create: async (_owner, id, saved) => { creates++; return { id, saved, revision: 1 }; } }),
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual([compositions, searches, creates], [2, 2, 1]);
+  assert.ok((await response.json()).plan.steps[0].resource);
+});
+
 test('a detailed independent task can be stored and sent for review', async () => {
   const steps = draft.steps.slice(0, 2);
   const longTask = 'Новый пример. '.repeat(40).trim();
