@@ -3,6 +3,7 @@ import { ROADMAP_LEVELS, ROADMAP_LIMITS, clarificationInput, normalizeClarificat
 import { accountSession, allowedOrigin, isGuestLearningRequest, cloudSettings, json, matchesLearningAccount, readBody } from './cloud-api.js';
 import { completeJson } from './deepseek-client.js';
 import { loadCourseOutlineSources } from './course-outline-sources.js';
+import { lessonTopic } from './lesson-topic.js';
 
 const unavailable = { error: 'Не удалось открыть построение пути. Попробуй позже.', code: 'ROADMAP_UNAVAILABLE' };
 const practiceCapabilities = [
@@ -25,6 +26,7 @@ export async function generateDeepSeekClarification(input, apiKey, fetcher = fet
       practiceCapabilities,
       'If the goal is already specific, keep its exact intent in the first direction when supported and offer two nearby applications. Otherwise preserve its purpose through a supported preparatory task or explicitly labeled simulation. Do not turn a specific request into unrelated career tracks.',
       'Each diagnosticQuestion must be answerable in roughly 30 seconds without installing tools or reading a course: predict a tiny code result, calculate a simple quantity with reasoning, or explain a concrete visual decision. Include all data needed to attempt it. Check that the example is valid and its result can be evaluated from the supplied information. Ask for a result and a short reason. Do not disclose the answer. Let uncertainty be a legitimate response.',
+      ...(lessonTopic(input.goal) === 'smm' ? ['For SMM, the starting-level diagnostic must check communication judgment: identify a specific audience or goal, improve a vague post opening, or choose a fitting call to action and explain why. Do not substitute arithmetic, counting calendar days, calculating discounts or factual platform trivia for an SMM skill check. Include a tiny fictional brief with all necessary facts.'] : []),
       'Do not include URLs, personal details, job guarantees, or claims of mastery.',
     ].join('\n') },
     { role: 'user', content: JSON.stringify(input) },
