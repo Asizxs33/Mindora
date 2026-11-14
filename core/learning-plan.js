@@ -1,4 +1,5 @@
 import { languageCode } from './language.js';
+import { normalizePractice } from './lesson-practice.js';
 import { isAssessmentCorrect, isAssessmentReady, normalizeAssessment, normalizeAssessmentResponse } from './lesson-assessment.js';
 
 export const PLAN_DURATIONS = Object.freeze({
@@ -131,7 +132,9 @@ export function normalizePlan(raw, input, sources) {
       images: sourceImages(source.images).filter(image => selected.includes(image.url)),
       imageSourceUrl: sourceUrl(source.imageSourceUrl) || source.url,
     } : null;
-    steps.push({ id, title, instruction, task, criterion, minutes: durations[id], resource, ...(teaching ? { teaching } : {}) });
+    const practice = item.practice === undefined ? null : normalizePractice(item.practice);
+    if (item.practice !== undefined && !practice) return null;
+    steps.push({ id, title, instruction, task, criterion, minutes: durations[id], resource, ...(teaching ? { teaching } : {}), ...(practice ? { practice } : {}) });
   }
   if (!steps.some(step => step.resource)) return null;
   return { ...input, ...(detailed ? { formatVersion } : {}), title, outcome, steps };

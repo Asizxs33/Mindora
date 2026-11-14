@@ -1,6 +1,7 @@
 import { lessonPages, normalizeTaskReview, planInput, restorePlan, taskReviewInput } from './learning-plan.js';
 import { isAssessmentCorrect, isAssessmentReady, normalizeAssessmentResponse } from './lesson-assessment.js';
 import { message } from '../ui/messages.js';
+import { createPracticeController } from './practice-controller.js';
 
 export function createPlanController({ state, save, render, isOpen, canLearn = () => true, beforeGenerate, onGenerated, onUnauthorized = () => {}, accountId = () => null }) {
   state.learningPlan = restorePlan(state.learningPlan);
@@ -11,8 +12,21 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
   let reviewError = '';
   let reviewErrorFor = null;
   let epoch = 0;
+  const practical = createPracticeController({ document,
+    getPractice: () => {
+      const lesson = currentLesson();
+      return !busy && isOpen() && atPractice(lesson) && !lesson.saved.reviews[lesson.index] ? lesson.step.practice : null;
+    },
+    onAnswer: answer => {
+      const lesson = currentLesson();
+      if (!lesson) return;
+      lesson.saved.answers[lesson.index] = answer;
+      save();
+    },
+  });
 
   function reset() {
+    practical.cancel();
     epoch++;
     state.learningPlan = restorePlan(state.learningPlan);
     goal = state.learningPlan?.plan.goal ?? '';
@@ -21,6 +35,7 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
   }
 
   function refresh() {
+    practical.cancel();
     if (isOpen()) render();
   }
 
@@ -295,7 +310,7 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
     save(saved.completed === saved.plan.steps.length ? { type: 'complete' } : undefined);
     refresh();
     if (isOpen()) {
-      if (learningStep === 'edit') document.querySelector('#learning-step-form textarea')?.focus();
+      if (learningStep === 'edit') document.querySelector('#learning-step-form textarea:not([hidden])')?.focus();
       else focusPage();
     }
   });

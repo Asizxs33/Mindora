@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import * as model from '../core/learning-plan.js';
 import * as assessmentModel from '../core/lesson-assessment.js';
+import { createPracticeController } from '../core/practice-controller.js';
 
 // Exercise the real controller and event handlers with DOM/network ports only.
 const source = readFileSync(new URL('../core/plan-controller.js', import.meta.url), 'utf8')
@@ -46,7 +47,7 @@ function controller(initial = { plan: plan() }, { confirm = true, fetch: fetchPo
     querySelector: element,
   };
   const context = vm.createContext({
-    ...model, ...assessmentModel, document, message: value => value,
+    ...model, ...assessmentModel, createPracticeController, document, message: value => value,
     window: { confirm: message => { confirmations.push(message); return confirm; } },
     AbortSignal: { timeout: () => undefined },
     fetch: async (url, options) => {

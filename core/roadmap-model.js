@@ -5,11 +5,29 @@ export const ROADMAP_LIBRARY_LIMIT = 16;
 export const ROADMAP_LEVELS = Object.freeze(['beginner', 'intermediate', 'advanced']);
 export const ROADMAP_LIMITS = Object.freeze({
   goal: 180, evidence: 360, title: 90, outcome: 300,
-  stageTitle: 75, objective: 240, levelReason: 220,
+  stageTitle: 75, objective: 240, levelReason: 220, diagnosticQuestion: 320, diagnosticAnswer: 600,
 });
 
 const boundedString = (value, max) => typeof value === 'string' && value.length <= max && !/[\u0000\u000b\u000c\u007f]/u.test(value);
 const text = (value, max) => boundedString(value, max) ? value.trim() || null : null;
+
+export function clarificationInput(raw) {
+  const input = planInput(raw?.goal, raw?.minutes, raw?.language);
+  return input && text(input.goal, ROADMAP_LIMITS.goal) ? input : null;
+}
+
+export function normalizeClarification(raw) {
+  const question = text(raw?.question, 180);
+  if (!question || !Array.isArray(raw?.directions) || raw.directions.length !== 3) return null;
+  const directions = raw.directions.map(direction => ({
+    title: text(direction?.title, 80),
+    goal: text(direction?.goal, ROADMAP_LIMITS.goal),
+    diagnosticQuestion: text(direction?.diagnosticQuestion, ROADMAP_LIMITS.diagnosticQuestion),
+  }));
+  if (directions.some(direction => !direction.title || !direction.goal || !direction.diagnosticQuestion)
+    || new Set(directions.map(direction => direction.goal.toLowerCase())).size !== 3) return null;
+  return { question, directions };
+}
 
 export function roadmapInput(raw) {
   const plan = planInput(raw?.goal, raw?.minutes, raw?.language);
@@ -18,7 +36,17 @@ export function roadmapInput(raw) {
     || !['work', 'personal', 'career', 'curiosity'].includes(raw.motivation)) return null;
   const evidence = raw.evidence === undefined ? '' : raw.evidence;
   if (!boundedString(evidence, ROADMAP_LIMITS.evidence)) return null;
-  return { ...plan, experience: raw.experience, motivation: raw.motivation, evidence: evidence.trim() };
+  const diagnostic = {};
+  if (raw.diagnosticQuestion !== undefined || raw.diagnosticAnswer !== undefined) {
+    diagnostic.diagnosticQuestion = text(raw.diagnosticQuestion, ROADMAP_LIMITS.diagnosticQuestion);
+    diagnostic.diagnosticAnswer = text(raw.diagnosticAnswer, ROADMAP_LIMITS.diagnosticAnswer);
+    if (!diagnostic.diagnosticQuestion || !diagnostic.diagnosticAnswer) return null;
+  }
+  if (raw.originalGoal !== undefined) {
+    diagnostic.originalGoal = text(raw.originalGoal, ROADMAP_LIMITS.goal);
+    if (!diagnostic.originalGoal) return null;
+  }
+  return { ...plan, experience: raw.experience, motivation: raw.motivation, evidence: evidence.trim(), ...diagnostic };
 }
 
 export function normalizeRoadmap(raw, input = raw) {

@@ -43,6 +43,7 @@ function radioOptions(name, options, selected) {
 function feedback(busy, error, notice) {
   return `${busy ? `<p class="roadmap-feedback reading" role="status">${icon('spark', 20)}${busy === 'stage'
     ? t('Preparing this lesson…', 'Готовим занятие…', 'Сабақ дайындалып жатыр…')
+    : busy === 'clarify' ? t('Finding useful directions for your goal…', 'Подбираем направления под твою цель…', 'Мақсатыңа сай бағыттар дайындалып жатыр…')
     : t('Building your learning path…', 'Строим твой путь обучения…', 'Оқу жолың құрылып жатыр…')}</p>` : ''}
     ${error ? `<p class="roadmap-feedback has-error" role="alert">${escape(error)}</p>` : ''}
     ${notice ? `<p class="roadmap-feedback" role="status">${escape(notice)}</p>` : ''}`;
@@ -50,6 +51,7 @@ function feedback(busy, error, notice) {
 
 function wizardView(wizard, busy, error) {
   const { step, goal, experience, evidence, motivation, minutes } = wizard;
+  const choosingDirection = step === 1 && !wizard.directionConfirmed;
   const prompts = [
     [t('What would you like to learn?', 'Чему хочешь научиться?', 'Не үйренгің келеді?'),
       t('Tell Mino what you want to be able to do.', 'Расскажи Мино, что хочешь уметь делать.', 'Миноға не істей алғың келетінін айт.')],
@@ -60,13 +62,29 @@ function wizardView(wizard, busy, error) {
     [t('How much time do you have?', 'Сколько времени в день у тебя есть?', 'Күніне қанша уақытың бар?'),
       t('We’ll plan each lesson to fit the time you choose.', 'Каждое занятие уложится в выбранное время.', 'Әр сабақ таңдаған уақытыңа сай болады.')],
   ];
-  const [title, hint] = prompts[step] || prompts[0];
+  const [title, hint] = choosingDirection
+    ? [wizard.clarification?.question || t('What would you like to make?', 'Какой результат хочешь получить?', 'Қандай нәтижеге қол жеткізгің келеді?'),
+      wizard.originalGoal]
+    : prompts[step] || prompts[0];
   const stepText = t(`Question ${step + 1} of 4`, `Вопрос ${step + 1} из 4`, `4 сұрақтың ${step + 1}-і`);
   let fields;
-  if (step === 1) {
+  if (choosingDirection) {
+    fields = wizard.clarification ? `<div class="roadmap-directions">${wizard.clarification.directions.map((direction, index) => `<label class="roadmap-option">
+      <input name="direction" type="radio" value="${index}"${wizard.direction === String(index) ? ' checked' : ''} required>
+      <span class="roadmap-option-content">${icon('target', 22)}<span><strong>${escape(direction.title)}</strong><small>${escape(direction.goal)}</small></span><span class="roadmap-option-mark">${icon('check', 16)}</span></span>
+    </label>`).join('')}${radioOptions('direction', [['custom', 'edit', t('My own result', 'Свой результат', 'Өз нәтижем')]], wizard.direction)}
+      <label class="field roadmap-custom-goal"><span>${t('Your own result (if you chose it above)', 'Свой результат, если выбрал этот вариант', 'Осы нұсқаны таңдасаң, нәтижеңді жаз')}</span><input name="customGoal" maxlength="180" value="${escape(wizard.customGoal || '')}" placeholder="${t('For example, make a weekly meal budget', 'Например, рассчитать бюджет питания на неделю', 'Мысалы, апталық тамақ бюджетін есептеу')}"></label></div>` : '';
+  } else if (step === 1) {
     fields = `${radioOptions('experience', experienceOptions(), experience)}
+      <div class="roadmap-diagnostic">
+        <label class="field"><span>${t('Try a small example', 'Попробуй маленький пример', 'Шағын мысалды орындап көр')}</span>
+          <span class="roadmap-diagnostic-question">${escape(wizard.diagnosticQuestion || '')}</span>
+          <textarea name="diagnosticAnswer" rows="3" maxlength="600" placeholder="${t('Your answer and a short explanation', 'Твой ответ и короткое объяснение', 'Жауабың және қысқаша түсіндірме')}">${escape(wizard.diagnosticAnswer || '')}</textarea>
+        </label>
+        <label class="roadmap-unknown"><input name="diagnosticUnknown" type="checkbox"${wizard.diagnosticUnknown ? ' checked' : ''}><span>${t('I don’t know yet — help me start', 'Пока не знаю — помоги начать', 'Әзірге білмеймін — бастауға көмектес')}</span></label>
+      </div>
       <label class="field roadmap-evidence"><span>${t('What have you tried? (optional)', 'Что уже пробовал? (необязательно)', 'Не жасап көрдің? (міндетті емес)')}</span>
-      <textarea name="evidence" rows="2" maxlength="360" placeholder="${t('For example, I can use SUM but haven’t tried IF.', 'Например, умею считать сумму, но ещё не пробовал ЕСЛИ.', 'Мысалы, SUM қолдана аламын, бірақ IF қолданып көрмедім.')}">${escape(evidence)}</textarea></label>`;
+      <textarea name="evidence" rows="2" maxlength="360" placeholder="${t('Something you have already made or tried', 'Что уже делал или пробовал по этой теме', 'Осы тақырыпта не жасап көрдің')}">${escape(evidence)}</textarea></label>`;
   } else if (step === 2) {
     fields = radioOptions('motivation', motivationOptions(), motivation);
   } else if (step === 3) {
@@ -82,14 +100,14 @@ function wizardView(wizard, busy, error) {
     </div>
     <header class="roadmap-wizard-intro">
       ${character('mino', busy ? 'waiting' : step === 0 ? 'listening' : 'idea', 'roadmap-guide')}
-      <div><h1 id="roadmap-title" tabindex="-1">${title}</h1><p>${hint}</p></div>
+      <div><h1 id="roadmap-title" tabindex="-1">${escape(title)}</h1><p>${escape(hint)}</p></div>
     </header>
     <form id="roadmap-form" aria-busy="${Boolean(busy)}">
       <fieldset aria-labelledby="roadmap-title"${busy ? ' disabled' : ''}>${fields}</fieldset>
       ${feedback(busy, error)}
       <div class="roadmap-wizard-actions">
         <button type="button" class="text-link" data-roadmap-action="skip"${busy ? ' disabled' : ''}>${t('Later', 'Позже', 'Кейін')}</button>
-        <button class="primary" type="submit"${busy ? ' disabled' : ''}>${step === 3 ? t('Build my path', 'Построить путь', 'Оқу жолын құру') : t('Continue', 'Дальше', 'Жалғастыру')} ${icon('arrow', 18)}</button>
+        <button class="primary" type="submit"${busy ? ' disabled' : ''}>${choosingDirection && !wizard.clarification && error ? t('Try again', 'Попробовать снова', 'Қайта байқап көру') : step === 3 ? t('Build my path', 'Построить путь', 'Оқу жолын құру') : t('Continue', 'Дальше', 'Жалғастыру')} ${icon('arrow', 18)}</button>
       </div>
     </form>
   </section>`;

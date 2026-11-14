@@ -5,7 +5,7 @@ import { createPlanController } from './plan-controller.js';
 import { createLearningLibrary } from './learning-library.js';
 import { createBuiltinSync } from './builtin-sync.js';
 import { restorePlan } from './learning-plan.js';
-import { normalizeRoadmap, restoreRoadmap, restoreRoadmapArchive, ROADMAP_LIBRARY_LIMIT, roadmapInput, roadmapStageStatuses, updateRoadmapStage } from './roadmap-model.js';
+import { normalizeClarification, normalizeRoadmap, restoreRoadmap, restoreRoadmapArchive, ROADMAP_LIBRARY_LIMIT, roadmapInput, roadmapStageStatuses, updateRoadmapStage } from './roadmap-model.js';
 import { buyRewardItem, claimDailyQuest, recordCheckReward, recordLessonReward, rewardScreen } from './roadmap-rewards.js';
 import { createWorkspaceStorage } from './workspace-storage.js';
 import { dayKey, dailyCourse, learningStats } from './progress.js';
@@ -695,15 +695,47 @@ function changeMinutes(value) {
 
 function beginRoadmap(goal = '', minutes = state.minutes) {
   if (roadmapOperation) return;
-  roadmapWizard = { step: goal ? 1 : 0, goal, minutes, experience: '', evidence: '', motivation: '' };
+  roadmapWizard = {
+    step: goal ? 1 : 0, goal, originalGoal: goal, minutes, experience: '', evidence: '', motivation: '',
+    clarification: null, direction: '', customGoal: '', directionConfirmed: false,
+    diagnosticQuestion: '', diagnosticAnswer: '', diagnosticUnknown: false,
+  };
   roadmapError = '';
   go('roadmap');
+  if (goal) clarifyRoadmap();
 }
 
 function roadmapErrorText(kind) {
+  if (kind === 'clarify') return t('We couldn’t prepare your choices. Try again; your topic is saved.', 'Не удалось подобрать направления. Попробуй ещё раз, тема сохранена.', 'Бағыттарды дайындау мүмкін болмады. Қайта байқап көр, тақырыбың сақталды.');
   return kind === 'stage'
     ? t('We couldn’t open the lesson. Try again.', 'Не удалось открыть занятие. Попробуй ещё раз.', 'Сабақты ашу мүмкін болмады. Қайта байқап көр.')
     : t('We couldn’t build your path. Your answers are still here. Try again.', 'Не удалось построить путь. Твои ответы сохранились в форме. Попробуй ещё раз.', 'Оқу жолы құрылмады. Жауаптарың сақталды. Қайта байқап көр.');
+}
+
+function clarifyRoadmap() {
+  const wizard = roadmapWizard;
+  if (!wizard) return;
+  wizard.originalGoal = wizard.goal;
+  runRoadmapOperation('clarify', async (isCurrent, owner) => {
+    let response;
+    try {
+      response = await fetch('/api/learning-roadmap', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Mindora-Account': owner },
+        body: JSON.stringify({ action: 'clarify', goal: wizard.originalGoal, minutes: wizard.minutes, language: state.language }),
+        signal: AbortSignal.timeout(38000),
+      });
+    } catch {
+      throw new Error(roadmapErrorText('clarify'));
+    }
+    if (!isCurrent() || roadmapWizard !== wizard) return;
+    if (response.status === 401) { expiredSession(); return; }
+    if (!response.ok) throw new Error(roadmapErrorText('clarify'));
+    const data = await response.json().catch(() => null);
+    if (!isCurrent() || roadmapWizard !== wizard) return;
+    const clarification = normalizeClarification(data?.clarification);
+    if (!clarification) throw new Error(roadmapErrorText('clarify'));
+    wizard.clarification = clarification;
+  });
 }
 
 function runRoadmapOperation(kind, work) {
@@ -730,10 +762,27 @@ function captureRoadmapAnswers(form) {
   if (!form || !roadmapWizard || roadmapOperation) return;
   const fields = new FormData(form);
   const wizard = roadmapWizard;
-  if (wizard.step === 0) wizard.goal = String(fields.get('goal') || '').trim();
+  if (wizard.step === 0) {
+    const goal = String(fields.get('goal') || '').trim();
+    if (goal !== wizard.originalGoal) {
+      wizard.clarification = null;
+      wizard.direction = '';
+      wizard.directionConfirmed = false;
+      wizard.diagnosticAnswer = '';
+      wizard.diagnosticUnknown = false;
+    }
+    wizard.goal = goal;
+  }
   if (wizard.step === 1) {
-    wizard.experience = String(fields.get('experience') || '');
-    wizard.evidence = String(fields.get('evidence') || '').trim();
+    if (!wizard.directionConfirmed) {
+      wizard.direction = String(fields.get('direction') || '');
+      wizard.customGoal = String(fields.get('customGoal') || '').trim();
+    } else {
+      wizard.experience = String(fields.get('experience') || '');
+      wizard.evidence = String(fields.get('evidence') || '').trim();
+      wizard.diagnosticAnswer = String(fields.get('diagnosticAnswer') || '').trim();
+      wizard.diagnosticUnknown = fields.get('diagnosticUnknown') === 'on';
+    }
   }
   if (wizard.step === 2) wizard.motivation = String(fields.get('motivation') || '');
   if (wizard.step === 3) wizard.minutes = Number(fields.get('minutes'));
@@ -743,9 +792,35 @@ function submitRoadmap(form) {
   if (!roadmapWizard || roadmapOperation) return;
   captureRoadmapAnswers(form);
   const wizard = roadmapWizard;
+  if (wizard.step === 1 && !wizard.directionConfirmed) {
+    if (!wizard.clarification) { clarifyRoadmap(); return; }
+    const direction = wizard.clarification.directions.find((item, index) => String(index) === wizard.direction);
+    const goal = wizard.direction === 'custom' ? wizard.customGoal : direction?.goal;
+    if (!goal || goal.length < 3 || goal.length > 180) {
+      roadmapError = t('Choose a result or write your own.', 'Выбери результат или напиши свой.', 'Нәтижені таңда немесе өзің жаз.');
+      render();
+      return;
+    }
+    const diagnosticQuestion = direction?.diagnosticQuestion || t(
+      'For your chosen goal, give one small example and explain how you would solve it. Show any part you already know.',
+      'Приведи маленький пример для своей цели и объясни, как бы ты его выполнил. Покажи ту часть, которую уже умеешь.',
+      'Мақсатыңа сай шағын мысал келтіріп, оны қалай орындайтыныңды түсіндір. Білетін бөлігін көрсет.',
+    );
+    if (wizard.goal !== goal || wizard.diagnosticQuestion !== diagnosticQuestion) {
+      wizard.diagnosticAnswer = '';
+      wizard.diagnosticUnknown = false;
+    }
+    wizard.goal = goal;
+    wizard.diagnosticQuestion = diagnosticQuestion;
+    wizard.directionConfirmed = true;
+    roadmapError = '';
+    go('roadmap');
+    return;
+  }
   const valid = [
     wizard.goal.length >= 3 && wizard.goal.length <= 180,
-    ['new', 'some', 'comfortable'].includes(wizard.experience),
+    ['new', 'some', 'comfortable'].includes(wizard.experience)
+      && (wizard.diagnosticUnknown || Boolean(wizard.diagnosticAnswer.trim())),
     ['work', 'personal', 'career', 'curiosity'].includes(wizard.motivation),
     [5, 10, 20].includes(wizard.minutes),
   ];
@@ -758,9 +833,13 @@ function submitRoadmap(form) {
   if (wizard.step < 3) {
     wizard.step++;
     go('roadmap');
+    if (wizard.step === 1 && !wizard.clarification) clarifyRoadmap();
     return;
   }
-  const input = roadmapInput({ ...wizard, language: state.language });
+  const input = roadmapInput({
+    ...wizard, language: state.language,
+    diagnosticAnswer: wizard.diagnosticUnknown ? 'I do not know yet.' : wizard.diagnosticAnswer,
+  });
   if (!input) {
     roadmapError = t('Check your answers and try again.', 'Проверь ответы и попробуй снова.', 'Жауаптарыңды тексеріп, қайта байқап көр.');
     render();
@@ -812,7 +891,10 @@ function startRoadmapStage(index) {
       const { title, objective } = roadmap.stages[index];
       const { goal, level, levelReason } = roadmap;
       const stageGoal = `${title} — ${goal}`.slice(0, 180);
-      const generated = await plans.generate(stageGoal, roadmap.minutes, { language: roadmap.language, roadmapStage: { goal, title, objective, level, levelReason } });
+      const previousStages = roadmap.stages.slice(0, index).map(({ title, objective }) => ({ title, objective }));
+      const generated = await plans.generate(stageGoal, roadmap.minutes, {
+        language: roadmap.language, roadmapStage: { goal, title, objective, level, levelReason, previousStages },
+      });
       if (!isCurrent()) return;
       if (!generated || !state.learningCourse?.id) {
         throw new Error(roadmapErrorText('stage'));
@@ -1007,7 +1089,12 @@ document.addEventListener('click', event => {
       go(state.learningRoadmap ? 'roadmap' : 'discover');
     } else if (roadmapAction === 'back' && roadmapWizard?.step > 0) {
       captureRoadmapAnswers($('#roadmap-form'));
-      roadmapWizard.step--;
+      if (roadmapWizard.step === 1 && roadmapWizard.directionConfirmed) {
+        roadmapWizard.directionConfirmed = false;
+      } else {
+        roadmapWizard.step--;
+        if (roadmapWizard.step === 0) roadmapWizard.goal = roadmapWizard.originalGoal;
+      }
       roadmapError = '';
       go('roadmap');
     } else if (roadmapAction === 'start' && /^[0-3]$/.test(roadmapStage)) {

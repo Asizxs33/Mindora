@@ -1,0 +1,18 @@
+.practice-workspace { display: grid; gap: 16px; margin: 20px 0; min-width: 0; }
+.practice-workspace .field { margin: 0; }
+.practice-workspace textarea { width: 100%; box-sizing: border-box; }
+.practice-workspace textarea[hidden], .practice-workspace [hidden] { display: none; }
+.practice-workspace [data-practice-field="code"], .practice-code-output { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 14px; line-height: 1.6; tab-size: 4; }
+.practice-workspace [data-practice-field="code"] { background: #f8fafc; color: #17212f; min-height: 180px; }
+.practice-code-output { white-space: pre-wrap; overflow-wrap: anywhere; padding: 16px; border-radius: 14px; border: 1px solid var(--line, #e7e2dc); background: #f8fafc; color: #17212f; max-height: 300px; overflow-y: auto; margin: 0; }
+.practice-editor-heading, .practice-run-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.practice-run-actions button { min-height: 44px; }
+.practice-workspace [data-practice-status]:empty { display: none; }
+.practice-palette-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.practice-palette-controls label { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--line, #e7e2dc); border-radius: 16px; }
+.practice-palette-controls input { width: 100%; max-width: 90px; height: 48px; padding: 3px; cursor: pointer; border: 1px solid var(--line, #e7e2dc); border-radius: 10px; background: transparent; }
+.practice-palette-preview { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; padding: clamp(22px, 5vw, 40px); min-height: 220px; border-radius: 20px; border: 2px solid var(--practice-accent); overflow-wrap: anywhere; }
+.practice-palette-preview strong { font-size: clamp(26px, 5vw, 42px); line-height: 1.1; max-width: 18ch; }
+.practice-palette-preview .practice-palette-button { padding: 10px 18px; border-radius: 12px; border: 3px solid var(--practice-accent); font-weight: 700; }
+.practice-palette-preview .practice-palette-sample { font-size: 15px; }
+.ai-lesson-submission .practice-palette-preview { white-space: normal; }

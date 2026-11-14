@@ -14,6 +14,17 @@ function roadmapStageInput(raw) {
     if (!value || /[\u0000\u000b\u000c\u007f]/u.test(value)) return null;
     stage[field] = value;
   }
+  if (raw.previousStages !== undefined) {
+    if (!Array.isArray(raw.previousStages) || raw.previousStages.length > 3) return null;
+    const previousStages = raw.previousStages.map(previous => {
+      if (!previous || typeof previous.title !== 'string' || typeof previous.objective !== 'string') return null;
+      const title = previous.title.trim(), objective = previous.objective.trim();
+      return title && objective && title.length <= ROADMAP_LIMITS.stageTitle && objective.length <= ROADMAP_LIMITS.objective
+        && !/[\u0000\u000b\u000c\u007f]/u.test(title + objective) ? { title, objective } : null;
+    });
+    if (previousStages.some(previous => !previous)) return null;
+    stage.previousStages = previousStages;
+  }
   return stage;
 }
 
