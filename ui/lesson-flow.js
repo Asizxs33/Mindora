@@ -22,6 +22,7 @@ function showPage(deck, index, moveFocus = false) {
   deck.querySelector('[data-action="finish-learn"]').hidden = current !== pages.length - 1;
   try { sessionStorage.setItem(key(deck.dataset.learnDeck), String(current)); } catch { /* Reading works without storage. */ }
   if (moveFocus) {
+    window.dispatchEvent(new CustomEvent('mindora:learn-page', { detail: { courseId: deck.dataset.learnDeck, page: current } }));
     const heading = pages[current].querySelector('h1');
     heading.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: 'instant' });

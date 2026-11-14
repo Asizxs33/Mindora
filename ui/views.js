@@ -13,6 +13,13 @@ if (typeof document !== 'undefined' && !document.getElementById('mindora-lesson-
   stylesheet.href = new URL('./lessons.css', import.meta.url).href;
   document.head.append(stylesheet);
 }
+if (typeof document !== 'undefined' && !document.getElementById('mindora-course-path-styles')) {
+  const stylesheet = document.createElement('link');
+  stylesheet.id = 'mindora-course-path-styles';
+  stylesheet.rel = 'stylesheet';
+  stylesheet.href = new URL('./course-path.css', import.meta.url).href;
+  document.head.append(stylesheet);
+}
 
 const guide = id => id === 'design' ? 'mia' : 'sam';
 const categories = { design: 'Design', budget: 'Spreadsheets' };
@@ -28,21 +35,30 @@ function emptyView(title, text, button = 'Find my first course') {
 }
 
 export function pathView(state) {
-  if (!state.active) return emptyView('A little curiosity goes a long way', 'Tell Mino what you want to learn. We’ll start with one small step.');
-  const id = state.active, c = COURSES[id], p = state.progress[id];
-  return `<div class="learning-path"><button class="back-button" data-view="courses">${icon('back', 18)} My courses</button>
-    <section class="path-intro">${character(guide(id), p === 4 ? 'celebrate' : 'welcome', 'path-character')}<div><span class="tag">${categories[id]} · with ${id === 'design' ? 'Mia' : 'Sam'}</span><h1>${courseNames[id]}</h1><p>${outcomes[id]}</p></div></section>
-    <div class="path-progress"><span>${p === 4 ? 'You completed your learning path' : 'Your learning path'}</span><strong>${p} / 4</strong><div class="path-segments" role="progressbar" aria-label="Course progress" aria-valuenow="${p * 25}" aria-valuemin="0" aria-valuemax="100">${[0, 1, 2, 3].map(i => `<i class="${i < p ? 'done' : ''}"></i>`).join('')}</div></div>
-    <section class="trail-map" aria-label="Your four learning steps">${c.steps.map((s, i) => `<article class="trail-stop ${i < p ? 'is-done' : i === p ? 'is-current' : 'is-locked'}"><button class="trail-button" data-step="${i}" ${i > p ? 'disabled' : ''} aria-label="${i > p ? 'Locked: ' : ''}${esc(lessonNames[id][i])}">${icon(i < p ? 'check' : i > p ? 'lock' : ['layers', 'spark', 'edit', 'trophy'][i], 28)}</button><div class="trail-copy"><span>${i < p ? 'Completed' : i === p ? 'Up next' : `Step ${i + 1}`} · ${stepTypes[i]}</span><h2>${lessonNames[id][i]}</h2>${i === p ? `<p>${esc(uiText(s.description))}</p>` : ''}</div></article>`).join('')}</section>
-    <div class="path-actionbar"><button class="primary" data-step="${Math.min(p, 3)}">${p === 4 ? 'Practise again' : p ? 'Continue learning' : 'Let’s start'} ${icon('arrow', 19)}</button><p class="small-note">${state.minutes} minutes is enough. Your progress is saved.</p></div>
-    <details class="learning-sources"><summary>About this course & sources</summary>${state.goals[id] ? `<p><strong>Your goal:</strong> ${esc(uiText(state.goals[id]))}</p>` : ''}<p>Explore the ideas behind your lessons.</p>${c.sources.map(s => `<a class="source-link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(uiText(s.title))} ↗</a>`).join('')}${p >= 2 ? `<button class="text-link path-extra" data-action="mix">${icon('shuffle', 17)} Try a fresh challenge</button>` : ''}</details></div>`;
+  const id = state.active, c = COURSES[id];
+  if (!c) return emptyView('A little curiosity goes a long way', 'Tell Mino what you want to learn. We’ll start with one small step.');
+  const p = Math.max(0, Math.min(4, Math.trunc(Number(state.progress[id]) || 0)));
+  return `<div class="learning-path course-path"><button type="button" class="back-button" data-view="courses">${icon('back', 18)} My courses</button>
+    <header class="course-path-header"><div><span class="course-path-category">${categories[id]} <span>· with ${id === 'design' ? 'Mia' : 'Sam'}</span></span><h1>${courseNames[id]}</h1><p>${outcomes[id]}</p></div>${character(guide(id), p === 4 ? 'celebrate' : 'welcome', 'course-path-mentor')}</header>
+    <div class="course-path-progress"><span>${p === 4 ? 'All steps complete' : `${p} of 4 steps complete`}</span><strong>${p * 25}%</strong><div role="progressbar" aria-label="Course progress" aria-valuenow="${p * 25}" aria-valuemin="0" aria-valuemax="100" aria-valuetext="${p} of 4 steps complete"><i style="width:${p * 25}%"></i></div></div>
+    <ol class="course-path-route" aria-label="Your learning path">${c.steps.map((s, i) => {
+      const done = i < p, current = i === p, locked = i > p, right = i % 2 === 1;
+      const title = lessonNames[id][i], status = done ? 'Completed' : current ? 'Up next' : 'Locked';
+      return `<li class="course-path-stop ${right ? 'on-right' : 'on-left'} ${done ? 'is-done' : current ? 'is-current' : 'is-locked'}">
+        ${i < 3 ? `<svg class="course-path-connector ${i < p ? 'is-complete' : ''}" viewBox="0 0 100 148" preserveAspectRatio="none" aria-hidden="true"><path d="${right ? 'M80 0 C80 74 20 74 20 148' : 'M20 0 C20 74 80 74 80 148'}"/></svg>` : ''}
+        <div class="course-path-node-wrap"><button type="button" class="course-path-node" data-step="${i}" ${locked ? 'disabled' : ''} ${current ? 'aria-current="step"' : ''} aria-label="${esc(`${done ? 'Revisit' : locked ? 'Locked' : 'Continue'}: ${title}`)}" aria-describedby="course-path-label-${i}">${icon(done ? 'check' : locked ? 'lock' : ['book', 'spark', 'edit', 'trophy'][i], 30)}</button>${current ? '<span class="course-path-here" aria-hidden="true">You are here</span>' : ''}</div>
+        <div class="course-path-label" id="course-path-label-${i}"><span>${i + 1} · ${stepTypes[i]}</span><h2>${esc(title)}</h2><p>${status}</p></div></li>`;
+    }).join('')}</ol>
+    <section class="course-path-certificate ${p === 4 ? 'is-ready' : ''}" aria-labelledby="course-path-certificate-title"><span class="course-path-certificate-icon" aria-hidden="true">${icon('cap', 34)}<span>${icon(p === 4 ? 'check' : 'lock', 14)}</span></span><div><h2 id="course-path-certificate-title">Your course certificate</h2><p>${p === 4 ? 'You earned it. Make it yours.' : 'Complete all 4 steps to unlock it.'}</p>${p === 4 ? `<button type="button" class="course-path-certificate-action" data-action="certificate" data-id="${id}">View certificate ${icon('arrow', 17)}</button>` : ''}</div></section>
+    <details class="learning-sources course-path-sources"><summary>About this course & sources</summary>${state.goals[id] ? `<p><strong>Your goal:</strong> ${esc(uiText(state.goals[id]))}</p>` : ''}<p>${outcomes[id]} Take it one short step at a time.</p>${c.sources.map(s => `<a class="source-link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(uiText(s.title))} ↗</a>`).join('')}${p >= 2 ? `<button type="button" class="text-link path-extra" data-action="mix">${icon('shuffle', 17)} Try a fresh challenge</button>` : ''}</details>
+    <div class="course-path-actions"><button type="button" class="primary" data-action="resume-course" data-id="${id}">${p === 4 ? 'Revisit course' : 'Continue learning'} ${icon('arrow', 19)}</button></div></div>`;
 }
 
 export function lesson(state, { step, question, quizIndex, quizChoice, quizFeedback, draft, checks }) {
   const id = state.active, c = COURSES[id];
   if (!c) return emptyView('Let’s find your first course', 'Start with something you would love to make.');
   const progress = Math.round((step + (step === 1 ? quizIndex / 3 : 0)) / 4 * 100);
-  return `<div class="lesson-flow lesson-step-${step}"><header class="lesson-progress-head"><button class="lesson-exit" data-view="path" aria-label="Save and return to my course">${icon('back', 23)}</button><div class="progress-bar" role="progressbar" aria-label="Course progress" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${progress}%"></i></div><span>Step ${step + 1} of 4</span></header>
+  return `<div class="lesson-flow lesson-step-${step}"><header class="lesson-progress-head"><button class="lesson-exit" data-view="path" aria-label="Save and return to my course">${icon('back', 23)}</button><div class="progress-bar" role="progressbar" aria-label="Course progress" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${progress}%"></i></div><span>${stepTypes[step]}</span></header>
     ${step >= 2 ? `<div class="lesson-titleblock"><span class="eyebrow">${categories[id]} · with ${id === 'design' ? 'Mia' : 'Sam'}</span><h1>${lessonNames[id][step]}</h1></div>` : ''}
     ${step === 0 ? learnContent(id) : step === 1 ? quizContent(id, question, quizIndex, quizChoice, quizFeedback) : practiceContent(id, draft, step === 3, checks)}</div>`;
 }
@@ -132,7 +148,7 @@ export function result(state) {
   const id = state.active;
   if (!COURSES[id]) return emptyView('Your next little win is waiting', 'Choose a course and make something of your own.');
   const finished = state.progress[id] === 4;
-  return `<section class="result-screen">${character(guide(id), 'celebrate', 'result-character')}<span class="tag">${finished ? 'Course complete' : 'Practice complete'} ${icon('check', 15)}</span><h1>Look at you go!</h1><p>${finished ? 'You learned it. You tried it. You made it your own.' : 'You turned a new idea into something real.'}</p><div class="result-card"><div class="result-symbol">${icon(id === 'design' ? 'edit' : 'grid', 28)}</div><h2>${id === 'design' ? 'Your poster is ready' : 'Your expense tracker is ready'}</h2><p>${outcomes[id]}</p><div class="result-stats"><div><strong>${state.progress[id]} / 4</strong><span>Steps complete</span></div><div><strong>1</strong><span>Thing you made</span></div></div><div class="result-actions"><button class="primary" data-action="download" data-id="${id}">${icon('download', 19)} Download ${id === 'design' ? 'poster' : 'tracker'}</button><button class="secondary" data-view="work">See my work ${icon('arrow', 18)}</button></div><p class="small-note">Saved in this browser, ready when you are.</p></div><button class="text-link" data-action="mix">${icon('shuffle', 17)} Try a fresh challenge</button></section>`;
+  return `<section class="result-screen">${character(guide(id), 'celebrate', 'result-character')}<span class="tag">${finished ? 'Course complete' : 'Practice complete'} ${icon('check', 15)}</span><h1>Look at you go!</h1><p>${finished ? 'You learned it. You tried it. You made it your own.' : 'You turned a new idea into something real.'}</p><div class="result-card"><div class="result-symbol">${icon(id === 'design' ? 'edit' : 'grid', 28)}</div><h2>${id === 'design' ? 'Your poster is ready' : 'Your expense tracker is ready'}</h2><p>${outcomes[id]}</p><div class="result-stats"><div><strong>${state.progress[id]} / 4</strong><span>Steps complete</span></div><div><strong>1</strong><span>Thing you made</span></div></div><div class="result-actions">${finished ? `<button class="primary" data-action="certificate" data-id="${id}">${icon('cap',19)} Get my certificate</button>` : ''}<button class="${finished ? 'secondary' : 'primary'}" data-action="download" data-id="${id}">${icon('download', 19)} Download ${id === 'design' ? 'poster' : 'tracker'}</button><button class="secondary" data-view="work">See my work ${icon('arrow', 18)}</button></div><p class="small-note">Saved in this browser, ready when you are.</p></div><button class="text-link" data-action="mix">${icon('shuffle', 17)} Try a fresh challenge</button></section>`;
 }
 
 export function workView(state) {

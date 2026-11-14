@@ -1,4 +1,5 @@
 import { COURSES, escapeHtml } from '../core/engine.js';
+import { resumeCursor } from '../core/resume.js';
 import { learningStats } from '../core/progress.js';
 import { icon } from './icons.js';
 import { character } from './characters.js';
@@ -12,7 +13,7 @@ const descriptions = {
   design: 'Make a poster with a clear message.',
   budget: 'Track expenses with a simple formula.',
 };
-const guide = id => id === 'design' ? 'designer' : 'programmer';
+const guide = id => id === 'design' ? 'designer' : 'sam';
 const guideLabel = id => id === 'design' ? 'Your design guide' : 'Your numbers guide';
 const startedCourses = state => Object.keys(COURSES).filter(id => state.goals[id] || state.progress[id] || state.works[id]);
 
@@ -23,7 +24,7 @@ export function badge(icon, name, color, size = 22) {
 export function brandNav(icon, view, place) {
   const items = [['discover', 'home', 'Learn'], ['courses', 'book', 'My courses'], ['work', 'folder', 'My work'], ['profile', 'user', 'Profile']];
   return items.map(([key, symbol, name]) => {
-    const active = view === key || (key === 'discover' && ['path', 'lesson', 'result'].includes(view))
+    const active = view === key || (key === 'discover' && ['path', 'lesson', 'recap', 'result', 'certificate'].includes(view))
       || (key === 'profile' && ['practice', 'achievements', 'community'].includes(view));
     return `<button class="nav-item ${active ? 'active' : ''}" data-view="${key}" ${active ? 'aria-current="page"' : ''}>${icon(symbol, place === 'bottom' ? 22 : 23)}<span>${name}</span></button>`;
   }).join('');
@@ -47,20 +48,22 @@ function goalBanner(minutes, compact = false) {
       <button class="topic-shortcut" data-course="budget">${icon('sheet', 18)} Learn spreadsheets</button>
     </div>
     <p class="home-note">Posters and spreadsheets are available now.</p>
+    ${compact ? '' : '<p class="home-account-link">New here? <button class="text-link" data-account-open="signup">Create account</button></p>'}
   </section>`;
 }
 
 function resumeCard(state) {
-  const id = state.active, completed = state.progress[id], current = Math.min(completed, 3), done = completed === 4;
+  const id = state.active, completed = state.progress[id], current = resumeCursor(state, id).step, done = completed === 4;
   return `<section class="return-home" aria-labelledby="return-title">
     <div class="return-heading"><h1 id="return-title">${done ? 'You did it!' : 'Welcome back.'}</h1></div>
     <section class="resume-card ${id}">
       <div class="resume-mentor">${character(guide(id), done ? 'celebrate' : 'explaining', 'resume-character')}<span>${guideLabel(id)}</span></div>
       <div class="resume-body"><h2>${courseNames[id]}</h2>
-        <div class="resume-progress"><span>${done ? 'All 4 steps complete' : `Step ${current + 1} of 4`}</span></div>
+        <div class="resume-progress"><span>${done ? 'Course complete' : `${completed * 25}% complete`}</span></div>
         <div class="progress-bar" role="progressbar" aria-label="Course progress" aria-valuemin="0" aria-valuemax="4" aria-valuenow="${completed}"><i style="width:${completed * 25}%"></i></div>
         <p class="resume-next">${done ? 'Your finished project is saved.' : lessonNames[id][current]}</p>
-        <button class="primary large" ${done ? 'data-view="work"' : `data-step="${current}"`}>${done ? 'View my work' : completed ? 'Continue learning' : 'Start lesson'} ${icon('arrow', 19)}</button>
+        <button class="primary large" data-action="${done ? 'certificate' : 'resume-course'}" data-id="${id}">${done ? 'My certificate' : state.sessions?.[id] || completed ? 'Continue learning' : 'Start learning'} ${icon('arrow', 19)}</button>
+        <button class="text-link resume-path-link" data-view="path">View my course ${icon('path', 16)}</button>
       </div>
     </section>
   </section>`;
@@ -78,7 +81,7 @@ export function coursesPage(state) {
     ${ids.length ? `<div class="course-grid">${ids.map(id => {
       const completed = state.progress[id], done = completed === 4;
       return `<article class="game-card catalog-tile ${id}">
-        <div class="course-tile-top"><span class="course-symbol">${icon(id === 'design' ? 'palette' : 'sheet', 26)}</span><span class="course-state ${done ? 'complete' : ''}">${done ? 'Completed' : `${completed} of 4 steps`}</span></div>
+        <div class="course-tile-top"><span class="course-symbol">${icon(id === 'design' ? 'palette' : 'sheet', 26)}</span><span class="course-state ${done ? 'complete' : ''}">${done ? 'Completed' : `${completed * 25}% complete`}</span></div>
         <h2>${courseNames[id]}</h2><p>${descriptions[id]}</p>
         <div class="progress-bar" role="progressbar" aria-label="${courseNames[id]} progress" aria-valuenow="${completed}" aria-valuemin="0" aria-valuemax="4"><i style="width:${completed * 25}%"></i></div>
         <button class="primary" data-course="${id}">${done ? 'Review course' : 'Open course'} ${icon('arrow', 18)}</button>
@@ -118,6 +121,7 @@ export function sidePage(view, state) {
   if (view === 'achievements') return `${pageBanner('Milestones', 'See what you’ve achieved.', 'cheer')}${achievementsCard(state, stats, icon, true)}`;
   if (view === 'community') return `${pageBanner('Learning, together.', 'A little space for curious people.')}<section class="game-card community-preview"><span class="course-symbol">${icon('users', 28)}</span><h2>Our community is still growing.</h2><p>Sharing and discussions aren’t available yet. For now, keep your projects in My work.</p><button class="secondary" data-view="work">See my work ${icon('arrow', 18)}</button></section>`;
   return `${pageBanner('Profile', '', 'smm')}
+    <section class="account-profile-card" data-account-summary><h2 data-account-name>Make yourself at home</h2><p data-account-description>Create your profile and choose what you enjoy.</p><button class="primary" data-account-open="signup">Create account</button><button class="text-link" data-account-secondary data-account-open="signin">Already a member? Sign in</button></section>
     <section class="profile-overview" aria-label="Your progress"><div class="profile-stats"><div><strong>${stats.total}</strong><span>Steps completed</span></div><div><strong>${Object.keys(state.works).length}</strong><span>Projects saved</span></div></div></section>
     <section class="profile-settings"><div><h2>Daily learning time</h2></div><label class="visually-hidden" for="profile-minutes">Daily learning time</label><select class="profile-select" id="profile-minutes">${[5, 10, 20].map(minutes => `<option value="${minutes}" ${minutes === state.minutes ? 'selected' : ''}>${minutes} minutes</option>`).join('')}</select></section>
     <section class="profile-settings motion-preference"><div><h2>Character motion</h2><small data-character-motion-status></small></div><button type="button" class="motion-switch" role="switch" data-character-motion aria-label="Character motion"><span data-character-motion-label>Character motion</span></button></section>

@@ -1,0 +1,41 @@
+Mindora rounded human mentors — v5
+Tool: built-in image_gen (not CLI/API fallback)
+Source reference: C:/Users/Acer/Desktop/хакатон/team-characters/team-characters/team-concept-v3.png
+Inspected reference images: graphic-designer-v3.png, programmer-v3.png, team-concept-v3.png.
+First output: C:/Users/Acer/.codex/generated_images/01a1da5e-e4e8-7383-a470-178eed75945c/exec-210b1895-edef-4114-acf9-c1416c126f1c.png
+Final output: C:/Users/Acer/.codex/generated_images/01a1da5e-e4e8-7383-a470-178eed75945c/exec-8612b099-7e9f-425e-8552-59808fd17b35.png
+Final project asset: ui/assets/team-rounded-v5.png
+Metadata: 1254 x 1254 RGBA; real alpha range 0..255. Generated alpha preserved without raster edits.
+Layout: 5 equal columns x 3 equal rows.
+Columns: Mia/designer, Leo+Sam/programmer, Ari/artist, Nora/copywriter, Zoe/social media.
+Rows: welcoming/explaining, thoughtful/supportive, delighted/celebrating.
+Rendering: CSS clips 230 x 418 portrait windows measured from the generated image. X offsets:40,275,520,765,1005. Row Y offsets:0,418,836. All fifteen opaque figure bounds are fully inside these windows; no cropped hands or neighbour fragments. Source image stays untouched. No SVG puppets as default.
+Motion: subtle whole-portrait breathing/sway and brief tap celebration. Actual face and physical pose change by sprite row; no claim of articulated raster limbs.
+Visibility: pause offscreen and when document hidden. Honor user motion preference and device reduced motion.
+Note: extremely low-alpha (1/255) edge/gutter pixels are preserved as generated; no opaque stray colour in inspected gutter.
+
+INITIAL PROMPT
+Use case: stylized-concept.
+Asset type: production transparent character pose sprite atlas for Mindora, a friendly mobile learning app.
+Input image: the attached team-concept-v3 is a REFERENCE for five human identities, hair, clothing colours and profession props. Redesign these original humans with much more appealing, rounded, polished educational-app character design: clean 2D flat shapes, expressive large heads, soft curved silhouettes, natural hands, simple confident faces, lively yet calm personalities. Duolingo-like warmth and visual clarity, but ORIGINAL characters, not copied franchise characters. Smooth deliberate vector-like edges, minimal restrained cel shading, no outlines or fine textures, no visible circular puppet joints, no rigid stick-limbs, no neon glows.
+Composition: exactly FIFTEEN isolated FULL-BODY figures in a precise FIVE-COLUMN by THREE-ROW sprite atlas. Every grid cell identical, each cell portrait 3:5; therefore the complete canvas is square. Do not draw the grid. Centre each figure in its cell, same scale and baseline, head-to-shoes entirely visible, generous transparent padding on all four sides. Never let any figure, hand, prop or effect cross a cell boundary. Each person fills about 82% of cell height. Align all columns and rows perfectly for CSS clipping.
+Columns from LEFT to RIGHT, identical identity/outfit in all three rows:
+1. Mia, graphic designer: warm light skin, short dark navy bob, lavender jacket, cream shirt, dark navy wide-leg trousers, purple sneakers; slim dark drawing tablet and white stylus.
+2. Leo/Sam, programmer: medium warm-brown skin, wavy copper/auburn bob, mint cropped jacket, purple top and relaxed violet trousers, mint sneakers; small navy laptop.
+3. Ari, artist: deep warm-brown skin, curly dark high bun, cream shirt, periwinkle painter apron with tasteful coral/yellow paint patches, violet trousers, ochre sneakers; small palette and brush.
+4. Nora, copywriter: warm light-medium skin, dark long side braid, sunflower yellow sweater, purple trousers, pale lilac sneakers; small purple notebook and pencil.
+5. Zoe, social media guide: warm light-medium skin, dark high ponytail, coral jacket, cream shirt, violet trousers, coral sneakers; a small lilac phone.
+Rows from TOP to BOTTOM:
+1. WELCOME/EXPLAIN: friendly open smile, relaxed standing posture, one inviting open hand or subtle wave, profession prop in the other hand.
+2. THINKING/SUPPORT: curious kind expression, head subtly tilted, brows softly raised, hand near chin or thoughtfully consulting the prop. Encouraging, never sad or scolding.
+3. CELEBRATE: delighted open smile, bright smiling eyes, a tasteful raised fist/thumbs-up or happy open hand, small weight shift. Keep the complete body and prop visible.
+Mood expressions and poses MUST physically differ between rows while all identities, hairstyles, outfits and scale remain consistent. Charming adult mentors with rounded proportions, not toddlers, not anime, not photorealistic, not rigid mannequins.
+Background: genuinely transparent alpha everywhere around the isolated figures; no white backdrop, checkerboard pattern, glow, shadow panels, labels, letters, logos, borders, captions, watermarks or floor. Solid clean colour inside all figures. Render at high resolution with crisp silhouettes suitable for 220px-high mobile portraits.
+
+CLEANUP PROMPT
+Edit the attached production sprite atlas. Keep all five character identities, exact clothing/hair colours, same rounded polished 2D art style, same five-column by three-row ordering, and all fifteen distinct poses. Improve ONLY sprite-sheet production cleanliness and alignment.
+The current sheet has stray magenta/blue/white fringes, smears and orphan pixels around the silhouettes. Completely remove ALL detached noise, glow, halos, shadows and colour spills. Every exterior pixel must have truly transparent alpha; figures must have clean crisp anti-aliased cutout edges without any colour fringe. Keep solid opaque colour inside the figures.
+Layout is exactly 5 equal columns × 3 equal rows on a square canvas. Every cell is portrait 3:5. Shrink and centre each figure within its OWN cell to leave at least 9% transparent padding above the head and below the shoes and at least 9% left/right. All fifteen figures should have the same full-body height, same baseline within their cell, and consistent scale across rows. The taller bun/ponytail may be slightly taller but must remain comfortably inside cell. Keep all hands, tools, hair and both shoes entirely inside the corresponding cell, with no clipping, and do not let figures overlap neighbouring cells.
+First row welcome/open smile; second row thoughtful/kind; third row delighted/celebrate. Column order unchanged: lavender designer, mint programmer, blue-apron artist, yellow copywriter, coral social-media guide.
+No grid lines, no labels, no text, no background pattern. Genuinely transparent background. High-quality clean rounded 2D game-ready illustration.
+
