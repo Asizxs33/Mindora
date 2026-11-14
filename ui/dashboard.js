@@ -1,4 +1,6 @@
-import { COURSES, escapeHtml } from './engine.js';
+import { COURSES, escapeHtml } from '../core/engine.js';
+import { learningStats, dailyCourse } from '../core/progress.js';
+import { icon } from './icons.js';
 
 export const courseNames = {
   design: 'Дизайн постера',
@@ -12,30 +14,6 @@ export const lessonNames = {
 
 export function badge(icon, name, color, size = 22) {
   return `<span class="game-icon ${color}">${icon(name, size)}</span>`;
-}
-
-export function learningStats(state) {
-  const total = state.progress.design + state.progress.budget;
-  const days = new Set(Array.isArray(state.studyDays) ? state.studyDays : []);
-  const today = dayKey();
-  const cursor = new Date();
-  if (!days.has(today)) cursor.setDate(cursor.getDate() - 1);
-  let streak = 0;
-  while (days.has(dayKey(cursor))) {
-    streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return { total, streak, xp: total * 50, level: 1 + Math.floor(total / 4), today: days.has(today) };
-}
-
-export function dayKey(date = new Date()) {
-  return [date.getFullYear(), date.getMonth() + 1, date.getDate()].join('-');
-}
-
-export function dailyCourse(state) {
-  const current = state.active || 'design';
-  return state.progress[current] < 4 ? current
-    : Object.keys(COURSES).find(id => state.progress[id] < 4) || current;
 }
 
 export function brandNav(icon, view, place) {
@@ -161,7 +139,7 @@ export function achievementsCard(state, stats, icon, full = false) {
   </section>`;
 }
 
-export function dashboard(state, icon) {
+export function dashboard(state) {
   const stats = learningStats(state);
   return `${goalBanner(icon, state.minutes)}
     <div class="game-grid">
@@ -173,7 +151,7 @@ export function dashboard(state, icon) {
     </div>`;
 }
 
-export function coursesPage(state, icon) {
+export function coursesPage(state) {
   return `<div class="course-catalog">
     ${pageBanner('Курсы', 'Выбери проект, который хочешь сделать сам.')}
     <div class="course-grid">${Object.keys(COURSES).map(id => `<article class="game-card catalog-tile">
@@ -191,7 +169,7 @@ export function pageBanner(title, description, mood = 'study') {
   </section>`;
 }
 
-export function sidePage(view, state, icon) {
+export function sidePage(view, state) {
   const stats = learningStats(state);
   if (view === 'practice') {
     return `${pageBanner('Практика', 'Примени знания в редакторе постера или в таблице.')}

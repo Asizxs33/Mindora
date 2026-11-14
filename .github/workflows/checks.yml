@@ -1,0 +1,38 @@
+name: Mindora checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check files in design branches
+        if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'design/')
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git diff --name-only --no-renames -z "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/mindora-changed-files"
+          invalid=0
+          while IFS= read -r -d '' file; do
+            case "$file" in
+              ui/*) ;;
+              *) printf 'Design branches can change only ui/: %s\n' "$file"; invalid=1 ;;
+            esac
+          done < "$RUNNER_TEMP/mindora-changed-files"
+          exit "$invalid"
+      - run: npm run check
+      - run: npm test

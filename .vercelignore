@@ -1,6 +1,8 @@
 .git
 node_modules
-engine.test.js
+tests
+docs
+AGENTS.md
 server.mjs
 README.md
 *.log

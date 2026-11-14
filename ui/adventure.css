@@ -42,7 +42,7 @@
   display: block;
   flex: 0 0 46px;
   height: 49px;
-  background: url('/assets/mindora-icon.png') center / contain no-repeat;
+  background: url('./assets/mindora-icon.png') center / contain no-repeat;
 }
 #top-navigation { display: flex; align-items: center; gap: clamp(4px, 2.3vw, 38px); }
 .topbar .nav-item {
@@ -125,7 +125,7 @@
 .promo-mascot { width: 100%; aspect-ratio: 1.22; }
 .mascot-study, .mascot-cheer {
   display: block;
-  background: url('/assets/capybara-sprites.png') center / 300% 100% no-repeat;
+  background: url('./assets/capybara-sprites.png') center / 300% 100% no-repeat;
   pointer-events: none;
 }
 .mascot-cheer { background-position: right center; }
@@ -150,7 +150,7 @@ main.dashboard-main { padding: 0 12px 16px 2px; }
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: url('/assets/adventure-hero.jpg') center / 100% 100% no-repeat;
+  background: url('./assets/adventure-hero.jpg') center / 100% 100% no-repeat;
 }
 .welcome-copy, .welcome-actions { grid-column: 2; min-width: 0; }
 .welcome-copy h1 {
@@ -304,7 +304,7 @@ main.dashboard-main { padding: 0 12px 16px 2px; }
   flex: 1;
   min-height: 252px;
   isolation: isolate;
-  background: url('/assets/learning-map.jpg') center / 100% 100% no-repeat, #b8df63;
+  background: url('./assets/learning-map.jpg') center / 100% 100% no-repeat, #b8df63;
 }
 .map-node {
   position: absolute;
@@ -478,7 +478,7 @@ main.dashboard-main { padding: 0 12px 16px 2px; }
   overflow: hidden;
   border: 1px solid #e2d7f0;
   border-radius: 27px;
-  background: linear-gradient(90deg, #f7edff 0%, #f6edffd9 62%, #f8f0ff3b), url('/assets/learning-map.jpg') right center / cover no-repeat;
+  background: linear-gradient(90deg, #f7edff 0%, #f6edffd9 62%, #f8f0ff3b), url('./assets/learning-map.jpg') right center / cover no-repeat;
   box-shadow: 0 3px 6px #35205413;
 }
 .page-banner > div { position: relative; z-index: 1; max-width: 72%; }
@@ -635,7 +635,7 @@ main.dashboard-main { padding: 0 12px 16px 2px; }
     border-radius: 24px;
   }
   .adventure-scenery {
-    background: linear-gradient(transparent 59%, #d3eb89 86%), url('/assets/adventure-hero.jpg') right top / 188% 85% no-repeat;
+    background: linear-gradient(transparent 59%, #d3eb89 86%), url('./assets/adventure-hero.jpg') right top / 188% 85% no-repeat;
   }
   .adventure-scenery::after {
     content: '';
@@ -644,7 +644,7 @@ main.dashboard-main { padding: 0 12px 16px 2px; }
     left: 0;
     width: 43%;
     aspect-ratio: 1;
-    background: url('/assets/capybara-sprites.png') left center / 300% 100% no-repeat;
+    background: url('./assets/capybara-sprites.png') left center / 300% 100% no-repeat;
   }
   .welcome-copy { align-self: center; }
   .welcome-copy h1 { font-size: clamp(18px, 5.3vw, 29px); line-height: 1.03; margin-bottom: 6px; }

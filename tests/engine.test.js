@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { COURSES, DESIGN_QUIZ, BUDGET_QUIZ, matchGoal, contrastRatio, evaluatePoster, evaluateBudget, makeBudgetChallenge, escapeHtml } from './engine.js';
+import { COURSES, DESIGN_QUIZ, BUDGET_QUIZ, matchGoal, contrastRatio, evaluatePoster, evaluateBudget, makeBudgetChallenge, escapeHtml } from '../core/engine.js';
 
 test('only supported goals produce a sample course', () => {
   assert.equal(matchGoal('Create a poster for my coffee shop'), 'design');

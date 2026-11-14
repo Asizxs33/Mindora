@@ -39,14 +39,12 @@ Browser storage is local to a device and origin. Clearing site data removes prog
 
 ## Files
 
-- `index.html`, `styles.css`, `adventure.css`: application shell and responsive visual design.
-- `dashboard.js`: dashboard, course catalog, practice, achievements, and guest profile.
-- `icons.js`: locally bundled [Lucide](https://lucide.dev/icons/) icons. See `assets/LUCIDE-LICENSE.txt`.
-- `assets/`: ImageGen illustrations based on the supplied references: a capybara with glasses and a backpack in a landscape, a trail leading to a castle, and transparent studying and cheering capybara poses.
-- `app.js`: navigation, lessons, workspaces, progress, and export.
-- `engine.js`: sample curricula, quizzes, goal matching, and deterministic checks.
-- `engine.test.js`: meaningful validation tests; no browser or network needed.
+- `ui/`: page templates, responsive styles, [Lucide](https://lucide.dev/icons/) icons and capybara illustrations. The icon license is in `ui/assets/LUCIDE-LICENSE.txt`.
+- `core/`: navigation and event handling, courses, validation, progress, persistence and export.
+- `tests/`: validation tests that run without a browser or network.
 - `server.mjs`: local static preview server.
+
+See the [team guide](docs/TEAM.md) and [Codex prompt for design work](docs/CODEX-DESIGN-PROMPT.md).
 
 ## Verification
 
