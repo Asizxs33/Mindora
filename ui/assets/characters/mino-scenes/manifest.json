@@ -1,0 +1,122 @@
+[
+  {
+    "mood": "listening",
+    "image": "01-listening.gif",
+    "still": "01-listening.png",
+    "width": 288,
+    "height": 288,
+    "frames": 40,
+    "durationMs": 1600,
+    "usage": "Greeting, entering a learning goal, and listening to the learner",
+    "source": "User supplied 01-listening.gif",
+    "sha256": "032326c0720ee1081f159c4fa1a9f5cb888d39840cde554f746afcdab8f5139e"
+  },
+  {
+    "mood": "idea",
+    "image": "02-bright-idea.gif",
+    "still": "02-bright-idea.png",
+    "width": 288,
+    "height": 288,
+    "frames": 40,
+    "durationMs": 1600,
+    "usage": "A new concept, hint, or useful takeaway",
+    "source": "User supplied 02-bright-idea.gif",
+    "sha256": "1ff8a52ce2a171964cc15f3d7da27064b62e5ff8655b106a2f4914ed044f78a6"
+  },
+  {
+    "mood": "map",
+    "image": "03-learning-map.gif",
+    "still": "03-learning-map.png",
+    "width": 288,
+    "height": 288,
+    "frames": 57,
+    "durationMs": 2920,
+    "usage": "Course roadmap and choosing the next lesson",
+    "source": "User supplied 03-learning-map.gif",
+    "sha256": "71e210495a8fc1dd54015acc54b5aa9f670a75a8e18a5d22af9db0996bd89a8e"
+  },
+  {
+    "mood": "waiting",
+    "image": "04-patient-wait.gif",
+    "still": "04-patient-wait.png",
+    "width": 288,
+    "height": 288,
+    "frames": 68,
+    "durationMs": 4080,
+    "usage": "Generating a course or waiting for a real request",
+    "source": "User supplied 04-patient-wait.gif",
+    "sha256": "cd7deeff36c74e01db3abdecb7847e4ee4b240c04b92c90ee2da4bbc04499188"
+  },
+  {
+    "mood": "drawing",
+    "image": "05-draw-a-poster.gif",
+    "still": "05-draw-a-poster.png",
+    "width": 288,
+    "height": 288,
+    "frames": 41,
+    "durationMs": 2080,
+    "usage": "Poster or visual-design practice",
+    "source": "User supplied 05-draw-a-poster.gif",
+    "sha256": "921f1ec6e629e6202950f7619658ade62a0b197bfcdd794b26e16f42df32bf9a"
+  },
+  {
+    "mood": "chart",
+    "image": "06-show-a-chart.gif",
+    "still": "06-show-a-chart.png",
+    "width": 288,
+    "height": 288,
+    "frames": 49,
+    "durationMs": 2600,
+    "usage": "Spreadsheet, budget, and data examples",
+    "source": "User supplied 06-show-a-chart.gif",
+    "sha256": "affa479e2e4ca0761c40c6a67bd58d09762604cf32ed6d1d3119c4abe4ee7c5e"
+  },
+  {
+    "mood": "applause",
+    "image": "07-applause.gif",
+    "still": "07-applause.png",
+    "width": 288,
+    "height": 288,
+    "frames": 43,
+    "durationMs": 1720,
+    "usage": "Correct answer and a completed learning step",
+    "source": "User supplied 07-applause.gif",
+    "sha256": "bca858df215448ed48316c31df22f1813bc9f30a8c695c03b63f3521e5f79d32"
+  },
+  {
+    "mood": "encouragement",
+    "image": "08-encouragement.gif",
+    "still": "08-encouragement.png",
+    "width": 288,
+    "height": 288,
+    "frames": 51,
+    "durationMs": 2040,
+    "usage": "Try again, revise an answer, and supportive feedback",
+    "source": "User supplied 08-encouragement.gif",
+    "sha256": "36d384cb6eb6dda2d3634680ae958fae915ac805fbac76a4a75e8abcdb005fd9"
+  },
+  {
+    "mood": "break",
+    "image": "09-tea-break.gif",
+    "still": "09-tea-break.png",
+    "width": 288,
+    "height": 288,
+    "frames": 77,
+    "durationMs": 4620,
+    "usage": "Welcome back and a short refresher after a learning break",
+    "source": "User supplied 09-tea-break.gif",
+    "sha256": "6777b5089faa5ade1208e52364a9206d7fcce5b795bea0de7c065d63b4b7f1fe"
+  },
+  {
+    "mood": "trophy",
+    "image": "10-trophy.gif",
+    "still": "10-trophy.png",
+    "width": 288,
+    "height": 288,
+    "frames": 49,
+    "durationMs": 1960,
+    "usage": "Completed course, final result, and certificate",
+    "source": "User supplied 10-trophy.gif",
+    "sha256": "44fc0a4516900f5fa33ef3897b69a611b192c7292aa92ef408891d6805fcde66"
+  }
+]

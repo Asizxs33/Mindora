@@ -12,6 +12,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const sizes = [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 900 }];
 const mentors = ['mino', 'mia', 'sam', 'artist', 'copywriter', 'smm'];
 const poses = ['welcome', 'thinking', 'explaining', 'encourage', 'incorrect', 'celebrate'];
+const minoPoses = [...poses, 'listening', 'idea', 'map', 'waiting', 'drawing', 'chart', 'applause', 'encouragement', 'break', 'trophy'];
 const failures = [], errors = [];
 let checks = 0;
 
@@ -93,7 +94,7 @@ try {
   };
   for (const size of sizes) {
     await page.setViewportSize(size);
-    for (const mentor of mentors) for (const pose of poses) {
+    for (const mentor of mentors) for (const pose of mentor === 'mino' ? minoPoses : poses) {
       await render({ kind: 'mentor', mentor, pose });
       await geometry(page, `${size.width}/${mentor}/${pose}`);
       await page.locator('.mindora-character').click();
