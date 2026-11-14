@@ -10,12 +10,11 @@ const request = (path, body) => new Request('https://mindora.test/api/' + path, 
   method: 'POST', headers: { origin: 'https://mindora.test', 'content-type': 'application/json' }, body: JSON.stringify(body),
 });
 
-test('generation and review require a verified account before any quota or provider call', async () => {
+test('generation and review require a verified account before any provider call', async () => {
   let calls = 0;
   const dependencies = {
-    settings, databaseUrl: settings.databaseUrl, apiKey: 'test-only',
+    settings, apiKey: 'test-only',
     session: async () => ({ user: null, cookies: ['session=; Max-Age=0'] }),
-    reserve: async () => { calls++; return false; },
     generate: async () => { calls++; }, review: async () => { calls++; },
   };
   for (const [api, path, body] of [
@@ -30,11 +29,11 @@ test('generation and review require a verified account before any quota or provi
   assert.equal(calls, 0);
 });
 
-test('a stale or missing expected account is rejected before reads, writes, quota or AI calls', async () => {
+test('a stale or missing expected account is rejected before reads, writes or AI calls', async () => {
   let calls = 0;
   const dependencies = {
     settings, apiKey: 'test-only', session: async () => ({ user: { id: 'cookie-account-b' }, cookies: [] }),
-    reserve: async () => { calls++; return true; }, generate: async () => { calls++; }, review: async () => { calls++; },
+    generate: async () => { calls++; }, review: async () => { calls++; },
     store: () => { calls++; throw new Error('A mismatched account must not reach storage'); },
   };
   for (const [api, path, method] of [

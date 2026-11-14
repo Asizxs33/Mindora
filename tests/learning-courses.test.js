@@ -78,9 +78,7 @@ function database() {
 test('generation saves separate account-owned courses before returning success', async () => {
   const db = database();
   let index = 0;
-  let reservations = 0;
   const configured = { ...db.dependencies('account-a'), apiKey: 'test-only', createId: () => ids[index++],
-    reserve: async (_request, url) => { reservations++; assert.equal(url, settings.databaseUrl); return true; },
     generate: async input => savedCourse(input.minutes).plan,
   };
   for (const minutes of [5, 20]) {
@@ -91,7 +89,6 @@ test('generation saves separate account-owned courses before returning success',
     assert.equal(body.course.revision, 1);
     assert.equal(body.course.saved.completed, 0);
   }
-  assert.equal(reservations, 2);
   const listed = await (await learningCoursesApi(request(), db.dependencies('account-a'))).json();
   assert.deepEqual(listed.courses.map(course => course.id), ids);
   assert.deepEqual(listed.courses.map(course => course.totalSteps), [2, 4]);
@@ -173,7 +170,7 @@ test('a complete detailed course larger than the default API body limit can be i
 test('generation does not report an unsaved course as successful', async () => {
   const response = await planApi(request('POST', { goal: 'Python loops', minutes: 5 }), {
     settings, session: async () => ({ user: { id: 'account-a' }, cookies: [] }), apiKey: 'test-only',
-    reserve: async () => true, generate: async () => savedCourse(5).plan,
+    generate: async () => savedCourse(5).plan,
     store: () => ({ create: async () => { throw new Error('Database offline'); } }),
   });
   assert.equal(response.status, 502);

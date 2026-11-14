@@ -1,6 +1,5 @@
 import { normalizeTaskReview, taskReviewInput } from '../core/learning-plan.js';
 import { accountSession, allowedOrigin, cloudSettings, json, matchesLearningAccount, readBody } from './cloud-api.js';
-import { reserveGeneration } from './plan-quota.js';
 import { LANGUAGES, languageCode } from '../core/language.js';
 
 const instructions = [
@@ -46,7 +45,6 @@ export async function taskReviewApi(request, {
   apiKey = process.env.DEEPSEEK_API_KEY,
   settings = cloudSettings(),
   session = accountSession,
-  reserve = reserveGeneration,
   review = reviewWithDeepSeek,
 } = {}) {
   if (request.method !== 'POST') return json({ error: 'Метод недоступен.' }, 405);
@@ -61,9 +59,6 @@ export async function taskReviewApi(request, {
     const input = taskReviewInput(await readBody(request));
     if (!input) return json({ error: 'Запиши ответ до 1500 символов.' }, 400, cookies);
     if (!apiKey) return json({ error: 'ИИ-разбор пока недоступен.' }, 503, cookies);
-    if (!await reserve(request, settings.databaseUrl, apiKey)) {
-      return json({ error: 'Дневной лимит ИИ исчерпан. Можно продолжить занятие.' }, 429, cookies);
-    }
     return json({ review: await review(input, apiKey) }, 200, cookies);
   } catch (error) {
     console.warn('Mindora task review failed', error.name, Number(error.providerStatus) || '');
