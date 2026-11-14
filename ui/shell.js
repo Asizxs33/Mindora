@@ -47,6 +47,8 @@ function restoreQuizFocus(main, remembered) {
 }
 
 export function mountShell() {
+  const guidedStyles = document.createElement('link'); guidedStyles.rel = 'stylesheet';
+  guidedStyles.href = new URL('./guided-start.css', import.meta.url).href; document.head.append(guidedStyles);
   document.querySelector('#app').innerHTML = `<a class="skip-link" href="#main">Skip to learning</a>
   <header class="topbar">
     <a class="brand" data-home href="#discover" aria-label="Mindora home"><img class="brand-mark" src="ui/assets/brand-mark.svg" alt="" width="43" height="43"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
@@ -106,7 +108,9 @@ export function renderShell(view, state, stats, html) {
   main.classList.toggle('dashboard-main', view === 'discover');
   main.classList.toggle('inside-main', view !== 'discover');
   main.dataset.page = view;
-  document.body.classList.toggle('is-learning', ['lesson', 'recap'].includes(view));
+  document.body.classList.toggle('is-learning', ['lesson', 'learning-plan', 'recap', 'return-review'].includes(view));
+  document.body.classList.toggle('is-guided', html.includes('data-guided-step='));
+  document.body.classList.add('quiet-shell');
   main.innerHTML = html;
   updateAccountLinks();
   expandedPanels.forEach(selector => { const panel = main.querySelector(selector); if (panel) panel.open = true; });

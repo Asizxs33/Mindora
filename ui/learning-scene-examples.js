@@ -1,0 +1,7 @@
+export const learningSceneExamples = [
+  { mentor: 'sam', prompt: 'A computer follows one clear instruction.', scene: { type: 'monitor', title: 'A first Python greeting', lines: ['name = "Mia"', 'print("Hi, " + name + "!")'], output: 'Hi, Mia!', caption: 'Change the name. The greeting changes with it.' } },
+  { mentor: 'mia', prompt: 'Give the main message the most space.', scene: { type: 'canvas', title: 'An art club poster', headline: 'ART CLUB', detail: 'A place to make something new.', action: 'Friday · 4 pm · Room 3', caption: 'The club name leads. The time and place come next.' } },
+  { mentor: 'sam', prompt: 'Each row holds one expense.', scene: { type: 'spreadsheet', title: 'A short expense table', columns: ['Expense', 'Amount'], rows: [['Transport', '48'], ['Groceries', '125'], ['Subscriptions', '24']], formula: '=SUM(B2:B4) → 197', caption: 'The range includes all three amounts.' } },
+  { mentor: 'copywriter', prompt: 'Write one useful thought at a time.', scene: { type: 'notebook', title: 'A simple writing plan', lines: ['Name the reader.', 'Choose one main message.', 'Give the reader a next step.'], caption: 'A short plan makes the first draft easier.' } },
+  { mentor: 'copywriter', prompt: 'A small change can make a request clearer.', scene: { type: 'comparison', title: 'A clearer invitation', before: 'Visit us sometime.', after: 'Join us Saturday at 10 am.', caption: 'The second version names a day, a time and an action.' } },
+];

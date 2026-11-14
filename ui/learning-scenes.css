@@ -1,0 +1,43 @@
+/* Quiet teaching objects. Their content is real selectable, accessible HTML. */
+.lesson-visual{margin:0}
+.lesson-visual>figcaption{margin:10px 4px 0;font-size:14px;line-height:1.5;color:#66584e}
+.learning-scene{--scene-border:#e2d7cc;position:relative;min-width:0;border:1px solid var(--scene-border);border-radius:15px;background:#fff;overflow:hidden}
+@media(prefers-reduced-motion:no-preference){.learning-scene{animation:learning-scene-appear .32s ease-out both}.scene-window-bar i{animation:scene-ready .65s ease-in-out 2}.scene-window-bar i:nth-child(2){animation-delay:.12s}.scene-window-bar i:nth-child(3){animation-delay:.24s}}
+@keyframes learning-scene-appear{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scene-ready{50%{opacity:.35}}
+.learning-scene .scene-content{min-width:0;padding:20px}
+.learning-scene h3{margin:0 0 9px;font-size:16px}
+.learning-scene p{margin:0;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.scene-monitor{border:5px solid #393342;border-bottom-width:13px;background:#faf9fc;box-shadow:0 4px 0 #e5ddea}
+.scene-window-bar{height:23px;display:flex;gap:5px;align-items:center;padding:0 12px;background:#393342}
+.scene-window-bar i{width:5px;height:5px;border-radius:50%;background:#f6e0c1}
+.scene-monitor pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:16px;line-height:1.8;color:#493b60}
+.scene-output{border-top:1px solid #e4dfea;margin-top:18px;padding-top:14px}
+.scene-output>span{font-size:12px;color:#746979;display:block;margin-bottom:6px}
+.scene-canvas{background:#fffdf5;border:8px solid #e6c8a4;border-radius:4px;box-shadow:0 3px 0 #cfaa7e}
+.scene-poster{padding:10px 12px;text-align:center;display:grid;gap:18px;min-height:190px;align-content:center}
+.scene-poster h3{font-size:clamp(25px,6vw,36px);line-height:1.1;letter-spacing:-.7px;margin:0;color:#3e324c}
+.scene-poster p{font-size:17px}
+.scene-poster>strong{font-size:14px;color:#9c480c;border-top:1px solid #ecdcc4;padding-top:14px}
+.scene-spreadsheet .scene-content{padding:0}
+.scene-spreadsheet table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:15px}
+.scene-spreadsheet th,.scene-spreadsheet td{padding:13px 12px;text-align:left;border-bottom:1px solid #e1e8df;border-right:1px solid #e1e8df;overflow-wrap:anywhere}
+.scene-spreadsheet th{background:#edf4e9;color:#426539;font-size:13px}
+.scene-spreadsheet tr:last-child td{border-bottom:0}
+.scene-spreadsheet th:last-child,.scene-spreadsheet td:last-child{border-right:0}
+.scene-formula{padding:14px!important;background:#f4f8f1;border-top:1px solid #e1e8df;font-size:15px;color:#426539}
+.scene-notebook{border-left:8px solid #d4b6df;background:#fffdf8}
+.scene-notes{list-style:none;margin:0;padding:0;counter-reset:notes}
+.scene-notes li{counter-increment:notes;padding:12px 0;border-bottom:1px solid #eadfd1;line-height:1.65;overflow-wrap:anywhere}
+.scene-notes li:before{content:counter(notes) '.';color:#a97a52;margin-right:12px;font-size:13px}
+.scene-notes li:first-child{padding-top:0}
+.scene-notes li:last-child{border-bottom:0;padding-bottom:0}
+.scene-versions{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.scene-versions>section+section{border-left:1px solid #e2d7cc;padding-left:18px}
+.scene-versions>section+section h3{color:#47733b}
+.learning-scene .ai-lesson-example{border:0;border-radius:0}
+.learning-scene .ai-lesson-example>section{padding:14px 0;background:transparent}
+.learning-scene .ai-lesson-example>section:first-child{padding-top:0}
+.learning-scene .ai-lesson-example>section:last-child{padding-bottom:0}
+.scene-spreadsheet .ai-lesson-example>section{padding:16px}
+@media(max-width:440px){.learning-scene .scene-content{padding:16px}.scene-spreadsheet .scene-content{padding:0}.scene-monitor pre{font-size:14px}.scene-poster{min-height:150px;padding:5px;gap:14px}.scene-versions{grid-template-columns:1fr;gap:14px}.scene-versions>section+section{padding-left:0;padding-top:14px;border-left:0;border-top:1px solid #e2d7cc}}

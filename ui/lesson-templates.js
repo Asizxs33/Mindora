@@ -4,6 +4,7 @@ import { mentorScene } from './mentor-scenes.js';
 export { mentorScene } from './mentor-scenes.js';
 import { icon } from './icons.js';
 import { t } from './language.js';
+import { normalizeLearningScene, renderLearningScene, learningSceneFrame } from './learning-scenes.js';
 
 // Presentation only. A course controller owns progression, persistence and credit.
 // Content is plain data, never model-generated HTML or executable code.
@@ -65,6 +66,12 @@ export function normalizeLessonTemplate(raw) {
   switch (raw.type) {
     case 'theory': if (!block.body) return null; break;
     case 'illustration': {
+      if (raw.scene !== undefined) {
+        if (raw.image || raw.images) return null;
+        block.scene = normalizeLearningScene(raw.scene);
+        if (!block.scene || !block.body) return null;
+        break;
+      }
       const url = safeImage(raw.image?.url), alt = clean(raw.image?.alt, 240);
       if (!url || !alt || !block.body) return null; block.image = { url, alt }; break;
     }
@@ -102,8 +109,8 @@ export function renderLessonTemplate(block, state = {}, { external = false, ment
   const speaker = block.mentor || mentor;
   const prompt = block.prompt || block.title;
   const hints = {
-    theory: block.body, illustration: block.body, comparison: block.explanation, practice: block.criterion,
-    recap: list(block.points)[0],
+    // Reading screens already show this material; only exercises need a hint.
+    practice: block.criterion,
     choice: t('Read every option. Which one best answers the question?', 'Прочитай все варианты. Какой точнее отвечает на вопрос?', 'Барлық нұсқаны оқы. Қайсысы сұраққа дәл жауап береді?'),
     'multi-choice': t('More than one can fit. Check each option separately.', 'Подходят несколько ответов. Проверь каждый отдельно.', 'Бірнеше жауап сәйкес келеді. Әрқайсысын жеке тексер.'),
     order: t('Find the first action. Then ask what must happen next.', 'Найди первое действие, затем следующее.', 'Алғашқы әрекетті тап. Одан кейін не істеу керек?'),
@@ -115,9 +122,13 @@ export function renderLessonTemplate(block, state = {}, { external = false, ment
   let content = '';
   if (type === 'theory') content = `<div class="ai-lesson-instruction learning-answer">${text(block.body)}</div>${sourceFigures(list(block.images))}`;
   if (type === 'illustration') {
-    content = `${sourceFigures(block.image ? [block.image] : list(block.images))}${block.body ? `<div class="ai-lesson-instruction learning-answer">${text(block.body)}</div>` : ''}`;
+    const images = block.image ? [block.image] : list(block.images);
+    content = `${images.length ? sourceFigures(images) : renderLearningScene(block.scene)}${block.body ? `<div class="ai-lesson-instruction learning-answer">${text(block.body)}</div>` : ''}`;
   }
-  if (type === 'comparison') content = `<div class="ai-lesson-example"><section class="ai-lesson-example-input">${heading(block.beforeLabel || t('Starting point', 'Исходные данные', 'Бастапқы деректер'))}<div class="learning-answer">${text(block.before)}</div></section><section class="ai-lesson-example-output">${heading(block.afterLabel || t('Worked result', 'Готовый результат', 'Дайын нәтиже'))}<div class="learning-answer">${text(block.after)}</div></section></div>${block.explanation ? `<p class="template-explanation">${text(block.explanation)}</p>` : ''}`;
+  if (type === 'comparison') {
+    const example = `<div class="ai-lesson-example"><section class="ai-lesson-example-input">${heading(block.beforeLabel || t('Starting point', 'Исходные данные', 'Бастапқы деректер'))}<div class="learning-answer">${text(block.before)}</div></section><section class="ai-lesson-example-output">${heading(block.afterLabel || t('Worked result', 'Готовый результат', 'Дайын нәтиже'))}<div class="learning-answer">${text(block.after)}</div></section></div>`;
+    content = `${block.sceneFrame ? learningSceneFrame(block.sceneFrame, example) : example}${block.explanation && block.explanation !== block.intro ? `<p class="template-explanation">${text(block.explanation)}</p>` : ''}`;
+  }
   if (type === 'choice' || type === 'multi-choice') {
     const selected = type === 'choice' ? [state.choice] : list(state.selected);
     content = `<div class="ai-lesson-choices" role="group" aria-label="${text(prompt)}">${list(block.options).map((option, i) => {
