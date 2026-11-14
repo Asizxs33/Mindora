@@ -1,22 +1,22 @@
-/** Friendly portrait sprites. Public character()/mountCharacters() APIs are unchanged.
- * Human atlas: five identities × welcome / thoughtful / celebrate poses.
- * Mino retains the original capybara atlas. All learning state belongs to core.
+/** Exact illustrations from the supplied team-characters pack.
+ * Single-pose PNGs retain the artist's faces, clothing and full-body proportions.
+ * Supplied SVG rigs provide a network-error fallback. Learning state stays in core.
  */
 import { t } from './language.js';
+import { rigMarkup } from './character-rigs.js';
 
 const characters = Object.freeze({
   mino: { name: 'Mino', atlas: 'mino-poses-v3.png', fallback: 'capybara.png' },
-  mia: { name: 'Mia', column: 0, cropX: 40 },
-  sam: { name: 'Sam', column: 1, cropX: 275 },
-  leo: { name: 'Leo', column: 1, cropX: 275 },
-  artist: { name: 'Ari', column: 2, cropX: 520 },
-  copywriter: { name: 'Nora', column: 3, cropX: 765 },
-  smm: { name: 'Zoe', column: 4, cropX: 1005 },
+  mia: { name: 'Mia', role: 'graphic_designer', image: 'graphic-designer-v3.png', order: 0 },
+  sam: { name: 'Sam', role: 'programmer', image: 'programmer-v3.png', order: 1 },
+  leo: { name: 'Sam', role: 'programmer', image: 'programmer-v3.png', order: 1 },
+  artist: { name: 'Ari', role: 'artist', image: 'artist-v3.png', order: 2 },
+  copywriter: { name: 'Nora', role: 'copywriter', image: 'copywriter-v3.png', order: 3 },
+  smm: { name: 'Zoe', role: 'smm', image: 'smm-v3.png', order: 4 },
 });
 const aliases = { programmer: 'leo', designer: 'mia', graphic_designer: 'mia', teacher: 'sam', capybara: 'mino', art: 'artist', writing: 'copywriter', social: 'smm' };
 const moods = new Set(['welcome', 'thinking', 'explaining', 'encourage', 'celebrate', 'incorrect']);
 const MOTION_KEY = 'mindora.characters.motion.v1';
-const HUMAN_ATLAS = 'team-rounded-v5.png';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, value => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value]));
 const asset = file => new URL(`./assets/${file}`, import.meta.url).href;
 const helloTimers = new WeakMap(), observed = new WeakSet(), atlasLoads = new Map();
@@ -26,12 +26,13 @@ export function character(kind = 'mino', mood = 'welcome', className = '') {
   kind = aliases[kind] || kind;
   if (!Object.hasOwn(characters, kind)) kind = 'mino';
   mood = moods.has(mood) ? mood : 'welcome';
-  const model = characters[kind], human = model.column !== undefined;
+  const model = characters[kind], human = Boolean(model.role);
   const art = human
-    ? `<img class="human-atlas-image" src="${escape(asset(HUMAN_ATLAS))}" alt="" decoding="async" draggable="false">`
+    ? `<img class="human-source-image" src="${escape(asset(`team/${model.image}`))}" alt="" width="1024" height="1536" decoding="async" draggable="false"><span class="human-source-fallback">${rigMarkup(model.role)}</span>`
     : `<img class="character-fallback" src="${escape(asset(model.fallback))}" alt="" loading="lazy" decoding="async">`;
-  const position = human ? ` style="--human-offset:${(-model.cropX / 230 * 100).toFixed(6)}%;--character-idle-delay:-${model.column * 1.37}s"` : '';
+  const position = human ? ` style="--character-idle-delay:-${model.order * 1.37}s"` : '';
   return `<button type="button" class="mindora-character character-${kind} ${human ? 'character-human character-portrait' : 'character-atlas'} ${escape(className)}" data-character-kind="${kind}" data-character-mood="${mood}" data-character-hello${position} aria-label="${t(`Say hello to ${model.name}`, `Поздороваться: ${model.name}`, `Сәлемдесу: ${model.name}`)}" title="${t(`Say hello to ${model.name}`, `Поздороваться: ${model.name}`, `Сәлемдесу: ${model.name}`)}"><span class="character-frame" aria-hidden="true"><span class="character-art">${art}</span></span><span class="character-reaction" aria-hidden="true">${t('Hi there!', 'Привет!', 'Сәлем!')}</span></button>`;
+
 }
 
 function readPreference() {
@@ -63,17 +64,18 @@ function fitFrame(element) {
   const width = element.clientWidth, height = element.clientHeight;
   if (!width || !height) return;
   if (element.classList.contains('character-human')) {
-    // Measured 230×418 crop windows retain all hands and avoid adjacent sprites.
-    const portraitWidth = Math.min(width, height * 230 / 418);
+    // Original 1024×1536 art: contain the whole figure, including tools and shoes.
+    const portraitWidth = Math.min(width, height * 2 / 3);
     element.style.setProperty('--character-frame-width', `${portraitWidth}px`);
-    element.style.setProperty('--character-frame-height', `${portraitWidth * 418 / 230}px`);
+    element.style.setProperty('--character-frame-height', `${portraitWidth * 3 / 2}px`);
   } else element.style.setProperty('--character-frame-size', `${Math.min(width, height)}px`);
 }
 
 function applyAtlas(file) {
   const ready = atlasLoads.get(file)?.status === 'ready';
-  const selector = file === HUMAN_ATLAS ? '.character-human' : '.character-mino';
-  document.querySelectorAll(selector).forEach(element => {
+  document.querySelectorAll('.mindora-character').forEach(element => {
+    const model = characters[element.dataset.characterKind];
+    if (!model || (model.atlas || `team/${model.image}`) !== file) return;
     element.classList.toggle('character-ready', ready);
     element.classList.toggle('character-image-error', atlasLoads.get(file)?.status === 'failed');
   });
@@ -98,7 +100,7 @@ function discover(root = document) {
     if (!observed.has(element)) {
       observed.add(element); fitFrame(element); resizeObserver?.observe(element); visibilityObserver?.observe(element);
     }
-    loadAtlas(model.atlas || HUMAN_ATLAS);
+    loadAtlas(model.atlas || `team/${model.image}`);
   }
   updateMotion();
 }

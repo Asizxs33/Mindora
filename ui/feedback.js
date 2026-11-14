@@ -11,9 +11,10 @@ export function dialogContent(type, data) {
       <p>${t('Choose a goal, practise it, and apply what you learned in a new task.','Выбери цель, потренируйся и примени навык в новом задании.','Мақсат таңда, жаттық және үйренгеніңді жаңа тапсырмада қолдан.')}</p>
       <p>${t('You can also start with a poster or spreadsheet course.','Можно начать с курса по постерам или таблицам.','Постер не кесте курсынан да бастауға болады.')}</p>`;
   }
+
   const content = {
     about: ['Small steps. Something real.', `<ol class="dialog-steps"><li>${icon('book', 25)}<div><strong>Learn one simple idea</strong><p>A short explanation, with an example you can see.</p></div></li><li>${icon('edit', 25)}<div><strong>Give it a little try</strong><p>Answer a question. Then make something yourself.</p></div></li><li>${icon('folder', 25)}<div><strong>Keep what you make</strong><p>Download your poster or spreadsheet from My work.</p></div></li></ol><p class="small-note">This version has two starter courses. Your progress stays in this browser.</p>`],
-    programming: ['Meet Leo, our coding buddy.', '<p>Coding lessons are still on the way. You can start with a poster or an everyday spreadsheet today.</p><div class="modal-buttons"><button class="primary" data-course="design">Make a poster</button><button class="secondary" data-course="budget">Try a spreadsheet</button></div>'],
+    programming: ['Meet Sam, our technology buddy.', '<p>Coding lessons are still on the way. You can start with a poster or an everyday spreadsheet today.</p><div class="modal-buttons"><button class="primary" data-course="design">Make a poster</button><button class="secondary" data-course="budget">Try a spreadsheet</button></div>'],
     notifications: ['A little step for today', `<p>${data?.today ? 'You’ve already taken a step today. Well done!' : 'Your next lesson is ready whenever you have a little time.'}</p><button class="primary" data-view="discover">Back to learning ${icon('arrow', 18)}</button>`],
   };
 

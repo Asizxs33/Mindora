@@ -1,4 +1,42 @@
-Source: user-provided team-characters/team-characters SVG rigs (programmer, smm, graphic_designer, artist, copywriter).
-Original SVG geometry and colours retained. SVG tags and attributes checked against a local allowlist; no scripts, event handlers, external URLs or images.
-Prepared for Mindora: full portrait viewBox, unique instance IDs via team-rigs.js, named face hooks, optional happy eye curves. Props reparented to their holding forearms with inverse affine matrices so source positions and articulated motion are preserved.
-Source generate.py was not executed.
+Source: C:/Users/Acer/Desktop/хакатон/team-characters/team-characters
+Source README distinguishes finished PNG illustrations from simplified editable SVG recreations.
+
+NORMAL HUMAN PORTRAITS
+The following original PNGs are copied byte-for-byte into this directory and used at every normal display size. No raster editing, cropping, recolouring, regeneration, or alternate-size artwork was applied. Each file is a single-pose 1024 x 1536 RGBA image; original transparency, faces, clothing, proportions, tools, and shoes are retained.
+
+Role: Graphic design (Mia)
+File: graphic-designer-v3.png
+Bytes: 1147157
+SHA-256: 0a744317ae0725f55f1b1edeec6800c8c07db54a893cea3a96abed176ed52469
+
+Role: Programming and spreadsheet guide (Sam; legacy leo/programmer/teacher aliases)
+File: programmer-v3.png
+Bytes: 1312828
+SHA-256: 1f4d1e80963a45c624f7e080485f7a09c11a8c651074b87f4e54d7dbd2e7a94d
+
+Role: Art and illustration (Ari)
+File: artist-v3.png
+Bytes: 1282270
+SHA-256: 7c34c4f950fc9ed65cce9081235a14cf206bd1c2932ba4f926d0afce9cd4d524
+
+Role: Copywriting (Nora)
+File: copywriter-v3.png
+Bytes: 1185792
+SHA-256: bcb147adf2b6933453e84bdbd60f94f93cc9cdaa076460b703573acc41ab5f03
+
+Role: Social media (Zoe)
+File: smm-v3.png
+Bytes: 1245263
+SHA-256: 43ad58b6d72f6b902750deb3bacb3637cb3632f5df32cdca32ecd46688b08be1
+
+Identity verification: SHA-256 for each shipped PNG equals the corresponding source file above (verified 2026-11-14).
+
+MOTION AND GREETINGS
+ui/characters.js and ui/characters.css contain the full image in a 2:3 portrait frame. Normal human motion is subtle whole-character breathing, sway, thoughtful tilt, or a brief celebratory lift. A tap triggers a short whole-character response and an accessible greeting. The PNG itself has one pose: no separate limb motion, blinking, or redrawn facial expressions are claimed. Mino continues to use the existing capybara pose atlas.
+
+IMAGE-ERROR FALLBACK ONLY
+ui/character-rigs.js embeds the supplied simplified programmer.svg, graphic_designer.svg, artist.svg, copywriter.svg, and smm.svg. ui/character-rigs.css animates this fallback. It is revealed only by .character-image-error after the corresponding PNG fails to load; it is not selected by viewport size or used as the normal portrait.
+
+The fallback preserves source SVG geometry, colours, and authored joint transforms, adding outer wrappers for small gestures/head motion and eye animation. The artist's brush receives the same outer motion as its hand. IDs are converted to data-rig-part handles to avoid duplicate DOM IDs. There are no scripts, event handlers, or external resource references in the embedded SVG source. The sibling editable SVG files and older team-rigs.js are not the active normal portrait implementation.
+
+Both portrait and fallback motion respect reduced-motion settings, the Profile motion switch, hidden-page state, and offscreen visibility. No new image generation was used for these original PNGs. Source generate.py was not executed.
