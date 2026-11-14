@@ -2,7 +2,7 @@ const ENDPOINT = '/api/learning-courses';
 const copy = value => structuredClone(value);
 const serialized = value => JSON.stringify(value);
 
-async function apiRequest(path, method = 'GET', body, ownerId) {
+export async function apiRequest(path, method = 'GET', body, ownerId) {
   const response = await fetch(path, {
     method, credentials: 'same-origin',
     headers: { Accept: 'application/json', 'X-Mindora-Account': ownerId, ...(body ? { 'Content-Type': 'application/json' } : {}) },

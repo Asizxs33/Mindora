@@ -1,4 +1,5 @@
-import { brandNav, courseHomeView, courseNames } from './dashboard.js';
+import { landingView } from './landing.js';
+import { brandNav, courseNames } from './dashboard.js';
 import { icon } from './icons.js';
 import { mountCharacters } from './characters.js';
 import { mountPresentation } from './presentation.js';
@@ -54,6 +55,8 @@ function restoreQuizFocus(main, remembered) {
 }
 
 export function mountShell() {
+  const landingStyles = document.createElement('link'); landingStyles.rel = 'stylesheet';
+  landingStyles.href = new URL('./landing.css', import.meta.url).href; document.head.append(landingStyles);
   const guidedStyles = document.createElement('link'); guidedStyles.rel = 'stylesheet';
   guidedStyles.href = new URL('./guided-start.css', import.meta.url).href; document.head.append(guidedStyles);
   const roadmapStyles = document.createElement('link');
@@ -175,7 +178,7 @@ export function renderShell(view, state, stats, html, rewards) {
   const guestGreeting = !signedIn && html.includes('data-guided-step="0"');
   const originalHtml = html;
   resizeGreeting = guestGreeting ? () => renderShell(view, state, stats, originalHtml, rewards) : null;
-  if (guestGreeting && desktopLayout.matches) html = courseHomeView(state, { guest: true });
+  if (guestGreeting) html = landingView();
   const guided = html.includes('data-guided-step=');
   $('#navigation').innerHTML = brandNav(icon, view, 'side', signedIn);
   $('#top-navigation').innerHTML = brandNav(icon, view, 'top', signedIn);
@@ -191,6 +194,7 @@ export function renderShell(view, state, stats, html, rewards) {
   main.dataset.page = view;
   document.body.classList.toggle('is-learning', ['lesson', 'learning-plan', 'recap', 'return-review'].includes(view));
   document.body.classList.toggle('is-guided', guided);
+  document.body.classList.toggle('is-landing', guestGreeting);
   document.body.classList.add('quiet-shell');
   document.body.classList.toggle('has-course-home', html.includes('class="course-home"'));
   if (!updateCourseHome(main, html, sameView && main.dataset.courseHomeOwner === owner)) {

@@ -182,14 +182,12 @@ export function roadmapView({ roadmap, wizard, active = [], busy = false, error 
   const finished = active.filter(stage => stage.status === 'completed').length;
   const all = roadmap.stages.length;
   const progressLabel = t(`${finished} of ${all} lessons done`, `Пройдено ${finished} из ${all} занятий`, `${all} сабақтың ${finished}-і аяқталды`);
-  const percent = all ? Math.round(finished / all * 100) : 0;
   const complete = all > 0 && finished === all;
   return `<section class="roadmap-layout" aria-labelledby="roadmap-title">
     <div class="roadmap-main-column">
       <header class="roadmap-heading">
-        <div><p class="roadmap-kicker">${TITLE.roadmap()} <span>· ${t(`${roadmap.minutes} min`, `${roadmap.minutes} мин`, `${roadmap.minutes} минут`)}</span></p>
-        <h1 id="roadmap-title" tabindex="-1">${escape(roadmap.title)}</h1></div>
-        <div class="roadmap-heading-progress"><span aria-hidden="true">${finished}/${all}</span><progress value="${finished}" max="${Math.max(1, all)}" aria-label="${progressLabel}"></progress><strong>${percent}%</strong></div>
+        <div><h1 id="roadmap-title" tabindex="-1">${escape(roadmap.title)}</h1></div>
+        <div class="roadmap-heading-progress"><span aria-hidden="true">${finished}/${all}</span><progress value="${finished}" max="${Math.max(1, all)}" aria-label="${progressLabel}"></progress></div>
       </header>
       <details class="roadmap-about"><summary>${icon('book', 17)} ${t('About this course', 'Об этом курсе', 'Курс туралы')}</summary><div><p>${escape(roadmap.outcome)}</p><div class="roadmap-level"><strong>${t('Estimated level', 'Стартовый уровень', 'Бастапқы деңгей бағасы')}<span>${levelName(roadmap.level)}</span></strong><p>${escape(roadmap.levelReason)}</p></div><ol>${roadmap.stages.map(stage => `<li><strong>${escape(stage.title)}</strong><p>${escape(stage.objective)}</p></li>`).join('')}</ol></div></details>
       ${feedback(busy, error, notice)}

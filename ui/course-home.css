@@ -113,7 +113,6 @@ body.quiet-shell.has-course-home:not(.is-guided) #main { max-width: 800px; paddi
 .course-library .phone-catalog[open]>summary>svg:last-child { transform:rotate(180deg); }
 .course-library .phone-catalog .ready-courses { margin-top:0; }
 .course-library .phone-catalog .ready-courses>h2 { display:none; }
-#main:is([data-page="profile"],[data-page="quests"],[data-page="shop"],[data-page="courses"])>[data-builtin-sync-panel] .learning-sync:not(.needs-attention):not([aria-busy="true"]) { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
 
 
 /* Navigation, course choices and account controls share the same visual scale. */
@@ -254,7 +253,6 @@ body.quiet-shell.has-course-home:not(.is-guided) #main { max-width: 800px; paddi
   .phone-catalog .ready-courses { margin-top:0; }
   .phone-catalog .ready-courses h2 { display:none; }
   #main:has(.phone-course-nav) { padding-bottom:calc(94px + env(safe-area-inset-bottom)); }
-  #main:has(.phone-course-nav) > [data-builtin-sync-panel] .learning-sync:not(.needs-attention):not([aria-busy="true"]) { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
   .phone-course-nav ~ .roadmap-layout .roadmap-aside, .phone-course-nav ~ .roadmap-layout .roadmap-new-goal { display:none; }
   .phone-course-nav ~ .roadmap-layout .roadmap-stages { --roadmap-node:72px; margin-top:8px; padding-top:37px; }
   .phone-course-nav ~ .roadmap-layout .roadmap-stage { min-height:155px; padding-bottom:24px; }

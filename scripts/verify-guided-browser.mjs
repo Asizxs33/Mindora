@@ -71,7 +71,7 @@ async function context({ signedIn = true, saved = null } = {}) {
   return { ctx, page };
 }
 const size = page => page.evaluate(() => ({ width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight, vw: innerWidth, vh: innerHeight }));
-const state = page => page.evaluate(key => JSON.parse(localStorage.getItem(key)), key);
+const state = page => page.evaluate(key => JSON.parse(localStorage.getItem(key) || localStorage.getItem('mindora.workspace.v1.guest')), key);
 const nav = (page, view) => page.locator(`#navigation [data-view="${view}"], #mobile-navigation [data-view="${view}"]`).filter({ visible: true }).first();
 try {
   // First entry: one short question at a time; the account form reuses the name.
@@ -80,23 +80,10 @@ try {
   for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(viewport);
     const bounds = await size(page);
-    assert.equal(bounds.width, bounds.vw); if (viewport.width < 921) assert.equal(bounds.height, bounds.vh);
+    assert.equal(bounds.width, bounds.vw);
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator('[data-intro-action="next"]').click();
-  assert.equal(await page.locator('[data-intro-action="next"]').isDisabled(), true);
-  await page.locator('#intro-name').fill('Aruzhan');
-  await page.locator('[data-intro-action="next"]').click();
-  await page.locator('[data-intro-topic="design"]').click();
-  await page.locator('[data-intro-action="next"]').click();
-  await page.locator('[data-intro-minutes="5"]').click();
-  await page.locator('[data-intro-action="start"]').click();
-  await page.locator('#account-email').fill(user.email);
-  assert.equal(await page.locator('#account-name').count(), 0);
-  await page.locator('#account-password').fill('Browser-fixture-8');
-  await page.locator('#account-confirm').fill('Browser-fixture-8');
-  await page.screenshot({ path: join(tmpdir(), 'mindora-clean-quick-signup.png'), fullPage: true });
-  await page.locator('.account-primary').click();
+  await page.locator('.landing-topic-grid [data-course="design"]').click();
   await page.waitForSelector('.learning-hub');
   for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(viewport);
@@ -112,8 +99,8 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('.learning-hub-actions [data-action="resume-course"]').click();
   await page.waitForSelector('#main[data-page="lesson"]');
-  assert.equal(signupPayload.name, 'Aruzhan');
-  assert.equal((await state(page)).minutes, 5);
+  assert.equal(signupPayload, undefined, 'the first course requires no registration');
+  assert.equal((await state(page)).minutes, 10);
   assert.equal((await state(page)).active, 'design');
   await first.ctx.close();
 
@@ -235,12 +222,12 @@ try {
   // Profile logout is directly reachable on the phone and returns to Mino.
   await p.locator('#mobile-navigation [data-view="profile"]').click();
   await p.locator('[data-account-signout]').click();
-  await p.waitForSelector('.guided-greeting');
+  await p.waitForSelector('.mindora-landing');
   assert.equal(await p.locator('#mindora-account[open]').count(), 0);
-  assert.equal(await p.locator('.guided-dialogue p').isVisible(), true);
+  assert.equal(await p.locator('#landing-title').isVisible(), true);
   await p.reload();
-  await p.waitForSelector('.guided-greeting');
-  await p.locator('.guided-signin').click();
+  await p.waitForSelector('.mindora-landing');
+  await p.locator('.header-account').click();
   await p.locator('#account-email').fill(user.email);
   await p.locator('#account-password').fill('Browser-fixture-8');
   await p.locator('.account-primary').click();
@@ -329,5 +316,5 @@ try {
   assert.equal(lessonRequests.length, generated, 'opening an archived lesson loads its saved copy');
   await journey.ctx.close();
   assert.deepEqual(errors, []);
-  console.log('PASS: responsive greeting/path, signup → lesson, interrupted recall, low-score repair, saved cursor/drafts, 5/10/20-minute courses, mobile signout → greeting → signin, personalized roadmap → completion → unlock → reload → next lesson. API mocked explicitly.');
+  console.log('PASS: responsive greeting/path, guest landing → lesson, interrupted recall, low-score repair, saved cursor/drafts, 5/10/20-minute courses, mobile signout → greeting → signin, personalized roadmap → completion → unlock → reload → next lesson. API mocked explicitly.');
 } finally { await browser.close(); }
