@@ -55,7 +55,14 @@ function researchFixture(steps, { readable = true, verify = () => {} } = {}) {
     assert.deepEqual(input.materials.map(item => item.url), [source, github]);
     assert.match(input.materials[1].content, /items of a sequence/);
     verify(request, input);
-    return modelResponse({ title: draft.title, outcome: draft.outcome, guided: steps.slice(0, -1), final: steps.at(-1) });
+    const guided = steps.slice(0, -1).map(step => {
+      const { checkpoint, ...teaching } = step.teaching;
+      const { question, choices, correctIndex, explanation } = checkpoint;
+      return {
+        ...step, teaching: { ...teaching, assessment: { type: 'choice', question, options: choices, answer: correctIndex, explanation } },
+      };
+    });
+    return modelResponse({ formatVersion: 3, title: draft.title, outcome: draft.outcome, guided, final: steps.at(-1) });
   };
 }
 

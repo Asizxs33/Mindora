@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import * as model from '../core/learning-plan.js';
+import * as assessmentModel from '../core/lesson-assessment.js';
 
 // Exercise the real controller and event handlers with DOM/network ports only.
 const source = readFileSync(new URL('../core/plan-controller.js', import.meta.url), 'utf8')
@@ -11,16 +12,18 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const feedback = { observation: 'The loop uses every item.', nextAction: 'Try a list with four items.' };
 
-function plan({ detailed = true, minutes = 10, goal = 'Learn Python loops' } = {}) {
+function plan({ detailed = true, minutes = 10, goal = 'Learn Python loops', assessment } = {}) {
   const url = 'https://docs.python.org/3/tutorial/controlflow.html';
   const teaching = {
     why: 'Repeat an operation for every item.',
     example: { input: 'names = ["Ada", "Lin"]', output: 'Ada\nLin', explanation: 'Each iteration prints one name.' },
-    checkpoint: { question: 'How many lines are printed?', choices: ['One', 'Two', 'Three'], correctIndex: 1, explanation: 'The list contains two names.' },
+    ...(assessment ? { assessment } : {
+      checkpoint: { question: 'How many lines are printed?', choices: ['One', 'Two', 'Three'], correctIndex: 1, explanation: 'The list contains two names.' },
+    }),
     takeaway: 'The loop visits every list item.',
   };
   return model.normalizePlan({
-    ...(detailed ? { formatVersion: 2 } : {}), title: 'Python loops', outcome: 'Write your own loop.',
+    ...(detailed ? { formatVersion: assessment ? 3 : 2 } : {}), title: 'Python loops', outcome: 'Write your own loop.',
     steps: model.PLAN_DURATIONS[minutes].map((_, index, steps) => ({
       title: `Task ${index + 1}`, instruction: 'A for loop processes each list item.',
       task: 'Write a loop over three names and record its output.', criterion: 'The output contains three lines.',
@@ -34,7 +37,7 @@ function controller(initial = { plan: plan() }, { confirm = true, fetch: fetchPo
   const listeners = new Map(), elements = new Map(), requests = [], confirmations = [];
   let stored = clone(state), saves = 0, renders = 0, open = true;
   function element(selector) {
-    if (!elements.has(selector)) elements.set(selector, { focusCount: 0, focus() { this.focusCount++; } });
+    if (!elements.has(selector)) elements.set(selector, { focusCount: 0, focus() { this.focusCount++; }, remove() { elements.delete(selector); } });
     return elements.get(selector);
   }
   const document = {
@@ -43,7 +46,7 @@ function controller(initial = { plan: plan() }, { confirm = true, fetch: fetchPo
     querySelector: element,
   };
   const context = vm.createContext({
-    ...model, document, message: value => value,
+    ...model, ...assessmentModel, document, message: value => value,
     window: { confirm: message => { confirmations.push(message); return confirm; } },
     AbortSignal: { timeout: () => undefined },
     fetch: async (url, options) => {
@@ -67,10 +70,12 @@ function controller(initial = { plan: plan() }, { confirm = true, fetch: fetchPo
     get renders() { return renders; },
     setOpen(value) { open = value; },
     click(dataset, disabled = false) {
-      const target = { dataset, disabled, closest: selector => Object.entries({ learningPage: 'data-learning-page', learningChoice: 'data-learning-choice', learningStep: 'data-learning-step' })
+      const target = { dataset, disabled, closest: selector => Object.entries({ learningPage: 'data-learning-page', learningChoice: 'data-learning-choice', learningOrder: 'data-learning-order', learningStep: 'data-learning-step' })
         .some(([key, attribute]) => key in dataset && selector.includes(`[${attribute}]`)) ? target : null };
       emit('click', target);
     },
+    match(left, value) { emit('change', { dataset: { learningMatch: String(left) }, value }); },
+    gap(value) { emit('input', { dataset: { learningGap: '' }, value }); },
     input(answer) { emit('input', { form: { id: 'learning-step-form' }, name: 'answer', value: answer }); },
     submit(answer) { emit('submit', { id: 'learning-step-form', elements: { answer: { value: answer } } }); },
     submitPlan(goal, minutes) { emit('submit', { id: 'learning-plan-form', elements: { goal: { value: goal }, minutes: { value: String(minutes) } } }); },
@@ -178,6 +183,50 @@ test('reload restores local checkpoint feedback, draft, and the first unfinished
   assert.equal(fourth.saved.study[1].page, 1);
   assert.equal(fourth.saved.reviews[0].answer, 'Completed loop');
   assert.equal(fourth.requests.length, 0);
+});
+
+test('live template controls persist attempts and require a checked correct result before recap and practice', () => {
+  const exerciseCases = [
+    { exercise: { type: 'choice', options: ['A', 'B', 'C'], answer: 2 },
+      tryWrong: run => run.click({ learningChoice: '0' }), solve: run => run.click({ learningChoice: '2' }), response: 2 },
+    { exercise: { type: 'multi-choice', options: ['A', 'B', 'C'], answers: [0, 2] },
+      tryWrong: run => run.click({ learningChoice: '0' }), solve: run => run.click({ learningChoice: '2' }), response: [0, 2] },
+    { exercise: { type: 'order', items: ['Step B', 'Step C', 'Step A'], answer: [2, 0, 1] },
+      tryWrong: run => run.click({ learningOrder: '0', direction: '-1' }),
+      solve: run => {
+        run.click({ learningOrder: '2', direction: '-1' });
+        run.click({ learningOrder: '1', direction: '-1' });
+      }, response: [2, 0, 1] },
+    { exercise: { type: 'match', left: ['First', 'Second', 'Third'], right: ['B', 'C', 'A'], answer: [2, 0, 1] },
+      tryWrong: run => { run.match(0, '0'); run.match(1, '1'); run.match(2, '2'); },
+      solve: run => { run.match(0, '2'); run.match(1, '0'); run.match(2, '1'); }, response: [2, 0, 1] },
+    { exercise: { type: 'gap-fill', before: 'for n ', after: ' names:', accepted: ['in'] },
+      tryWrong: run => run.gap('by'), solve: run => run.gap('in'), response: 'in' },
+  ];
+  for (const { exercise, tryWrong, solve, response } of exerciseCases) {
+    const assessment = { ...exercise, question: 'Apply the rule from the example.', explanation: 'The example uses this rule.' };
+    const first = controller({ plan: plan({ assessment }) });
+    first.click({ learningPage: 'next' });
+    first.click({ learningPage: 'next' });
+    tryWrong(first);
+    first.click({ learningPage: 'check' });
+    first.click({ learningPage: 'next' });
+    assert.equal(first.saved.study[0].page, 2, exercise.type);
+    assert.equal(first.saved.study[0].checked, true, exercise.type);
+    const resumed = controller(first.persisted);
+    assert.deepEqual(clone(resumed.saved.study[0]), first.persisted.study[0], exercise.type);
+    solve(resumed);
+    assert.deepEqual(resumed.persisted.study[0].response, response, exercise.type);
+    resumed.click({ learningPage: 'next' });
+    assert.equal(resumed.saved.study[0].page, 2);
+    resumed.click({ learningPage: 'check' });
+    resumed.click({ learningPage: 'next' });
+    assert.equal(resumed.saved.study[0].page, 3);
+    resumed.click({ learningPage: 'next' });
+    resumed.input('My own result from practice');
+    assert.equal(controller(resumed.persisted).saved.answers[0], 'My own result from practice');
+    assert.equal(resumed.requests.length, 0, 'interactive checks use no network');
+  }
 });
 
 test('legacy plans resume answers and feedback without acquiring a checkpoint', async () => {

@@ -1,4 +1,5 @@
 import { lessonPages, normalizeTaskReview, planInput, restorePlan, taskReviewInput } from './learning-plan.js';
+import { isAssessmentCorrect, isAssessmentReady, normalizeAssessmentResponse } from './lesson-assessment.js';
 import { message } from '../ui/messages.js';
 
 export function createPlanController({ state, save, render, isOpen, canLearn = () => true, beforeGenerate, onGenerated, onUnauthorized = () => {}, accountId = () => null }) {
@@ -40,7 +41,22 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
   }
 
   function passedCheckpoint({ step, study, pages }) {
-    return !pages.includes('check') || (study.checked && study.choice === step.teaching.checkpoint.correctIndex);
+    if (!pages.includes('check')) return true;
+    const { assessment, checkpoint } = step.teaching;
+    return study.checked && (assessment
+      ? isAssessmentCorrect(assessment, study.response)
+      : study.choice === checkpoint.correctIndex);
+  }
+
+  function editableAssessment(lesson, target) {
+    if (busy || !isOpen() || target.disabled || lesson?.page !== 'check' || passedCheckpoint(lesson)) return null;
+    return lesson.step.teaching.assessment;
+  }
+
+  function updateAssessment(lesson, assessment, response) {
+    lesson.study.response = normalizeAssessmentResponse(assessment, response);
+    lesson.study.checked = false;
+    save();
   }
 
   function atPractice(lesson) {
@@ -159,10 +175,35 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
 
   document.addEventListener('input', event => {
     const lesson = currentLesson();
+    if (event.target.dataset?.learningGap !== undefined) {
+      const assessment = editableAssessment(lesson, event.target);
+      if (assessment?.type !== 'gap-fill') return;
+      updateAssessment(lesson, assessment, event.target.value);
+      // Keep the native field and its caret in place while the learner types.
+      document.getElementById('learning-check-feedback')?.remove();
+      const check = document.querySelector('[data-learning-page="check"]');
+      if (check) check.disabled = !isAssessmentReady(assessment, lesson.study.response);
+      return;
+    }
     if (busy || !isOpen() || event.target.form?.id !== 'learning-step-form' || event.target.name !== 'answer'
       || !atPractice(lesson) || lesson.saved.reviews[lesson.index]) return;
     lesson.saved.answers[lesson.index] = event.target.value.slice(0, 1500);
     save();
+  });
+
+  document.addEventListener('change', event => {
+    const left = event.target.dataset?.learningMatch;
+    if (left === undefined || !/^[0-9]$/.test(left)) return;
+    const lesson = currentLesson();
+    const assessment = editableAssessment(lesson, event.target);
+    if (assessment?.type !== 'match' || Number(left) >= assessment.left.length) return;
+    const value = event.target.value;
+    if (value !== '' && (!/^[0-9]$/.test(value) || Number(value) >= assessment.right.length)) return;
+    const response = [...lesson.study.response];
+    response[Number(left)] = value === '' ? null : Number(value);
+    updateAssessment(lesson, assessment, response);
+    refresh();
+    document.querySelector(`select[data-learning-match="${left}"]`)?.focus();
   });
 
   document.addEventListener('submit', event => {
@@ -177,22 +218,49 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
   });
 
   document.addEventListener('click', event => {
-    const button = event.target.closest('button[data-learning-page], button[data-learning-choice], button[data-learning-step]');
+    const button = event.target.closest('button[data-learning-page], button[data-learning-choice], button[data-learning-order], button[data-learning-step]');
     const lesson = currentLesson();
     if (!button || button.disabled || busy || !isOpen() || !lesson) return;
     const { saved, index, study, pages, page } = lesson;
-    const { learningPage, learningChoice, learningStep } = button.dataset;
+    const { learningPage, learningChoice, learningOrder, direction, learningStep } = button.dataset;
+    if (learningOrder !== undefined) {
+      const assessment = editableAssessment(lesson, button);
+      if (assessment?.type !== 'order' || !/^[0-9]$/.test(learningOrder) || !['-1', '1'].includes(direction)) return;
+      const from = Number(learningOrder), to = from + Number(direction);
+      if (from >= assessment.items.length || to < 0 || to >= assessment.items.length) return;
+      const response = [...study.response];
+      [response[from], response[to]] = [response[to], response[from]];
+      updateAssessment(lesson, assessment, response);
+      refresh();
+      const moved = document.querySelector(`button[data-learning-order="${to}"][data-direction="${direction}"]:not(:disabled)`)
+        || document.querySelector(`button[data-learning-order="${to}"]:not(:disabled)`);
+      moved?.focus();
+      return;
+    }
     if (learningChoice !== undefined) {
-      if (page !== 'check' || !/^[0-2]$/.test(learningChoice)) return;
-      study.choice = Number(learningChoice);
-      study.checked = false;
-      save();
+      if (page !== 'check' || !/^[0-9]$/.test(learningChoice)) return;
+      const selection = Number(learningChoice);
+      const { assessment } = lesson.step.teaching;
+      if (assessment) {
+        if (!editableAssessment(lesson, button) || !['choice', 'multi-choice'].includes(assessment.type)
+          || selection >= assessment.options.length) return;
+        const response = assessment.type === 'choice' ? selection
+          : study.response.includes(selection) ? study.response.filter(value => value !== selection) : [...study.response, selection];
+        updateAssessment(lesson, assessment, response);
+      } else {
+        if (selection > 2) return;
+        study.choice = selection;
+        study.checked = false;
+        save();
+      }
       refresh();
       if (isOpen()) document.querySelector(`button[data-learning-choice="${learningChoice}"]`)?.focus();
       return;
     }
     if (learningPage) {
-      if (learningPage === 'check' && page === 'check' && study.choice !== null) {
+      const assessment = lesson.step.teaching?.assessment;
+      if (learningPage === 'check' && page === 'check'
+        && (assessment ? isAssessmentReady(assessment, study.response) : study.choice !== null)) {
         study.checked = true;
       } else if (learningPage === 'back' && study.page > 0) {
         study.page -= 1;
@@ -204,7 +272,9 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
       }
       save();
       refresh();
-      focusPage();
+      if (assessment && learningPage === 'check') {
+        document.getElementById('learning-check-feedback')?.focus();
+      } else focusPage();
       return;
     }
     if (!atPractice(lesson)) return;

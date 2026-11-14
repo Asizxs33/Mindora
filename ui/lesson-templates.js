@@ -1,4 +1,5 @@
 import { escapeHtml as esc } from '../core/engine.js';
+import { LESSON_ASSESSMENT_LIMITS } from '../core/lesson-assessment.js';
 import { character } from './characters.js';
 import { icon } from './icons.js';
 import { t } from './language.js';
@@ -43,8 +44,15 @@ const text = value => esc(String(value ?? ''));
 const heading = value => value ? `<h3>${text(value)}</h3>` : '';
 const disabled = value => value ? ' disabled' : '';
 
-// Validate AI-authored blocks before handing them to the standalone presenter.
-// This is a UI contract; the production API still validates its existing v2 plan.
+function sourceFigures(images) {
+  return images.map(image => {
+    const src = safeImage(image?.url);
+    const alt = String(image?.alt ?? '').replace(/^Image\s+\d+:\s*/i, '');
+    return src ? `<figure class="lesson-source-figure"><img src="${text(src)}" alt="${text(alt)}" loading="lazy" referrerpolicy="no-referrer"></figure>` : '';
+  }).join('');
+}
+
+// The studio validates standalone examples. The production API validates entire lessons.
 export function normalizeLessonTemplate(raw) {
   if (!raw || !Object.hasOwn(LESSON_TEMPLATES, raw.type)) return null;
   const clean = (value, max = 1200) => typeof value === 'string' && value.trim() && value.length <= max ? value.trim() : null;
@@ -91,33 +99,56 @@ export function normalizeLessonTemplate(raw) {
   return block;
 }
 
-export function renderLessonTemplate(block, state = {}, { external = false, mentor = 'mino', busy = false } = {}) {
+export function renderLessonTemplate(block, state = {}, { external = false, mentor = 'mino', busy = false, sceneMood } = {}) {
   const type = Object.hasOwn(LESSON_TEMPLATES, block?.type) ? block.type : 'theory';
   const locked = busy || state.correct === true;
   const mood = state.checked ? state.correct ? 'celebrate' : 'encourage' : ['choice', 'multi-choice', 'order', 'match', 'gap-fill'].includes(type) ? 'thinking' : 'explaining';
   const speaker = block.mentor || mentor;
   const prompt = block.prompt || block.title;
-  const scene = mentorScene(speaker, mood, `${heading(prompt)}${block.intro ? `<p>${text(block.intro)}</p>` : ''}`);
+  const scene = prompt || block.intro
+    ? mentorScene(speaker, sceneMood ?? mood, `${heading(prompt)}${block.intro ? `<p>${text(block.intro)}</p>` : ''}`)
+    : '';
   let content = '';
-  if (type === 'theory') content = `<div class="ai-lesson-instruction learning-answer">${text(block.body)}</div>${list(block.images).map(image => safeImage(image.url) ? `<figure class="lesson-source-figure"><img src="${text(safeImage(image.url))}" alt="${text(String(image.alt ?? '').replace(/^Image\s+\d+:\s*/i, ''))}" loading="lazy" referrerpolicy="no-referrer"></figure>` : '').join('')}`;
+  if (type === 'theory') content = `<div class="ai-lesson-instruction learning-answer">${text(block.body)}</div>${sourceFigures(list(block.images))}`;
   if (type === 'illustration') {
-    const src = safeImage(block.image?.url);
-    content = `${src ? `<figure class="lesson-source-figure"><img src="${text(src)}" alt="${text(block.image.alt)}" loading="lazy" referrerpolicy="no-referrer"></figure>` : ''}<div class="ai-lesson-instruction learning-answer">${text(block.body)}</div>`;
+    content = `${sourceFigures(block.image ? [block.image] : list(block.images))}${block.body ? `<div class="ai-lesson-instruction learning-answer">${text(block.body)}</div>` : ''}`;
   }
   if (type === 'comparison') content = `<div class="ai-lesson-example"><section class="ai-lesson-example-input">${heading(block.beforeLabel || t('Starting point', 'Исходные данные', 'Бастапқы деректер'))}<div class="learning-answer">${text(block.before)}</div></section><section class="ai-lesson-example-output">${heading(block.afterLabel || t('Worked result', 'Готовый результат', 'Дайын нәтиже'))}<div class="learning-answer">${text(block.after)}</div></section></div>${block.explanation ? `<p class="template-explanation">${text(block.explanation)}</p>` : ''}`;
   if (type === 'choice' || type === 'multi-choice') {
     const selected = type === 'choice' ? [state.choice] : list(state.selected);
-    content = `<div class="ai-lesson-choices" role="group" aria-label="${text(prompt)}">${list(block.options).map((option, i) => `<button type="button" class="ai-lesson-choice${selected.includes(i) ? ' is-selected' : ''}" ${external ? 'data-learning-choice' : 'data-template-choice'}="${i}" aria-pressed="${selected.includes(i)}"${disabled(locked)}><span class="ai-lesson-choice-mark" aria-hidden="true">${selected.includes(i) ? icon('check', 18) : String.fromCharCode(65 + i)}</span><span>${text(option)}</span></button>`).join('')}</div>`;
+    content = `<div class="ai-lesson-choices" role="group" aria-label="${text(prompt)}">${list(block.options).map((option, i) => {
+      const active = selected.includes(i);
+      const resultClass = active && state.checked && external
+        ? state.correct ? ' is-correct' : type === 'choice' ? ' is-incorrect' : ''
+        : '';
+      return `<button type="button" class="ai-lesson-choice${active ? ' is-selected' : ''}${resultClass}" ${external ? 'data-learning-choice' : 'data-template-choice'}="${i}" aria-pressed="${active}"${disabled(locked)}><span class="ai-lesson-choice-mark" aria-hidden="true">${active ? icon(external && !state.correct ? 'target' : 'check', 18) : String.fromCharCode(65 + i)}</span><span>${text(option)}</span></button>`;
+    }).join('')}</div>`;
   }
   if (type === 'order') {
     const order = list(state.order).length === list(block.items).length ? state.order : list(block.items).map((_, i) => i);
-    content = `<ol class="template-order">${order.map((id, index) => `<li><span class="template-number">${index + 1}</span><span>${text(block.items[id])}</span><span class="template-order-actions"><button class="template-move" type="button" data-template-move="${index}" data-direction="-1" aria-label="${text(t('Move up', 'Переместить вверх', 'Жоғары жылжыту'))}: ${text(block.items[id])}"${disabled(locked || index === 0)}>↑</button><button class="template-move" type="button" data-template-move="${index}" data-direction="1" aria-label="${text(t('Move down', 'Переместить вниз', 'Төмен жылжыту'))}: ${text(block.items[id])}"${disabled(locked || index === order.length - 1)}>↓</button></span></li>`).join('')}</ol>`;
+    const moveHook = external ? 'data-learning-order' : 'data-template-move';
+    content = `<ol class="template-order">${order.map((id, index) => `<li><span class="template-number" aria-hidden="true">${index + 1}</span><span>${text(block.items[id])}</span><span class="template-order-actions"><button class="template-move" type="button" ${moveHook}="${index}" data-direction="-1" aria-label="${text(t('Move up', 'Переместить вверх', 'Жоғары жылжыту'))}: ${text(block.items[id])}"${disabled(locked || index === 0)}>↑</button><button class="template-move" type="button" ${moveHook}="${index}" data-direction="1" aria-label="${text(t('Move down', 'Переместить вниз', 'Төмен жылжыту'))}: ${text(block.items[id])}"${disabled(locked || index === order.length - 1)}>↓</button></span></li>`).join('')}</ol>`;
   }
   if (type === 'match') {
     const pairs = list(block.pairs);
-    content = `<div class="template-matching">${pairs.map((pair, index) => `<label class="template-match-row"><span>${text(pair.left)}</span><select data-template-match="${index}"${disabled(locked)}><option value="">${t('Choose a match', 'Выбери пару', 'Жұбын таңда')}</option>${pairs.map((_, i) => pairs.length - 1 - i).map(i => `<option value="${i}"${String(state.matches?.[index]) === String(i) ? ' selected' : ''}>${text(pairs[i].right)}</option>`).join('')}</select></label>`).join('')}</div>`;
+    const left = external ? list(block.left) : pairs.map(pair => pair.left);
+    const right = external ? list(block.right) : pairs.map(pair => pair.right);
+    const options = right.map((label, index) => ({ label, index }));
+    if (!external) options.reverse();
+    const matchHook = external ? 'data-learning-match' : 'data-template-match';
+    content = `<div class="template-matching">${left.map((label, index) => `<label class="template-match-row"><span>${text(label)}</span><select ${matchHook}="${index}"${disabled(locked)}><option value="">${t('Choose a match', 'Выбери пару', 'Жұбын таңда')}</option>${options.map(option => `<option value="${option.index}"${state.matches?.[index] === option.index ? ' selected' : ''}>${text(option.label)}</option>`).join('')}</select></label>`).join('')}</div>`;
   }
-  if (type === 'gap-fill') content = `<label class="template-gap"><span>${text(block.before)}</span><input data-template-input aria-label="${t('Missing word or phrase', 'Пропущенное слово или фраза', 'Түсіп қалған сөз немесе тіркес')}" value="${text(state.value)}" maxlength="200" autocomplete="off"${disabled(locked)}><span>${text(block.after)}</span></label>`;
+  if (type === 'gap-fill') {
+    const inputHook = external ? 'data-learning-gap' : 'data-template-input';
+    const contexts = ['before', 'after'].filter(name => block[name]);
+    const description = external && contexts.length
+      ? ` aria-describedby="${contexts.map(name => 'learning-gap-' + name).join(' ')}"` : '';
+    const gapContext = name => block[name]
+      ? `<span${external ? ` id="learning-gap-${name}"` : ''}>${text(block[name])}</span>` : '';
+    content = `<label class="template-gap">${gapContext('before')}
+      <input ${inputHook} aria-label="${t('Missing word or phrase', 'Пропущенное слово или фраза', 'Түсіп қалған сөз немесе тіркес')}"${description} value="${text(state.value)}" maxlength="${external ? LESSON_ASSESSMENT_LIMITS.gapAnswer : 200}" autocomplete="off" autocapitalize="off" spellcheck="false"${disabled(locked)}>
+      ${gapContext('after')}</label>`;
+  }
   if (type === 'practice') content = `<p class="learning-answer">${text(block.body)}</p><div class="ai-lesson-criterion"><strong>${t('Before you finish', 'Перед завершением', 'Аяқтау алдында')}</strong><p>${text(block.criterion)}</p></div>${external ? '' : `<label class="field"><span>${t('Your result', 'Твой результат', 'Нәтижең')}</span><textarea data-template-input rows="5" maxlength="1500"${disabled(busy)}>${text(state.value)}</textarea></label>`}`;
   if (type === 'recap') content = `<ul class="template-recap">${list(block.points).map(point => `<li>${icon('check', 20)}<span>${text(point)}</span></li>`).join('')}</ul>${block.body ? `<p>${text(block.body)}</p>` : ''}`;
   const interactive = ['choice', 'multi-choice', 'order', 'match', 'gap-fill', 'practice'].includes(type);

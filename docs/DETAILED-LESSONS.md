@@ -12,23 +12,25 @@ These are observed interaction patterns, not copied course content or a claim th
 
 ## Mindora behavior
 
-The goal and 5/10/20-minute selection still produce one practical lesson. New lessons use `formatVersion: 2`. Each guided task has four screens:
+The goal and 5/10/20-minute selection produce one practical lesson. New lessons use `formatVersion: 3`. A guided task uses these templates in order:
 
-1. Explanation: purpose, instructions, and relevant verified-source images.
-2. Worked example: input or initial situation, result, and explanation.
-3. Local knowledge check: three options and corrective feedback. A correct answer unlocks practice.
-4. Practice: the learner's own result and optional recovery when AI review is unavailable.
+1. Theory: purpose and instructions.
+2. Illustration, when the source provides images that apply to the lesson.
+3. Worked comparison: input or initial situation, result, and explanation.
+4. Local knowledge check: DeepSeek picks a single choice, multiple choice, ordering, matching, or fill-in exercise as appropriate to the skill. The learner sees feedback and can retry.
+5. Recap: the rule to take into practice.
+6. Practice: the learner's own result and optional recovery when AI review is unavailable.
 
 The final task remains independent practice. Only generation and written-answer reviews call DeepSeek. Time includes reading, checking and practice. It is an estimate rather than a countdown.
 
 ## Integration contract
 
-- `core/learning-plan.js` validates `teaching` and restores per-step `study: { page, choice, checked }` entries. `lessonPages(step, isFinal)` declares the screen sequence.
+- `core/learning-plan.js` validates `teaching`; `core/lesson-assessment.js` validates and checks the five exercise types. `lessonPages(step, isFinal)` declares the screen sequence. The course store persists the position, attempt and check status per step, in the same record as practice drafts.
 - `core/plan-controller.js` owns navigation, gating, attempts and persistence. `ui/learning-plan.js` renders supplied state, with styles in `ui/ai-lesson.css`.
-- New actions: `data-learning-page="back|next|check"`, `data-learning-choice="0|1|2"`. Existing goal, answer and review hooks remain supported.
-- Old lessons without `formatVersion` remain readable. They use an explanation screen followed by practice; no invented example or quiz is added to old material.
+- Page actions remain `data-learning-page="back|next|check"`. Single and multiple choice use `data-learning-choice`; ordering uses `data-learning-order` and `data-direction`, matching uses `data-learning-match` and fill-in uses `data-learning-gap`. Preserve the hooks and disabled states when changing layout.
+- Version 2 lessons keep the original explanation, example, single-choice check and practice with saved progress. Unversioned lessons keep explanation and practice.
 - Images resolve only from retrieved source IDs. No raw source-language captions are displayed. The model may not invent screenshots.
-- Local checks compare a selection against an AI-authored answer key. They provide practice feedback, not independent expert certification. Written feedback also does not certify mastery.
+- Local checks compare the learner's input against an AI-authored answer key. They provide practice feedback. Neither local checks nor written feedback provide independent certification.
 
 The main design files, built-in poster/spreadsheet courses, account schema and billing are outside this change.
 
