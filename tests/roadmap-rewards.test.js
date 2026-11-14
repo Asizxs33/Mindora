@@ -55,6 +55,22 @@ test('roadmap unlocks one next stage at a time and restores linked courses throu
   assert.equal(validateBuiltinWorkspace({ learningRoadmap: { ...fresh, progress: [fresh.progress[0], started.progress[0], ...fresh.progress.slice(2)] } }), null);
 });
 
+test('a narrowed path retains its original subject through account workspace save and restore', () => {
+  const context = { ...input, goal: 'Summarize a short list of expenses', originalGoal: ' Python ' };
+  const map = normalizeRoadmap({ ...provider, originalGoal: 'Wrong model topic' }, context);
+  assert.equal(map.goal, context.goal);
+  assert.equal(map.originalGoal, 'Python', 'the original subject comes from the validated request, not model output');
+  const saved = restoreRoadmap(JSON.parse(JSON.stringify(map)));
+  assert.equal(saved.originalGoal, 'Python');
+  assert.deepEqual(validateBuiltinWorkspace({ learningRoadmap: saved }).learningRoadmap, saved);
+  assert.equal(normalizeRoadmap({ ...provider, originalGoal: 'Injected topic' }, input).originalGoal, undefined);
+  assert.equal(restoreRoadmap(normalizeRoadmap(provider, input)).originalGoal, undefined, 'old paths need no migration');
+  for (const originalGoal of ['', 'x'.repeat(181), null, 'Python\u0000']) {
+    assert.equal(normalizeRoadmap(provider, { ...context, originalGoal }), null);
+    assert.equal(restoreRoadmap({ ...map, originalGoal }), null);
+  }
+});
+
 test('game actions spend and refill hearts, deduplicate quiz and lesson rewards, and allow one daily quest claim', () => {
   const now = date(14);
   const loss = recordCheckReward(undefined, id(1), 0, false, now);
