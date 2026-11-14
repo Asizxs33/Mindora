@@ -14,7 +14,7 @@ dialog.account-dialog { --account-orange: #c34b00; --account-orange-dark: #a93f0
 .account-brand>span>span { color: var(--account-orange); }
 .account-close { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: #faf6f2; color: #776b63; }
 .account-close:hover { color: #35251d; background: #f6eade; }
-.account-panel { display: flex; flex-direction: column; flex: 1; width: min(100%,540px); margin: 0 auto; padding: 18px 24px 0; }
+.account-panel { display: flex; flex-direction: column; flex: 1; width: min(100%,580px); margin: 0 auto; padding: 18px 24px 0; }
 .account-form { display: flex; flex: 1; flex-direction: column; margin: 0; min-width: 0; }
 .account-form-body { flex: 1; min-width: 0; }
 .account-steps { margin: 0 0 26px; }
@@ -24,13 +24,16 @@ dialog.account-dialog { --account-orange: #c34b00; --account-orange-dark: #a93f0
 .account-step-bars i.on { background: var(--account-orange); }
 .account-back { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -12px 0 10px -5px; padding: 0 5px; border: 0; background: none; color: #6b6260; font-size: 15px; }
 .account-back:hover { color: var(--account-orange); }
-.account-intro { display: flex; gap: 16px; align-items: center; margin-bottom: 28px; }
-.account-intro-copy { flex: 1; min-width: 0; }
+.account-intro { margin-bottom: 26px; }
+.account-guide-scene { display: flex; gap: 18px; align-items: center; margin-top: 16px; }
+.account-intro-copy { position: relative; flex: 1; min-width: 0; padding: 18px 20px; border: 2px solid #efd5bd; border-radius: 22px 22px 22px 7px; background: #fffaf5; box-shadow: 0 4px 0 #f9eadb; }
+.account-intro-copy:before { content: ''; position: absolute; top: 44%; left: -9px; width: 14px; height: 14px; border-left: 2px solid #efd5bd; border-bottom: 2px solid #efd5bd; transform: rotate(45deg); background: #fffaf5; }
+.account-speaker { display: block; font-size: 12px; line-height: 1.5; color: var(--account-orange); font-weight: 800; }
 .account-intro h1,.account-loading h1 { font-size: 34px; letter-spacing: -.9px; line-height: 1.16; font-weight: 800; text-wrap: balance; margin: 0; }
 .account-intro h1:focus { outline: none; }
-.account-dialog .account-intro p { font-size: 17px; line-height: 1.5; color: #696568; margin: 13px 0 0; }
-.account-guide { display: grid; place-items: center; flex: 0 0 138px; width: 138px; height: 138px; border-radius: 50%; background: var(--account-peach); }
-.account-dialog .account-mino { --character-size: 142px; width: 142px; height: 142px; flex: 0 0 142px; margin: 0; }
+.account-dialog .account-intro p { font-size: 17px; line-height: 1.5; color: #4a3b31; margin: 7px 0 0; }
+.account-guide { display: grid; place-items: center; flex: 0 0 200px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(ellipse at center,var(--account-peach) 0 57%,transparent 58%); }
+.account-dialog .account-mino { --character-size: 210px; width: 210px; height: 210px; flex: 0 0 210px; margin: 0; }
 .account-inputs,.account-interest-field { padding: 0; margin: 0; border: 0; min-width: 0; }
 .account-field { display: flex; flex-direction: column; gap: 9px; margin-bottom: 23px; font-size: 16px; line-height: 1.4; font-weight: 700; }
 .account-required { color: #b73938; font-weight: 700; }
@@ -89,11 +92,13 @@ dialog.account-dialog { --account-orange: #c34b00; --account-orange-dark: #a93f0
   .account-brand img { width: 32px; height: 32px; }
   .account-panel { padding: 16px 24px 0; }
   .account-steps { margin-bottom: 26px; }
-  .account-intro { margin-bottom: 25px; gap: 10px; }
+  .account-intro { margin-bottom: 25px; }
+  .account-guide-scene { gap: 12px; margin-top: 14px; }
+  .account-intro-copy { padding: 15px 16px; }
   .account-intro h1,.account-loading h1 { font-size: 30px; letter-spacing: -.7px; }
-  .account-dialog .account-intro p { font-size: 16px; margin-top: 12px; }
-  .account-guide { flex-basis: 116px; width: 116px; height: 116px; }
-  .account-dialog .account-mino { --character-size: 126px; width: 126px; height: 126px; flex-basis: 126px; }
+  .account-dialog .account-intro p { font-size: 16px; margin-top: 6px; }
+  .account-guide { flex-basis: 180px; width: 180px; height: 180px; }
+  .account-dialog .account-mino { --character-size: 190px; width: 190px; height: 190px; flex-basis: 190px; }
   .account-field { font-size: 15px; margin-bottom: 24px; }
   .account-field input,.account-field select,.account-custom input { padding-left: 15px; padding-right: 15px; }
   .account-password input { padding-right: 55px; }
@@ -105,12 +110,18 @@ dialog.account-dialog { --account-orange: #c34b00; --account-orange-dark: #a93f0
   .account-header { padding-left: 18px; padding-right: 18px; }
   .account-panel { padding-left: 18px; padding-right: 18px; }
   .account-intro h1 { font-size: 27px; }
-  .account-guide { flex-basis: 96px; width: 96px; height: 96px; }
-  .account-dialog .account-mino { --character-size: 106px; width: 106px; height: 106px; flex-basis: 106px; }
   .account-interest { padding: 12px 10px; font-size: 14px; }
   .account-custom { gap: 7px; }
   .account-custom button { min-width: 62px; }
   .account-custom input { font-size: 16px; }
+}
+@media(max-width:360px) {
+  .account-guide-scene { gap: 9px; }
+  .account-intro-copy { padding: 13px 12px; }
+  .account-dialog .account-intro p { font-size: 15px; }
+  .account-guide { flex-basis: 150px; width: 150px; height: 170px; }
+  .account-dialog .account-mino { --character-size: 170px; width: 170px; height: 170px; flex-basis: 170px; }
+  .account-steps { margin-bottom: 22px; }
 }
 @media(max-height:560px) { .account-footer { position: static; } }
 @media(prefers-reduced-motion:reduce) { .account-spinner { animation: none; } .account-dialog * { transition: none!important; } }

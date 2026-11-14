@@ -19,7 +19,6 @@ const descriptions = {
   get budget() { return t('Track expenses with a simple formula.', 'Считай расходы простой формулой.', 'Шығындарды қарапайым формуламен есепте.'); },
 };
 const guide = id => id === 'design' ? 'designer' : 'sam';
-const guideLabel = id => id === 'design' ? t("Your design guide", "Твой наставник по дизайну", "Дизайн тәлімгерің") : t("Your numbers guide", "Твой наставник по таблицам", "Кестелер тәлімгерің");
 const startedCourses = state => Object.keys(COURSES).filter(id => state.goals[id] || state.progress[id] || state.works[id]);
 
 export function badge(icon, name, color, size = 22) {
@@ -37,7 +36,7 @@ export function brandNav(icon, view, place) {
 
 function goalBanner(minutes, compact = false) {
   return `<section class="learn-home ${compact ? 'new-goal-section' : ''}" aria-labelledby="welcome-title">
-    ${compact ? '' : `<div class="hero-character">${character('mino', 'welcome', 'home-character')}</div><div class="speech-bubble" aria-live="polite">${t("Hi! I’m Mino. Let’s learn something.", "Привет! Я Мино.", "Сәлем! Мен Мино.")}</div>`}
+    ${compact ? '' : `<div class="home-introduction"><div class="hero-character">${character('mino', 'welcome', 'home-character')}</div><div class="speech-bubble"><span class="home-guide-label">${t('Mino · your learning buddy', 'Мино · учимся вместе', 'Мино · бірге үйренеміз')}</span><p>${t("Hi! Tell me your goal. We’ll take it one small step at a time.", "Привет! Расскажи о своей цели. Будем разбираться вместе, шаг за шагом.", "Сәлем! Мақсатыңды айт. Бірге, шағын қадамдармен үйренеміз.")}</p></div></div>`}
     <div class="goal-copy">
       <${compact ? 'h2' : 'h1'} id="welcome-title">${t('What do you want to learn?', 'Чему ты хочешь научиться?', 'Не үйренгің келеді?')}</${compact ? 'h2' : 'h1'}>
       <p>${t('Choose a goal and get a lesson that fits your time.', 'Выбери цель и укажи, сколько времени у тебя есть.', 'Мақсатыңды жазып, сабаққа қанша уақытың барын таңда.')}</p>
@@ -62,7 +61,7 @@ function resumeCard(state) {
   return `<section class="return-home" aria-labelledby="return-title">
     <div class="return-heading"><h1 id="return-title">${done ? t("You did it!", "Отличная работа!", "Жарайсың!") : t("Welcome back.", "С возвращением.", "Қайта келгеніңе қуаныштымыз.")}</h1></div>
     <section class="resume-card ${id}">
-      <div class="resume-mentor">${character(guide(id), done ? 'celebrate' : 'explaining', 'resume-character')}<span>${guideLabel(id)}</span></div>
+      <div class="resume-mentor">${character(guide(id), done ? 'celebrate' : 'explaining', 'resume-character')}<span><strong>${id === 'design' ? 'Mia' : 'Sam'}</strong>${done ? t('Look what you made! Let’s celebrate your progress.', 'Посмотри, что получилось! Отличная работа.', 'Не жасағаныңды қарашы! Жарайсың.') : t('I’ll show you an example. Then we’ll try it together.', 'Я покажу пример. А потом попробуем вместе.', 'Алдымен мысал көрсетемін. Сосын бірге жасап көреміз.')}</span></div>
       <div class="resume-body"><h2>${courseNames[id]}</h2>
         <div class="resume-progress"><span>${done ? t("Course complete", "Курс завершён", "Курс аяқталды") : t(`${completed * 25}% complete`, `Пройдено ${completed * 25}%`, `${completed * 25}% аяқталды`)}</span></div>
         <div class="progress-bar" role="progressbar" aria-label="${t("Course progress", "Прогресс курса", "Курс барысы")}" aria-valuemin="0" aria-valuemax="4" aria-valuenow="${completed}"><i style="width:${completed * 25}%"></i></div>
@@ -86,7 +85,7 @@ export function dashboard(state) {
     return `<section class="return-home" aria-labelledby="return-title">
       <div class="return-heading"><h1 id="return-title">${done ? t("You did it!", "Отличная работа!", "Жарайсың!") : t("Welcome back.", "С возвращением.", "Қайта келгеніңе қуаныштымыз.")}</h1></div>
       <section class="resume-card personalized">
-        <div class="resume-mentor">${character('mino', done ? 'celebrate' : 'explaining', 'resume-character')}<span>${done ? t("Let’s see what you learned.", "Посмотрим, чему ты научился.", "Не үйренгеніңді көрейік.") : t("Ready for your next small step?", "Продолжим с того же места?", "Тоқтаған жерден жалғастырайық па?")}</span></div>
+        <div class="resume-mentor">${character('mino', done ? 'celebrate' : 'explaining', 'resume-character')}<span><strong>Mino</strong>${done ? t("Let’s see what you learned.", "Посмотрим, чему ты научился.", "Не үйренгеніңді көрейік.") : t("Ready for your next small step?", "Продолжим с того же места?", "Тоқтаған жерден жалғастырайық па?")}</span></div>
         <div class="resume-body"><h2>${escapeHtml(saved.plan.title)}</h2>
           <div class="resume-progress"><span>${t(`${completed} of ${total} tasks complete`, `Выполнено ${completed} из ${total} заданий`, `${total} тапсырманың ${completed} орындалды`)}</span></div>
           <div class="progress-bar" role="progressbar" aria-label="${t("Lesson progress", "Прогресс занятия", "Сабақ барысы")}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${completed}"><i style="width:${progress}%"></i></div>

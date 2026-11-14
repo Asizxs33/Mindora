@@ -30,8 +30,8 @@ function lessonMentor(plan) {
   return mentorForTopic(`${plan.goal ?? ''} ${plan.title ?? ''}`);
 }
 
-function mentorView(mentor, mood, content, extraClass = '') {
-  return mentorScene(mentor, mood, content, extraClass);
+function mentorView(mentor, mood, content, extraClass = '', options = {}) {
+  return mentorScene(mentor, mood, content, extraClass, options);
 }
 
 function reviewView(review, nested = false) {
@@ -89,14 +89,14 @@ function illustrationView(step) {
 }
 
 function exampleView(teaching, mentor) {
-  return renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output }, {}, { external: true, mentor });
+  return renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output, explanation: teaching.example.explanation }, {}, { external: true, mentor });
 }
 
 function checkpointView(teaching, study, busy, mentor) {
   const checkpoint = teaching.checkpoint;
   const correct = study.checked && study.choice === checkpoint.correctIndex;
   return `<div class="ai-lesson-check">
-    ${mentorView(mentor, study.checked ? correct ? 'celebrate' : 'encourage' : 'thinking', `<h3 id="learning-check-question">${esc(checkpoint.question)}</h3>`)}
+    ${mentorView(mentor, study.checked ? correct ? 'celebrate' : 'encourage' : 'thinking', `<h3 id="learning-check-question">${esc(checkpoint.question)}</h3>`, '', { hint: study.checked ? checkpoint.explanation : t('Compare each answer with the example you just saw.', 'Сравни каждый ответ с предыдущим примером.', 'Әр жауапты жаңа ғана көрген мысалмен салыстыр.'), focus: t('See the answers', 'К вариантам', 'Жауаптарға өту') })}
     <div class="ai-lesson-choices" role="group" aria-labelledby="learning-check-question">
       ${checkpoint.choices.map((choice, index) => {
         const selected = study.choice === index;
@@ -133,7 +133,7 @@ function practiceView(step, answer, review, busy, reviewError, last, mentor, use
   const prompt = t('Your turn.', 'Теперь твоя очередь.', 'Енді сенің кезегің.');
   const task = useTemplates
     ? renderLessonTemplate({ type: 'practice', prompt, body: step.task, criterion: step.criterion }, {}, { external: true, mentor, sceneMood: mood })
-    : `${mentorView(mentor, mood, `<h3 lang="${esc(currentLanguage())}">${prompt}</h3><p class="learning-answer">${esc(step.task)}</p>`, 'ai-lesson-mentor-practice')}
+    : `${mentorView(mentor, mood, `<h3 lang="${esc(currentLanguage())}">${prompt}</h3><p class="learning-answer">${esc(step.task)}</p>`, 'ai-lesson-mentor-practice', { hint: step.teaching?.takeaway || step.criterion, focus: t('What to check', 'Что проверить', 'Нені тексеру керек') })}
       ${step.teaching && !last ? `<div class="ai-lesson-note"><strong lang="${esc(currentLanguage())}">${t('Keep in mind', 'Запомни', 'Есте сақта')}</strong><p>${esc(step.teaching.takeaway)}</p></div>` : ''}
       <div class="ai-lesson-criterion"><strong lang="${esc(currentLanguage())}">${t('Before you submit', 'Перед проверкой', 'Тексеруге жіберер алдында')}</strong><p>${esc(step.criterion)}</p></div>`;
   return `${task}

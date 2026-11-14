@@ -1,0 +1,52 @@
+/* Large, full-body tutors and readable speech share one stage on every topic. */
+.mentor-scene { display:grid; grid-template-columns:210px minmax(0,1fr); gap:0 24px; align-items:center; margin:20px 0 28px; position:relative; }
+.mentor-figure { position:relative; display:grid; place-items:center; align-self:center; min-width:0; }
+.mentor-figure::before { content:''; position:absolute; width:95%; aspect-ratio:1; border-radius:50%; background:#fff0e0; top:20%; }
+.mentor-figure .mindora-character { --character-size:210px; --character-height:330px; --character-frame-width:100%; --character-frame-height:100%; z-index:1; }
+.mentor-figure .character-mino { --character-height:230px; }
+.mentor-ground { position:absolute; bottom:2px; width:62%; height:13px; background:#e9c6a7; border-radius:50%; opacity:.45; }
+.mentor-dialogue { position:relative; min-width:0; padding:22px; border:2px solid #edd4bd; border-radius:24px; background:#fffaf3; box-shadow:0 4px 0 #f7e9da; overflow-wrap:anywhere; }
+.mentor-dialogue::before { content:''; position:absolute; width:16px; height:16px; left:-10px; top:38%; border-left:2px solid #edd4bd; border-bottom:2px solid #edd4bd; background:#fffaf3; transform:rotate(45deg); }
+.mentor-speaker { display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; margin-bottom:14px; font-size:12px; line-height:1.4; color:#776356; }
+.mentor-speaker strong { color:#aa4508; font-weight:850; font-size:14px; }
+.mentor-speaker span { flex-basis:100%; }
+.mentor-dialogue [data-mentor-message]>:first-child { margin-top:0; }
+.mentor-dialogue [data-mentor-message]>:last-child { margin-bottom:0; }
+.mentor-dialogue h3 { margin:0 0 10px; font-size:22px; line-height:1.3; letter-spacing:-.3px; }
+.mentor-dialogue p { margin:8px 0; color:#51463e; font-size:17px; line-height:1.65; }
+.mentor-actions { grid-column:1/-1; display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin-top:16px; }
+.mentor-actions button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; max-width:100%; padding:9px 16px; border:1px solid #e8d3bf; border-radius:99px; color:#8f400f; background:#fff; font:inherit; font-size:14px; font-weight:700; cursor:pointer; touch-action:manipulation; }
+.mentor-actions button:hover { background:#fff3e6; border-color:#c47643; }
+.mentor-actions button:focus-visible { outline:3px solid #bc4b00; outline-offset:3px; }
+.mentor-actions [aria-expanded='true'] { background:#fff0dc; border-color:#c47643; }
+.mentor-hint { margin-top:16px; padding-top:14px; border-top:1px dashed #d8b692; }
+.mentor-hint>span { font-size:12px; font-weight:800; color:#a4470e; }
+.mentor-hint p { font-size:15px; }
+.mentor-focus-target { outline:3px solid #c96c2a; outline-offset:5px; scroll-margin-block:100px; }
+.mentor-scene[data-mentor-tone='celebrate'] .mentor-dialogue { background:#f3faef; border-color:#bbd7a8; box-shadow:0 4px 0 #e7f2df; }
+.mentor-scene[data-mentor-tone='celebrate'] .mentor-dialogue::before { background:#f3faef; border-color:#bbd7a8; }
+.mentor-scene[data-mentor-tone='celebrate'] .mentor-speaker strong { color:#386532; }
+.mentor-scene .character-reaction { display:none; }
+.mentor-is-speaking .mentor-dialogue { animation:mentor-speak .35s ease-out; }
+@keyframes mentor-speak { 0% { transform:translateY(3px) scale(.985); } 100% { transform:none; } }
+@media(max-width:600px) {
+  .mentor-scene { grid-template-columns:minmax(118px,.85fr) minmax(0,1.15fr); gap:0 13px; margin:16px 0 24px; }
+  .mentor-figure .mindora-character { --character-size:100%; --character-height:250px; }
+  .mentor-figure .character-mino { --character-height:180px; }
+  .mentor-dialogue { padding:16px 14px; border-radius:20px; }
+  .mentor-dialogue h3 { font-size:19px; }
+  .mentor-dialogue p { font-size:16px; line-height:1.55; }
+  .mentor-speaker { margin-bottom:10px; font-size:11px; }
+  .mentor-speaker strong { font-size:13px; }
+  .mentor-actions { gap:8px; margin-top:14px; }
+  .mentor-actions button { font-size:13px; padding-inline:13px; }
+}
+@media(max-width:350px) {
+  .mentor-scene { grid-template-columns:112px minmax(0,1fr); gap:0 10px; }
+  .mentor-figure .mindora-character { --character-height:224px; }
+  .mentor-dialogue { padding:13px 11px; }
+  .mentor-dialogue h3 { font-size:18px; }
+  .mentor-dialogue p { font-size:15px; }
+}
+@media(prefers-reduced-motion:reduce) { .mentor-is-speaking .mentor-dialogue { animation:none; } }
+html[data-character-animations='off'] .mentor-is-speaking .mentor-dialogue { animation:none; }
