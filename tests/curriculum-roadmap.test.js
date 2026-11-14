@@ -112,27 +112,75 @@ test('legacy four-lesson paths keep their original schema and coexist with full 
   assert.equal(archive[0].stages.length, 4);
   assert.equal(archive[0].curriculumVersion, undefined);
   const doc = documentFor(roadmapView({ roadmap: restoreRoadmap(old) }));
-  assert.equal(doc.querySelectorAll('[data-roadmap-stage]').length, 4);
+  assert.equal(doc.querySelectorAll('.roadmap-stage-node').length, 4);
+  assert.equal(doc.querySelector('.roadmap-resume'), null);
   assert.equal(doc.querySelector('[data-roadmap-module]'), null);
 });
 
-test('syllabus groups global lesson indexes, opens the current module and shows the full course scale', () => {
+test('syllabus is one continuous path with milestone headings and the current global lesson visible', () => {
   let saved = restoreRoadmap(course());
   for (let index = 0; index < 8; index++) saved = updateRoadmapStage(saved, index, id(index + 1), true);
   const doc = documentFor(roadmapView({ roadmap: saved, active: roadmapStageStatuses(saved) }));
-  const modules = [...doc.querySelectorAll('[data-roadmap-module]')];
-  assert.equal(modules.length, 6);
-  assert.deepEqual(modules.filter(module => module.hasAttribute('open')).map(module => module.dataset.roadmapModule), ['2']);
-  assert.deepEqual([...doc.querySelectorAll('[data-roadmap-stage]')].map(button => Number(button.dataset.roadmapStage)), Array.from({ length: 24 }, (_, index) => index));
+  const paths = [...doc.querySelectorAll('ol.roadmap-stages')];
+  assert.equal(paths.length, 1);
+  assert.equal(paths[0].children.length, 24);
+  assert.equal(paths[0].querySelector('details'), null);
+  assert.equal(doc.querySelector('[data-roadmap-module],.roadmap-module'), null);
+  const milestones = [...paths[0].querySelectorAll('[data-roadmap-milestone]')];
+  assert.equal(milestones.length, 6);
+  assert.deepEqual(milestones.map(marker => marker.querySelector('h2').textContent), saved.modules.map(module => module.title));
+  assert.deepEqual(milestones.map(marker => Number(marker.closest('li').querySelector('[data-roadmap-stage]').dataset.roadmapStage)), [0, 4, 8, 12, 16, 20]);
+  assert.deepEqual(milestones.filter(marker => marker.classList.contains('is-current')).map(marker => marker.dataset.roadmapMilestone), ['2']);
+  assert.deepEqual([...doc.querySelectorAll('.roadmap-stage-node')].map(button => Number(button.dataset.roadmapStage)), Array.from({ length: 24 }, (_, index) => index));
   assert.equal(doc.querySelector('[data-roadmap-stage="8"]').hasAttribute('disabled'), false);
   assert.equal(doc.querySelector('[data-roadmap-stage="9"]').hasAttribute('disabled'), true);
-  assert.equal(doc.querySelectorAll('.roadmap-stage-connector').length, 18);
+  assert.equal(doc.querySelector('[aria-current="step"] [data-roadmap-stage]').dataset.roadmapStage, '8');
+  assert.equal(doc.querySelectorAll('.roadmap-stage-connector').length, 23);
+  assert.equal(paths[0].querySelectorAll('.roadmap-stage-text h3').length, 24);
   assert.match(doc.querySelector('.roadmap-course-scale').textContent, /24 daily lessons/);
   assert.match(doc.querySelector('.roadmap-course-scale').textContent, /10 min a day/);
   assert.match(doc.querySelector('.roadmap-course-scale').textContent, /4 weeks/);
   const source = doc.querySelector('.roadmap-sources a');
   assert.equal(source.getAttribute('href'), course().sources[0].url);
   assert.equal(source.getAttribute('rel'), 'noopener noreferrer');
+  assert.ok(source.closest('.roadmap-about'));
+});
+
+test('one connected path retains alternation across uneven milestones and completed paths', () => {
+  let saved = restoreRoadmap(course([3, 5, 4, 4, 4, 4]));
+  for (let index = 0; index < 24; index++) saved = updateRoadmapStage(saved, index, id(index + 1), true);
+  const doc = documentFor(roadmapView({ roadmap: saved, active: roadmapStageStatuses(saved) }));
+  const rows = [...doc.querySelectorAll('.roadmap-stages > li')];
+  assert.equal(rows.length, 24);
+  assert.equal(doc.querySelectorAll('.roadmap-stage-connector').length, 23);
+  for (const [index, row] of rows.entries()) {
+    assert.equal(row.querySelector('[data-roadmap-stage]').hasAttribute('disabled'), false);
+    if (index < 23) assert.ok(row.querySelector('.roadmap-stage-connector path').getAttribute('d').startsWith(index % 2 ? 'M75' : 'M25'));
+  }
+  assert.deepEqual(rows.flatMap((row, index) => row.classList.contains('has-milestone') ? [index] : []), [0, 3, 8, 12, 16, 20]);
+  assert.deepEqual(rows.flatMap((row, index) => row.classList.contains('before-milestone') ? [index] : []), [2, 7, 11, 15, 19]);
+  assert.equal(doc.querySelectorAll('.roadmap-milestone.is-completed').length, 6);
+  assert.equal(doc.querySelector('[aria-current="step"]'), null);
+  assert.equal(doc.querySelector('.roadmap-resume'), null);
+});
+
+test('a compact header action opens the current unfinished lesson without scrolling or hiding its path node', () => {
+  let saved = restoreRoadmap(course());
+  for (let index = 0; index < 12; index++) saved = updateRoadmapStage(saved, index, id(index + 1), true);
+  for (const status of ['ready', 'active']) {
+    if (status === 'active') saved = updateRoadmapStage(saved, 12, id(13));
+    for (const busy of [false, 'stage']) {
+      const doc = documentFor(roadmapView({ roadmap: saved, active: roadmapStageStatuses(saved), busy }));
+      const resume = doc.querySelector('.roadmap-resume button');
+      assert.equal(resume.dataset.roadmapAction, 'start');
+      assert.equal(resume.dataset.roadmapStage, '12');
+      assert.equal(resume.textContent.trim(), status === 'active' ? 'Continue lesson' : 'Start lesson');
+      assert.equal(resume.hasAttribute('disabled'), Boolean(busy));
+      assert.equal(doc.querySelector('.roadmap-resume > span').textContent, saved.stages[12].title);
+      assert.equal(doc.querySelectorAll('.roadmap-stage-node').length, 24);
+      assert.equal(doc.querySelector('.roadmap-stage-node[data-roadmap-stage="12"]').hasAttribute('disabled'), Boolean(busy));
+    }
+  }
 });
 
 test('course provenance notices remain visible and generated headings are escaped', () => {

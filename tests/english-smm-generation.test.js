@@ -30,8 +30,8 @@ const choice = {
 };
 const response = value => Response.json({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(value) } }] });
 
-function fixture({ visual, assessment, task, finalTask, source }) {
-  const requests = { search: [], fetch: [], composition: [], query: [] };
+function fixture({ visual, assessment, task, finalTask, source, outputForAttempt }) {
+  const requests = { search: [], fetch: [], composition: [], compositionSignals: [], query: [] };
   const output = {
     formatVersion: 3, title: 'Практика на конкретном примере', outcome: 'Создать свой результат по образцу.',
     guided: [{
@@ -63,8 +63,9 @@ function fixture({ visual, assessment, task, finalTask, source }) {
       return response({ query: 'Specific beginner guide with a worked example', githubQuery: '' });
     }
     requests.composition.push(body);
+    requests.compositionSignals.push(options.signal);
     assert.equal(data.materials[0].url, source);
-    return response(output);
+    return response(outputForAttempt ? outputForAttempt(structuredClone(output), requests.composition.length) : output);
   };
   return { requests, generate: input => generateDeepSeekPlan(input, 'test-only', fetcher, {
     readPage: async () => null, readRenderedPage: async () => null,
@@ -131,6 +132,47 @@ test('a discounted SMM post requests and preserves a social-post example instead
   const restored = reopen(plan, 0);
   assert.deepEqual(restored.plan.steps[0].teaching.example.visual, socialPost);
   assert.equal(restored.plan.steps[0].teaching.example.visual.type === 'percent', false);
+});
+
+test('English and SMM regenerate choice-only text practice once while preserving research and the original deadline', async () => {
+  for (const subject of ['english', 'smm']) {
+    const run = fixture({ visual: subject === 'english' ? dialogue : socialPost, assessment: choice,
+      task: subject === 'english' ? 'Напишите две новые реплики знакомства на английском.' : 'Составьте пост для кофейни с одной выгодой и призывом.',
+      finalTask: subject === 'english' ? 'Напишите приветствие и вопрос новому коллеге на английском.' : 'Напишите новый пост для покупателей вечернего кофе.',
+      source: subject === 'english' ? 'https://learnenglish.britishcouncil.org/skills/speaking/a1-speaking/meeting-new-people' : 'https://buffer.com/resources/social-media-marketing-strategy/',
+      outputForAttempt(output, attempt) {
+        if (attempt === 1) {
+          const step = subject === 'english' ? output.guided[0] : output.final;
+          step.task = 'Прочитайте диалог. Затем выберите правильный ответ: какое приветствие лучше подходит?';
+          step.criterion = 'Выберите вариант, подходящий для знакомства.';
+        }
+        return output;
+      },
+    });
+    const plan = await run.generate({ goal: subject === 'english' ? 'English introductions' : 'SMM coffee posts', minutes: 5, language: 'ru' });
+    assert.equal(run.requests.composition.length, 2);
+    assert.equal(run.requests.compositionSignals[0], run.requests.compositionSignals[1]);
+    assert.equal(run.requests.query.length, 1, 'research query is not regenerated');
+    const [first, second] = run.requests.composition;
+    assert.deepEqual(second.messages.slice(0, first.messages.length), first.messages);
+    assert.equal(second.messages.length, first.messages.length + 1);
+    assert.equal(second.max_tokens, first.max_tokens);
+    assert.doesNotMatch(second.messages.at(-1).content, /какое приветствие лучше подходит/, 'raw failed task is not replayed as instructions');
+    assert.ok(plan.steps.every(step => step.practice.type === 'text'));
+    assert.match(plan.steps[0].task, /Напишите|Составьте/);
+    assert.match(plan.steps.at(-1).task, /Напишите/);
+  }
+});
+
+test('a second unusable English text task fails instead of publishing phantom choice controls', async () => {
+  const run = fixture({ visual: dialogue, assessment: gap,
+    task: 'Read the dialogue and choose the correct greeting.', finalTask: 'Write a new English greeting for a colleague.',
+    source: 'https://learnenglish.britishcouncil.org/skills/speaking/a1-speaking/meeting-new-people',
+  });
+  await assert.rejects(run.generate({ goal: 'English greetings', minutes: 5, language: 'en' }), { name: 'LessonContentInvalid' });
+  assert.equal(run.requests.composition.length, 2);
+  assert.equal(run.requests.compositionSignals[0], run.requests.compositionSignals[1]);
+  assert.equal(run.requests.query.length, 1);
 });
 
 test('programming that mentions English text keeps exact code gaps and does not request a language dialogue', async () => {
