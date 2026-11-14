@@ -8,6 +8,11 @@ import { mountAccount, getAccountState } from './account.js';
 import { rewardMetrics } from './roadmap.js';
 
 const $ = selector => document.querySelector(selector);
+let desktopLayout;
+
+function openDesktopLibrary(panel = $('.course-home-library')) {
+  if (panel) panel.open = desktopLayout.matches;
+}
 
 // The controller redraws a quiz after each answer. Keep keyboard users at the
 // same choice, or move them to the resulting feedback / next question.
@@ -60,7 +65,7 @@ export function mountShell() {
   document.head.append(courseHomeStyles);
   document.querySelector('#app').innerHTML = `<a class="skip-link" href="#main">Skip to learning</a>
   <header class="topbar">
-    <a class="brand" data-home href="#discover" aria-label="Mindora home"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
+    <a class="brand" data-home href="#discover" aria-label="Mindora home"><img class="brand-mark" src="ui/assets/brand-mark.svg" alt="" width="40" height="40"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
     <nav id="top-navigation" aria-label="Main navigation"></nav>
     <div class="top-actions" id="top-actions"></div>
   </header>
@@ -78,6 +83,8 @@ export function mountShell() {
   mountPresentation();
   mountLessonFlow();
   mountAccount();
+  desktopLayout = window.matchMedia('(min-width: 921px)');
+  desktopLayout.addEventListener('change', () => openDesktopLibrary());
   window.addEventListener('mindora:account-changed', updateAccountLinks);
 }
 
@@ -106,9 +113,12 @@ function updateCourseHome(main, html, sameView) {
       continue;
     }
     if (existing) {
-      if (existing.tagName === 'DETAILS' && existing.open) nextChild.open = true;
+      if (existing.tagName === 'DETAILS') nextChild.open = existing.open;
       existing.replaceWith(nextChild);
-    } else current.append(nextChild);
+    } else {
+      if (nextChild.classList.contains('course-home-library')) openDesktopLibrary(nextChild);
+      current.append(nextChild);
+    }
     retained.add(nextChild);
     ordered.push(nextChild);
   }
@@ -165,7 +175,10 @@ export function renderShell(view, state, stats, html, rewards) {
   document.body.classList.toggle('is-guided', guided);
   document.body.classList.add('quiet-shell');
   document.body.classList.toggle('has-course-home', html.includes('class="course-home"'));
-  if (!updateCourseHome(main, html, sameView && main.dataset.courseHomeOwner === owner)) main.innerHTML = html;
+  if (!updateCourseHome(main, html, sameView && main.dataset.courseHomeOwner === owner)) {
+    main.innerHTML = html;
+    openDesktopLibrary();
+  }
   main.dataset.courseHomeOwner = owner;
   updateAccountLinks();
   expandedPanels.forEach(selector => { const panel = main.querySelector(selector); if (panel) panel.open = true; });

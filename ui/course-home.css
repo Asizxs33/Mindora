@@ -1,6 +1,5 @@
 /* The home screen keeps the next action and the writing field in plain sight. */
 body.quiet-shell.has-course-home:not(.is-guided) #main { max-width: 800px; padding: 30px 28px 60px; }
-body.quiet-shell .header-account[data-account-open="profile"] { display: none; }
 .course-home { width: 100%; min-width: 0; margin: 0 auto; }
 .course-home-heading { display: grid; grid-template-columns: minmax(0, 1fr) 104px; align-items: center; gap: 12px; margin: 0 0 18px; }
 .course-home-heading h1 { font-size: clamp(24px, 3.2vw, 34px); line-height: 1.2; letter-spacing: -.7px; margin: 0; }
@@ -65,14 +64,31 @@ body.quiet-shell .header-account[data-account-open="profile"] { display: none; }
 .profile-rewards > summary { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 52px; cursor: pointer; font-size: 15px; font-weight: 650; list-style: none; }
 .profile-rewards > summary::-webkit-details-marker { display: none; }
 .profile-rewards > summary svg { flex-shrink: 0; }
-@media (min-width: 761px) {
-  body.quiet-shell:not(.is-guided):not(.is-learning) #top-navigation { display: flex; gap: 8px; margin-inline: auto; }
-  body.quiet-shell #top-navigation .nav-item { width: auto; min-height: 42px; padding: 10px 14px; }
+@media (min-width: 921px) {
+  body.quiet-shell #top-navigation { margin-inline: auto; }
+  body.quiet-shell.has-course-home:not(.is-guided) #main { max-width: 1000px; padding: 30px 28px 60px; }
+  .course-home-composer { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+  .course-home-form-actions { grid-template-columns: 110px auto; }
+  .course-home-form-actions .primary { padding-inline: 18px; }
+  .course-home-current-actions { display: flex; flex-wrap: wrap; }
+  .course-home-current-actions button { padding-inline: 16px; }
+  .course-home-library { border: 0; margin-top: 28px; }
+  .course-home-library > summary { padding-inline: 0; font-size: 22px; }
+  .course-home-library > div { padding: 8px 0 0; }
+  .course-home-library .learning-library-heading h2 { font-size: 18px; }
+  .course-home-ready .ready-courses h2 { font-size: 22px; }
+  .course-home-ready .course-pace, .course-home-ready .course-pace-note { display: block; }
+  .course-home-ready .ready-course { background: #fffaf5; }
+  .course-home-ready .ready-course:hover { background: #fff2e6; }
 }
-@media (max-width: 760px) {
+@media (max-width: 920px) {
+  .topbar .brand-mark, body.quiet-shell .header-account[data-account-open="profile"] { display: none; }
   body.quiet-shell:not(.is-guided):not(.is-learning) .mobile-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-height: 70px; padding: 5px max(18px, env(safe-area-inset-left)) calc(5px + env(safe-area-inset-bottom)); }
+  body.quiet-shell.has-course-home:not(.is-guided) #main { padding-bottom: calc(94px + env(safe-area-inset-bottom)); }
   .mobile-navigation .nav-item { min-height: 58px; font-size: 12px; gap: 4px; }
   .mobile-navigation .nav-item.active { background: #fff5eb; color: var(--accent); }
+}
+@media (max-width: 760px) {
   body.quiet-shell.has-course-home:not(.is-guided) #main { padding: 16px 18px calc(94px + env(safe-area-inset-bottom)); }
   .course-home-heading { grid-template-columns: minmax(0, 1fr) 96px; gap: 7px; margin-bottom: 13px; }
   .course-home-heading h1 { font-size: 25px; line-height: 1.2; }

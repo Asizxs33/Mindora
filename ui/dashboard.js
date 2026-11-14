@@ -22,11 +22,21 @@ export function badge(icon, name, color, size = 22) {
 }
 
 export function brandNav(icon, view, place, signedIn = false) {
-  const items = [['courses', 'book', t('Courses','Курсы','Курстар')], ['profile', 'user', t('Profile','Профиль','Профиль')]];
+  const mobile = place === 'bottom';
+  const courses = ['courses', 'book', t('Courses','Курсы','Курстар')];
+  const profile = ['profile', 'user', t('Profile','Профиль','Профиль')];
   const profileViews = ['profile', 'work', 'practice', 'achievements', 'community', 'quests', 'shop'];
+  const pathViews = ['path', 'builtin-path', 'course-path', 'roadmap', 'lesson', 'learning-plan', 'recap', 'return-review', 'result', 'certificate'];
+  const items = [courses, profile];
+  let activeView = profileViews.includes(view) ? 'profile' : 'courses';
+  if (!mobile && signedIn) {
+    items.splice(1, 0, ['my-path', 'path', t('My path','Мой путь','Оқу жолым')], ['work', 'folder', t('My work','Мои работы','Жұмыстарым')]);
+    if (pathViews.includes(view)) activeView = 'my-path';
+    if (view === 'work') activeView = 'work';
+  }
   return items.map(([key, symbol, name]) => {
-    const active = key === (profileViews.includes(view) ? 'profile' : 'courses');
-    return `<button class="nav-item ${active ? 'active' : ''}" data-view="${key}" ${active ? 'aria-current="page"' : ''}>${icon(symbol, place === 'bottom' ? 22 : 23)}<span>${name}</span></button>`;
+    const active = key === activeView;
+    return `<button class="nav-item ${active ? 'active' : ''}" data-view="${key}" ${active ? 'aria-current="page"' : ''}>${icon(symbol, mobile ? 22 : 23)}<span>${name}</span></button>`;
   }).join('');
 }
 
