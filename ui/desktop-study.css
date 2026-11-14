@@ -1,51 +1,28 @@
 .learning-hub-course-label, .course-library-create { display:none; }
 @media (min-width:921px) {
-  .sidebar .nav-item { min-height:58px; border:1px solid transparent; border-radius:14px; }
-  .sidebar .nav-item.active { border-color:#ebc6a5; box-shadow:0 2px 0 #f5e5d7; }
   .course-library-heading { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:24px; }
   .course-library-heading h1 { margin:0; }
   .course-library-create { display:inline-flex; gap:7px; align-items:center; }
-  body.quiet-shell:not(.is-guided) #main.has-desktop-study[data-page] { width:100%; max-width:1220px; margin-inline:auto; padding:28px 36px 64px; }
-  .desktop-study-layout { display:grid; grid-template-columns:minmax(0,1fr) 300px; align-items:start; gap:36px; }
   .desktop-study-main { min-width:0; }
   .desktop-study-rail { position:sticky; top:calc(var(--header) + 28px); display:grid; gap:18px; min-width:0; }
-  .study-side-card { min-width:0; border:1px solid #e5dbd1; border-radius:18px; padding:20px; background:#fff; }
-  .study-side-card h2 { font-size:18px; line-height:1.35; letter-spacing:-.2px; text-wrap:pretty; }
-  .study-side-card p { margin-top:6px; color:#776658; font-size:14px; line-height:1.6; }
   .study-side-card > header { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:4px; }
   .study-side-card .text-link { padding:5px 0; min-height:34px; font-size:13px; line-height:1.3; }
   .study-side-card > header .text-link { flex:none; }
   .study-side-card .roadmap-quest { grid-template-columns:34px minmax(0,1fr); align-items:start; column-gap:10px; margin:0; padding:19px 0; border-bottom:1px solid #eee4db; }
   .study-side-card .roadmap-quest:last-child { border-bottom:0; padding-bottom:0; }
-  .study-side-card .roadmap-symbol { width:34px; height:34px; border-radius:10px; background:#fff1df; color:#ab4f19; }
-  .study-side-card .roadmap-symbol svg { width:20px; height:20px; }
-  .study-side-card .roadmap-quest h3 { font-size:14px; line-height:1.5; text-wrap:pretty; }
   .study-side-card .roadmap-quest progress { display:block; width:100%; height:9px; margin:9px 0 7px; }
-  .study-side-card .roadmap-quest small { font-size:11px; }
   .study-side-card .roadmap-quest .roadmap-gem { color:#ad490e; }
   .study-side-card .roadmap-quest > .primary, .study-side-card .roadmap-complete-label { grid-column:2; justify-self:start; margin-top:6px; min-height:32px; font-size:12px; padding:5px 9px; }
-  .study-streak-card, .study-pace-card { display:grid; grid-template-columns:38px minmax(0,1fr); column-gap:12px; }
-  .study-card-symbol { display:grid; place-items:center; width:38px; height:42px; background:#fff3e4; color:#ad541d; border-radius:12px; }
   .study-pace-card .study-card-symbol { color:#746150; background:#f6f2ed; }
   .study-account-card { background:#fffaf4; }
   .study-account-card > button { width:100%; margin-top:10px; min-height:44px; font-size:14px; }
   .study-account-card > .primary { margin-top:18px; }
   .desktop-study-main .learning-hub.quiet-home { max-width:none; min-height:0; padding:0; gap:14px; }
-  .desktop-study-main .learning-hub-heading { border-radius:18px; padding:20px 22px; }
-  .desktop-study-main .learning-hub-heading h1 { font-size:22px; line-height:1.35; text-wrap:pretty; }
   .desktop-study-main .learning-hub-heading .icon-button { display:flex; gap:7px; width:auto; min-height:44px; padding:8px 10px; }
   .desktop-study-main .learning-hub-course-label { display:inline; font-size:12px; font-weight:750; color:white; white-space:nowrap; }
   .desktop-study-main .learning-hub-progress { padding-inline:4px; font-size:12px; }
   .desktop-study-main .learning-hub-journey { position:relative; display:block; width:100%; max-width:560px; margin:10px auto 0; }
-  .desktop-study-main .learning-hub-path { --route-node:82px; --route-row:166px; width:calc(100% - 120px); max-width:400px; margin:0 0 0 12px; padding-top:52px; }
-  .desktop-study-main .learning-hub-node { border-radius:50%; border-bottom-width:7px; }
-  .desktop-study-main .learning-hub-connector { opacity:.65; }
-  .desktop-study-main .learning-hub-label { max-width:170px; font-size:14px; background:white; }
-  .desktop-study-main .learning-hub-guide { position:absolute; top:180px; right:0; width:140px; gap:12px; margin:0; }
-  .desktop-study-main .learning-hub-guide .quiet-mentor { --character-size:140px; --character-height:140px; }
   .desktop-study-main .learning-hub-guide .guided-dialogue { padding:10px 12px; border-width:1px; }
-  .desktop-study-main .learning-hub-guide .guided-dialogue p { font-size:13px; line-height:1.5; }
-  .desktop-study-main .learning-hub-actions { max-width:330px; margin-inline:auto; }
   .desktop-study-main .learning-path.course-path { max-width:none; }
   .desktop-study-main .course-path > .back-button { min-height:34px; margin-bottom:12px; font-size:14px; }
   .desktop-study-main .course-path-header { gap:16px; }
@@ -67,15 +44,305 @@
   .desktop-study-main .roadmap-stage-node { border-radius:50%; }
 }
 @media (min-width:921px) and (max-width:1199px) {
-  body.quiet-shell #main.has-desktop-study { padding:24px 24px 56px; }
-  .desktop-study-layout { grid-template-columns:minmax(0,1fr) 250px; gap:22px; }
-  .study-side-card { padding:16px; }
-  .desktop-study-main .learning-hub-heading { padding:17px; }
-  .desktop-study-main .learning-hub-heading h1 { font-size:19px; }
   .desktop-study-main .learning-hub-course-label { display:none; }
-  .desktop-study-main .learning-hub-path { --route-node:72px; width:calc(100% - 120px); margin-left:0; }
-  .desktop-study-main .learning-hub-guide { width:100px; top:205px; }
-  .desktop-study-main .learning-hub-guide .quiet-mentor { --character-size:100px; --character-height:100px; }
   .desktop-study-main .learning-hub-guide .guided-dialogue { display:none; }
-  .desktop-study-main .learning-hub-label { font-size:12px; }
+}
+
+/* The study desk follows the existing Mindora palette and expands the route
+   and its activity rail to use the available desktop space. */
+@media (min-width: 921px) {
+  body.quiet-shell:has(#main.has-desktop-study) {
+    --sidebar: clamp(190px, 15vw, 252px);
+    --header: 78px;
+    --study-ink: #322017;
+    --study-muted: #654635;
+    --study-line: #eddfd2;
+    --study-track: #ead9c8;
+    --study-button: linear-gradient(152deg, #c55405, #983700);
+    --study-shadow: 0 4px 12px #7e421015;
+    background: #fdfbf9;
+  }
+
+  body.quiet-shell:has(#main.has-desktop-study) .topbar {
+    border-color: var(--study-line);
+    background: #fffdfb;
+  }
+
+  body.quiet-shell:has(#main.has-desktop-study) .sidebar {
+    padding: 32px clamp(12px, 1.2vw, 20px);
+    border-color: var(--study-line);
+    background: #fffdfa;
+  }
+
+  body.quiet-shell:has(#main.has-desktop-study) .sidebar .nav-item {
+    min-height: 64px;
+    padding: 10px clamp(8px, .72vw, 12px);
+    border: 1px solid transparent;
+    gap: clamp(8px, .84vw, 14px);
+    border-radius: 17px;
+    color: var(--study-muted);
+    font-size: clamp(15px, 1.2vw, 20px);
+    font-weight: 750;
+  }
+
+  body.quiet-shell:has(#main.has-desktop-study) .sidebar .nav-item.active {
+    border-color: #efb78b;
+    background: #ffead5;
+    color: #923600;
+    box-shadow: 0 3px 5px #ad62251c;
+  }
+
+  body.quiet-shell:has(#main.has-desktop-study) .sidebar .nav-symbol {
+    width: clamp(32px, 2.4vw, 40px);
+    height: clamp(32px, 2.4vw, 40px);
+    border-radius: 13px;
+  }
+
+  body.quiet-shell:has(#main.has-desktop-study) .header-rewards .roadmap-metric > strong { font-size: 19px; }
+  body.quiet-shell:has(#main.has-desktop-study) .header-rewards .roadmap-metric > span { font-size: 11px; }
+  body.quiet-shell:has(#main.has-desktop-study) .language-picker .profile-select {
+    padding-inline: 14px 10px;
+    min-height: 42px;
+    border-radius: 14px;
+    font-size: 15px;
+  }
+
+  body.quiet-shell:not(.is-guided) #main.has-desktop-study[data-page] {
+    max-width: 1500px;
+    padding: 34px clamp(20px, 1.85vw, 31px) 64px clamp(20px, 2.5vw, 42px);
+  }
+
+  .desktop-study-layout {
+    display: grid;
+    align-items: start;
+    grid-template-columns: minmax(0, 1fr) clamp(230px, 24.5vw, 410px);
+    gap: clamp(22px, 2.1vw, 36px);
+  }
+
+  .desktop-study-rail { top: calc(var(--header) + 24px); gap: 20px; }
+
+  .study-side-card {
+    min-width: 0;
+    border: 1px solid var(--study-line);
+    padding: clamp(16px, 1.45vw, 24px);
+    border-radius: 21px;
+    background: linear-gradient(145deg, #fff 35%, #fbf7f1);
+    color: var(--study-ink);
+    box-shadow: var(--study-shadow);
+  }
+
+  .study-side-card h2 { font-size: clamp(18px, 1.6vw, 26px); line-height: 1.18; }
+  .study-side-card p { color: var(--study-muted); font-size: clamp(14px, 1.16vw, 19px); line-height: 1.45; }
+  .study-side-card .text-link { color: var(--study-muted); font-size: clamp(13px, 1.05vw, 17px); }
+  .study-side-card .text-link:hover { color: #953a09; text-decoration: underline; text-underline-offset: 4px; }
+  .study-side-card > header { margin-bottom: 8px; }
+
+  .study-side-card .roadmap-quest {
+    grid-template-columns: clamp(34px, 2.8vw, 46px) minmax(0, 1fr);
+    gap: 10px 14px;
+    border-color: var(--study-line);
+  }
+
+  .study-side-card .roadmap-symbol {
+    width: clamp(34px, 2.8vw, 46px);
+    height: clamp(34px, 2.8vw, 46px);
+    border-radius: 13px;
+    background: #ffecd2;
+    color: #9e4108;
+  }
+
+  .study-side-card .roadmap-symbol svg { width: 60%; height: 60%; }
+  .study-side-card .roadmap-quest h3 { font-size: clamp(14px, 1.12vw, 18px); line-height: 1.35; }
+  .study-side-card .roadmap-quest small { font-size: clamp(12px, 1vw, 16px); color: var(--study-muted); }
+  .study-side-card .roadmap-quest progress { height: 12px; background: var(--study-track); }
+  .study-side-card .roadmap-quest progress::-webkit-progress-bar { background: var(--study-track); }
+  .study-streak-card, .study-pace-card { display: grid; grid-template-columns: clamp(38px, 3.1vw, 52px) minmax(0, 1fr); gap: 12px 18px; }
+  .study-card-symbol {
+    display: grid;
+    place-items: center;
+    background: #fff3e4;
+    color: #ad541d;
+    width: clamp(38px, 3.1vw, 52px);
+    height: clamp(38px, 3.1vw, 52px);
+    border-radius: 14px;
+  }
+
+  .desktop-study-main :is(.learning-hub-heading, .roadmap-heading) {
+    padding: clamp(18px, 1.3vw, 22px) clamp(20px, 2.15vw, 36px);
+    border-radius: 23px;
+    background: var(--study-button);
+    box-shadow: var(--study-shadow);
+  }
+
+  .desktop-study-main .learning-hub.quiet-home { gap: 16px; }
+  .desktop-study-main .learning-hub-heading > div > span { color: #fff4e8; font-size: clamp(13px, 1.07vw, 17px); }
+  .desktop-study-main :is(.learning-hub-heading, .roadmap-heading) h1 {
+    font-size: clamp(22px, 1.92vw, 32px);
+    line-height: 1.23;
+    overflow-wrap: anywhere;
+    font-weight: 800;
+  }
+  .desktop-study-main .learning-hub-heading .icon-button {
+    min-height: 48px;
+    padding: 8px 14px;
+    border-color: #ffffff62;
+    border-radius: 14px;
+    color: #fff;
+  }
+  .desktop-study-main .learning-hub-heading .icon-button:hover { background: #ffffff29; }
+  .desktop-study-main .learning-hub-course-label { font-size: clamp(12px, 1vw, 16px); }
+
+  .desktop-study-main .learning-hub-progress {
+    padding-inline: 12px 0;
+    gap: 14px;
+    color: var(--study-ink);
+    font-size: clamp(13px, 1.07vw, 17px);
+    font-variant-numeric: tabular-nums;
+  }
+  .desktop-study-main .learning-hub-progress progress { height: 13px; background: var(--study-track); }
+  .desktop-study-main .learning-hub-progress progress::-webkit-progress-bar { background: var(--study-track); }
+  .desktop-study-main .learning-hub-progress strong {
+    padding: 4px 13px;
+    border-radius: 20px;
+    background: #fff0de;
+    color: #943500;
+  }
+
+  .desktop-study-main .learning-hub-journey {
+    --route-node: clamp(72px, 5.9vw, 100px);
+    --route-row: 176px;
+    --route-pad: 62px;
+    isolation: isolate;
+    max-width: 700px;
+    margin: 12px auto 0;
+  }
+  .desktop-study-main .learning-hub-path {
+    --route-node: inherit;
+    --route-row: inherit;
+    width: 70%;
+    max-width: none;
+    padding-top: var(--route-pad);
+    margin-left: 5%;
+  }
+  .desktop-study-main .learning-hub-stop { gap: 16px; }
+  .desktop-study-main .learning-hub-node {
+    border-radius: 50%;
+    border-color: #dbc3ac;
+    border-bottom: 5px solid #d4b79f;
+    background: linear-gradient(145deg, #fbf3ea, #f0e6d9);
+    color: #8b6a54;
+    box-shadow: 0 6px 14px #8b59351a;
+  }
+  .desktop-study-main .learning-hub-node > svg { width: 42%; height: 42%; }
+  .desktop-study-main .learning-hub-path .is-current .learning-hub-node {
+    border-color: #cb560b;
+    border-bottom-color: #8f3500;
+    background: var(--study-button);
+    box-shadow: 0 0 0 4px #fff9f0, 0 0 0 6px #ffd8aa, 0 8px 16px #a3502029;
+  }
+  .desktop-study-main .learning-hub-path .is-done .learning-hub-node { background: #ffedd5; }
+  .desktop-study-main .learning-hub-label {
+    max-width: 100%;
+    background: none;
+    color: var(--study-muted);
+    font-size: clamp(14px, 1.18vw, 19px);
+  }
+  .desktop-study-main .learning-hub-start {
+    padding: 9px 22px;
+    border-radius: 18px;
+    font-size: clamp(14px, 1.17vw, 19px);
+    box-shadow: var(--study-shadow);
+  }
+  .desktop-study-main .learning-hub-connector { color: #ebd7c3; opacity: 1; }
+  .desktop-study-main .learning-hub-connector::before,
+  .desktop-study-main .learning-hub-connector::after {
+    border-width: 9px;
+    width: calc(50% + 4.5px);
+    height: calc(50% + 4.5px);
+  }
+
+  .desktop-study-main .learning-hub-guide {
+    position: absolute;
+    top: 182px;
+    right: 1%;
+    display: flex;
+    width: clamp(116px, 11vw, 176px);
+    gap: 10px;
+  }
+  .desktop-study-main .learning-hub-guide .guided-dialogue {
+    padding: 12px 14px;
+    border-color: #ead3bd;
+    border-radius: 22px;
+    background: #fffaf3;
+    color: var(--study-ink);
+    box-shadow: var(--study-shadow);
+  }
+  .desktop-study-main .learning-hub-guide .guided-dialogue::after {
+    border-color: #ead3bd;
+    background: #fffaf3;
+  }
+  .desktop-study-main .learning-hub-guide .guided-dialogue p { font-size: clamp(13px, 1vw, 16px); }
+  .desktop-study-main .learning-hub-guide .quiet-mentor {
+    --character-size: clamp(110px, 10vw, 158px);
+    --character-height: var(--character-size);
+  }
+  /* Short courses can follow the final node with a decorative turn toward Mino. */
+  .desktop-study-main .learning-hub-journey:has(.learning-hub-path > li:nth-child(2):last-child) {
+    min-height: 390px;
+  }
+  .desktop-study-main .learning-hub-journey:has(.learning-hub-path > li:nth-child(2):last-child)::before,
+  .desktop-study-main .learning-hub-journey:has(.learning-hub-path > li:nth-child(2):last-child)::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    width: 12%;
+    height: 29px;
+    pointer-events: none;
+    border: 8px solid #ebd7c3;
+  }
+  .desktop-study-main .learning-hub-journey:has(.learning-hub-path > li:nth-child(2):last-child)::before {
+    top: calc(var(--route-pad) + var(--route-row) + var(--route-node) / 2 - 4px);
+    left: 57.5%;
+    border-inline-start: 0;
+    border-bottom: 0;
+    border-radius: 0 45px 0 0;
+  }
+  .desktop-study-main .learning-hub-journey:has(.learning-hub-path > li:nth-child(2):last-child)::after {
+    top: calc(var(--route-pad) + var(--route-row) + var(--route-node) / 2 + 17px);
+    left: 68.5%;
+    border-inline-end: 0;
+    border-top: 0;
+    border-radius: 0 0 0 45px;
+  }
+  .desktop-study-main .learning-hub-actions {
+    width: min(100%, 416px);
+    max-width: none;
+    margin: 0 auto;
+    gap: 10px;
+  }
+  .desktop-study-main :is(.learning-hub-actions, .roadmap-resume) > .primary {
+    border-radius: 20px;
+    border-color: #a13b01;
+    background: var(--study-button);
+    box-shadow: var(--study-shadow);
+  }
+  .desktop-study-main .learning-hub-actions > .primary {
+    min-height: 64px;
+    gap: 16px;
+    font-size: clamp(18px, 1.48vw, 24px);
+  }
+  .desktop-study-main .learning-hub-actions > .text-link { color: var(--study-muted); font-size: clamp(15px, 1.23vw, 20px); }
+  .desktop-study-main :is(.learning-hub-actions, .roadmap-resume) > .primary:hover:not(:disabled) {
+    background: #963500;
+  }
+  .desktop-study-main .roadmap-tutor-speech { background: #fffaf3; box-shadow: var(--study-shadow); }
+  .desktop-study-main .roadmap-tutor-speech::before { background: #fffaf3; }
+}
+
+@media (min-width: 921px) and (max-width: 1199px) {
+  .desktop-study-main .learning-hub-journey { --route-row: 154px; }
+  .desktop-study-main .learning-hub-path { width: 70%; }
+  .desktop-study-main .learning-hub-guide { right: 0; }
+  .desktop-study-main .learning-hub-guide .guided-dialogue { padding-inline: 8px; }
+  .desktop-study-main .learning-hub-journey:has(.learning-hub-path > li:nth-child(2):last-child) { min-height: 352px; }
 }
