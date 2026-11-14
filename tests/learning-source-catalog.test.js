@@ -16,7 +16,9 @@ test('specific subjects and subskills select relevant instructional pages', () =
     ['HTML basic page', '/1-intro-to-html/README.md'],
     ['Векторные иллюстрации в Illustrator', '/illustration-techniques'],
     ['Түс үйлесімі және түстер', '/secondary-colors.html'],
-    ['Расчёт процентов и скидки', '/6-2-solve-general-applications-of-percent'],
+    ['HSL hue and saturation', '/Colors/Color_values'],
+    ['Цветовые модели HSL', '/Colors/Color_values'],
+    ['Расчёт процентов и скидки', '/Primary_Mathematics/Percentages'],
     ['Google Sheets: сумма расходов', '/3093669?hl=en'],
     ['СУММЕСЛИ по категориям', '/3093583?hl=en'],
     ['Technical writing: clear sentences', '/clear-sentences'],
@@ -31,6 +33,7 @@ test('specific subjects and subskills select relevant instructional pages', () =
 test('domain precedence avoids irrelevant material from incidental words', () => {
   assert.match(sourceSuggestions('Python: sum and colors')[0].url, /docs\.python\.org/);
   assert.match(sourceSuggestions('CSS color palette')[0].url, /intro-to-css/);
+  assert.match(sourceSuggestions('Palette and contrast')[0].url, /secondary-colors/);
   for (const topic of ['Excel chart colors', 'Excel SUMIF', 'JavaScript percent calculator', 'Google Sheets chart colors', 'ChatGPT image generation', 'ChatGPT поиск в интернете']) {
     assert.deepEqual(sourceSuggestions(topic), [], topic);
   }

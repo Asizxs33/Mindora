@@ -8,6 +8,7 @@ import { message } from './messages.js';
 import { mentorForTopic, mentorScene, renderLessonTemplate } from './lesson-templates.js';
 import { sceneForTopic } from './learning-scenes.js';
 import { practiceEditor, practiceResult } from './lesson-practice.js';
+import { renderLessonVisual } from './lesson-visual.js';
 
 if (typeof document !== 'undefined' && !document.getElementById('mindora-template-styles')) {
   const stylesheet = document.createElement('link');
@@ -95,7 +96,7 @@ function illustrationView(step) {
 }
 
 function exampleView(teaching, mentor, topic) {
-  return renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output, explanation: teaching.example.explanation, sceneFrame: sceneForTopic(topic) }, {}, { external: true, mentor });
+  return renderLessonVisual(teaching.example.visual) + renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output, explanation: teaching.example.explanation, sceneFrame: sceneForTopic(topic) }, {}, { external: true, mentor });
 }
 
 function checkpointView(teaching, study, busy, mentor) {
