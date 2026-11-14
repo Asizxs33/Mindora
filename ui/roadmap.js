@@ -150,8 +150,24 @@ function questDefinition(id) {
   return ['target', t('Answer two exercises correctly', 'Реши два упражнения верно', 'Екі жаттығуды дұрыс орында')];
 }
 
-export function questRow(quest) {
+export function questRow(quest, { compact = false } = {}) {
   const [symbol, title] = questDefinition(quest.id);
+  if (compact) {
+    const done = quest.progress >= quest.target;
+    const compactTitle = quest.id === 'correct-check'
+      ? t('Get 2 exercises right', 'Реши 2 упражнения верно', '2 жаттығуды дұрыс орында')
+      : title;
+    const claim = t(`Claim ${quest.reward} gems`, `Забрать алмазы: +${quest.reward}`, `Алмаз алу: +${quest.reward}`);
+    return `<li class="study-quest-row${done ? ' is-finished' : ''}">
+      <span class="study-quest-marker" aria-hidden="true">${done ? icon('check', 19) : ''}</span>
+      <div class="study-quest-copy">
+        <h3>${compactTitle}</h3>
+        <div class="study-quest-progress"><span>${quest.progress} / ${quest.target}</span><progress value="${quest.progress}" max="${quest.target}" aria-label="${compactTitle}"></progress></div>
+      </div>
+      ${quest.claimable ? `<button type="button" class="icon-button study-quest-gift" data-roadmap-claim="${escape(quest.id)}" aria-label="${claim}" title="${claim}">${icon('gift', 23)}</button>`
+        : quest.claimed ? `<span class="visually-hidden">${t('Reward claimed', 'Награда получена', 'Марапат алынды')}</span>` : ''}
+    </li>`;
+  }
   return `<div class="roadmap-quest">
     <span class="roadmap-symbol">${icon(symbol, 22)}</span>
     <div><h3>${title}</h3><progress value="${quest.progress}" max="${quest.target}" aria-label="${title}"></progress>
