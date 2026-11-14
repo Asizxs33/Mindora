@@ -6,13 +6,14 @@ import * as engine from '../core/engine.js';
 import * as progress from '../core/progress.js';
 import * as budget from '../core/budget-session.js';
 import * as learningModel from '../core/learning-plan.js';
-import * as roadmapModel from '../core/roadmap-model.js';
-import * as rewardsModel from '../core/roadmap-rewards.js';
 import * as assessments from '../core/lesson-assessment.js';
 import * as returnReview from '../core/return-review.js';
+import * as roadmapModel from '../core/roadmap-model.js';
+import * as rewardsModel from '../core/roadmap-rewards.js';
 import { createWorkspaceStorage } from '../core/workspace-storage.js';
 import { resumeCursor, needsRecap, certificateEligible, RECAP_AFTER_MS } from '../core/resume.js';
 import { recapQuestion, builtinReviewContent } from '../ui/recap.js';
+import { startTopics } from '../ui/guided-start.js';
 import { getStarterCourse, starterCourses } from '../core/starter-courses.js';
 
 // Run the real controller and its registered event handlers. Only DOM/rendering,
@@ -55,6 +56,16 @@ function savedAiCourse() {
   return learningModel.restorePlan({ plan, completed: 1, answers: ['Ada\nLin', 'My current draft'], study: [{ page: 3, response: 1, checked: true }, { page: 1 }] });
 }
 
+function savedRoadmap(courseId = null) {
+  return roadmapModel.restoreRoadmap({
+    goal: 'Learn Python', minutes: 5, language: 'en', title: 'Python foundations',
+    outcome: 'Write a small program.', level: 'beginner', levelReason: 'Start with the basics.',
+    stages: ['Print a message', 'Store a value', 'Repeat an action', 'Build a program']
+      .map(title => ({ title, objective: `${title} independently.` })),
+    progress: Array.from({ length: 4 }, (_, index) => ({ courseId: index === 0 ? courseId : null, completed: false })),
+  });
+}
+
 function emitter() {
   const listeners = new Map();
   return {
@@ -79,11 +90,7 @@ function node() {
   };
 }
 
-function app(initial, {
-  now = NOW, account = { user: { id: 'test-user' }, profile: null }, storage: priorStorage,
-  realPlans = false, failStorageWrites = false, reconcile = Promise.resolve(), roadmapResponse,
-  libraryCourses = [], starterCopy = Promise.resolve(true), starterFlush = Promise.resolve(true),
-} = {}) {
+function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profile: null }, storage: priorStorage, realPlans = false, failStorageWrites = false, reconcile = Promise.resolve(), libraryCourses = [], starterCopy = Promise.resolve(true), starterFlush = Promise.resolve(true), stageGeneration = Promise.resolve(true), roadmapResponse } = {}) {
   let time = now, current, deck = null, uuidCount = 0, reloads = 0, conflictNotice = false, accountOpens = 0;
   const storage = priorStorage || new Map([[KEY, JSON.stringify(initial)]]);
   const presentation = new Map();
@@ -96,8 +103,7 @@ function app(initial, {
   const window = { ...emitter(), scrollTo() {}, location: { reload() { reloads++; } } };
   const downloads = [];
   const generations = [];
-  const roadmapRequests = [];
-  const copiedCourses = [], loadedCourses = [];
+  const copiedCourses = [], loadedCourses = [], roadmapRequests = [];
   const storePort = map => ({
     getItem: key => map.get(key) ?? null,
     setItem(key, value) {
@@ -112,14 +118,15 @@ function app(initial, {
   }
   const screen = kind => (...args) => ({ kind, args: clone(args) });
   const context = vm.createContext({
-    ...engine, ...progress, ...budget, ...learningModel, ...roadmapModel, ...rewardsModel, ...assessments, ...returnReview,
-    resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, getStarterCourse, starterCourses,
+    ...engine, ...progress, ...budget, ...learningModel, ...assessments, ...returnReview, ...roadmapModel, ...rewardsModel,
+    resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, startTopics, getStarterCourse, starterCourses,
     needsReturnReview: (lastSeen, learned) => returnReview.needsReturnReview(lastSeen, learned, time),
     languageCode: value => value || 'en', setLanguage() {}, message: value => value, t: value => value,
     createCloudDrafts: () => ({ render() {}, async init() {} }),
-    createPlanController: () => ({ screen: () => ({}), reset() {}, async generate(goal, minutes, options) {
-      generations.push(clone({ goal, minutes, context: options }));
-      if (options?.roadmapStage) {
+    createPlanController: () => ({ screen: () => ({}), reset() {}, async generate(goal, minutes, details) {
+      generations.push(clone({ goal, minutes, ...(details ? { context: details } : {}) }));
+      if (details?.roadmapStage) {
+        if (!await stageGeneration) return false;
         vm.runInContext("state.learningCourse = { id: '12345678-1234-4000-8000-123456789012' }", context);
         return true;
       }
@@ -197,7 +204,7 @@ function app(initial, {
     get conflictNotice() { return conflictNotice; },
     get accountOpens() { return accountOpens; },
     saved: () => JSON.parse(storage.get(KEY)), storage, presentation, downloads,
-    generations, roadmapRequests, copiedCourses, loadedCourses,
+    generations, copiedCourses, loadedCourses, roadmapRequests,
     signIn(user, reason) { account.user = user; window.dispatch('mindora:account-changed', { detail: { reason } }); },
     answerRoadmap(fields) { document.dispatch('submit', { target: { id: 'roadmap-form', fields } }); },
     startGoal(goal, minutes) {
@@ -242,7 +249,35 @@ test('starting either built-in course requires authentication and does not expos
   assert.deepEqual(run.current.state.progress, { design: 0, budget: 0 });
 });
 
-test('a ready mini-course creates one account copy and opens its path before starting the lesson', async () => {
+test('a first visit asks one thing at a time, then opens the selected built-in course path before the lesson', () => {
+  const run = app(seed({ active: null }));
+  assert.equal(run.current.view, 'discover');
+  assert.equal(run.current.html.kind, 'guided-start');
+  assert.equal(run.current.html.args[0].step, 0);
+  run.click({ introAction: 'next' });
+  assert.equal(run.current.html.args[0].step, 1);
+  run.click({ introAction: 'next' });
+  assert.equal(run.current.html.args[0].step, 1, 'the required name cannot be skipped');
+  run.input('intro-name', 'Aida');
+  run.click({ introAction: 'next' });
+  assert.equal(run.current.html.args[0].step, 2);
+  run.click({ introTopic: 'design' });
+  run.click({ introAction: 'next' });
+  assert.equal(run.current.html.args[0].step, 3);
+  run.click({ introMinutes: '5' });
+  run.click({ introAction: 'start' });
+  assert.equal(run.current.view, 'discover', 'onboarding ends at the course path, not inside a lesson');
+  assert.equal(run.current.html.kind, 'quiet-home');
+  assert.equal(run.current.state.active, 'design');
+  assert.equal(run.current.state.minutes, 5);
+  assert.equal(run.current.state.lastLearningType, 'builtin');
+  assert.deepEqual(run.generations, []);
+  run.click({ action: 'resume-course', id: 'design' });
+  assert.equal(run.current.view, 'lesson');
+  assert.equal(run.lesson.step, 0);
+});
+
+test('a ready mini-course creates one account copy and opens its path without AI generation', async () => {
   let finishCopy;
   const starterCopy = new Promise(resolve => { finishCopy = resolve; });
   const run = app(seed({ active: null, language: 'kk' }), { realPlans: true, starterCopy });
@@ -254,12 +289,15 @@ test('a ready mini-course creates one account copy and opens its path before sta
   finishCopy(true);
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(run.generations, []);
-  assert.equal(run.current.view, 'course-path');
+  assert.equal(run.current.view, 'discover');
+  assert.equal(run.current.html.kind, 'quiet-home');
   assert.equal(run.current.state.learningPlan.completed, 0);
   assert.equal(run.current.state.learningCourse.ownerId, 'test-user');
+  assert.equal(run.current.state.lastLearningType, 'ai');
   run.click({ view: 'profile' });
   run.click({ view: 'my-path' });
   assert.equal(run.current.view, 'course-path');
+  assert.equal(run.current.html.kind, 'quiet-home', 'My path reopens the ready course map');
   run.click({ view: 'learning-plan' });
   assert.equal(run.current.view, 'learning-plan');
 });
@@ -267,9 +305,10 @@ test('a ready mini-course creates one account copy and opens its path before sta
 test('catalog built-in cards open the same roadmap and retain the selected pace', () => {
   const run = app(seed({ minutes: 20, learningPlan: savedAiCourse() }));
   run.click({ course: 'budget' }, { attributes: ['data-course-path'] });
-  assert.equal(run.current.view, 'path');
-  assert.equal(run.current.html.kind, 'path');
+  assert.equal(run.current.view, 'discover');
+  assert.equal(run.current.html.kind, 'quiet-home');
   assert.equal(run.current.state.active, 'budget');
+  assert.equal(run.current.state.lastLearningType, 'builtin');
   assert.equal(run.current.state.pathKind, 'builtin');
   assert.equal(run.current.state.minutes, 20);
   assert.ok(run.current.state.learningPlan, 'the previous AI course remains saved');
@@ -286,7 +325,7 @@ test('choosing an existing ready mini-course loads the saved copy without cleari
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(run.copiedCourses, []);
   assert.deepEqual(run.loadedCourses, ['my-writing-course']);
-  assert.equal(run.current.view, 'course-path');
+  assert.equal(run.current.view, 'discover');
   assert.equal(run.current.state.learningPlan.completed, 1);
   assert.equal(run.current.state.learningPlan.answers[1], saved.answers[1]);
 });
@@ -335,25 +374,29 @@ test('a new duration keeps the old saved course and survives account restoration
   assert.deepEqual(run.loadedCourses, []);
   assert.equal(course.saved.plan.minutes, 5);
 
-  const guest = app(seed({ minutes: 5 }), { account: { user: null }, realPlans: true });
-  guest.click({ view: 'courses' });
-  guest.click({ courseMinutes: '20' });
-  guest.click({ starterCourse: 'ai-prompts' });
-  guest.signIn({ id: 'test-user' });
-  await new Promise(resolve => setImmediate(resolve));
-  assert.equal(guest.copiedCourses[0].plan.minutes, 20, 'selected duration crosses the auth boundary');
+  for (const reason of [undefined, 'signup-complete']) {
+    const guest = app(seed({ minutes: 5 }), { account: { user: null }, realPlans: true });
+    guest.click({ view: 'courses' });
+    guest.click({ courseMinutes: '20' });
+    guest.click({ starterCourse: 'ai-prompts' });
+    guest.signIn({ id: 'test-user' }, reason);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(guest.copiedCourses[0].plan.minutes, 20, 'selected duration crosses the sign-in and signup boundaries');
+  }
 });
 
-test('signout returns home and signing back in retains the exact lesson', async () => {
+test('signout opens the greeting and signing back in retains the exact lesson', async () => {
   const saved = savedAiCourse();
-  const run = app(seed({ active: null, learningPlan: saved, pathKind: 'course' }), { realPlans: true });
+  const run = app(seed({ learningPlan: saved }), { realPlans: true });
   run.signIn(null, 'signout');
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.current.view, 'discover');
+  assert.equal(run.current.html.kind, 'guided-start');
+  assert.equal(run.current.html.args[0].step, 0);
   assert.equal(run.current.state.learningPlan, null);
   run.signIn({ id: 'test-user' });
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(run.current.view, 'course-path');
+  assert.equal(run.current.html.kind, 'quiet-home');
   assert.deepEqual(run.current.state.learningPlan, saved);
 });
 
@@ -405,10 +448,10 @@ test('a starter copy finishing after account switch cannot replace the next acco
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.current.state.learningPlan, null);
   assert.equal(run.current.state.learningCourse, undefined);
-  assert.equal(run.current.view, 'courses');
+  assert.equal(run.current.html.kind, 'guided-start');
 });
 
-test('a guest goal waits for account restoration, then prefills onboarding without generating a lesson', async () => {
+test('a guest goal waits for account restoration, then prefills the requested roadmap without generating a lesson', async () => {
   let ready;
   const reconcile = new Promise(resolve => { ready = resolve; });
   const run = app(seed(), { account: { user: null, profile: null }, reconcile });
@@ -426,7 +469,7 @@ test('a guest goal waits for account restoration, then prefills onboarding witho
   assert.equal(run.current.html.args[0].wizard.minutes, 20);
 });
 
-test('completed signup opens onboarding and builds a path before any lesson request', async () => {
+test('an explicitly requested roadmap builds a personalized path and starts only its unlocked stage', async () => {
   const roadmapResponse = {
     title: 'Write useful spreadsheet formulas', outcome: 'Build a small report with formulas.', level: 'intermediate',
     levelReason: 'You already write SUM formulas.',
@@ -440,6 +483,9 @@ test('completed signup opens onboarding and builds a path before any lesson requ
   const run = app(seed(), { account: { user: null, profile: null }, roadmapResponse });
   run.signIn({ id: 'new-learner' }, 'signup-complete');
   await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'discover', 'signup keeps the simple guided topic selection');
+  assert.equal(run.current.html.kind, 'guided-start');
+  run.click({ roadmapAction: 'setup' });
   assert.equal(run.current.view, 'roadmap');
   assert.equal(run.current.html.args[0].wizard.step, 0);
   run.answerRoadmap({ goal: 'I want to learn spreadsheet formulas' });
@@ -473,6 +519,194 @@ test('a signup started from a goal resumes it only after the signup profile is s
   assert.equal(run.current.html.args[0].wizard.goal, 'Learn to use ChatGPT');
 });
 
+test('signup preserves a pending built-in introduction instead of replacing it with roadmap onboarding', async () => {
+  const run = app(seed({ active: null }), { account: { user: null, profile: null } });
+  run.click({ introAction: 'next' });
+  run.input('intro-name', 'Aida');
+  run.click({ introAction: 'next' });
+  run.click({ introTopic: 'budget' });
+  run.click({ introAction: 'next' });
+  run.click({ introMinutes: '20' });
+  run.click({ introAction: 'start' });
+  assert.equal(run.accountOpens, 1);
+  run.signIn({ id: 'new-learner' }, 'signup-profile-pending');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.state.active, null);
+  run.signIn({ id: 'new-learner' }, 'signup-complete');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'discover');
+  assert.equal(run.current.html.kind, 'quiet-home');
+  assert.equal(run.current.state.active, 'budget');
+  assert.equal(run.current.state.minutes, 20);
+  assert.deepEqual(run.roadmapRequests, []);
+});
+
+test('English introduction opens the ready course while a custom topic explicitly starts roadmap setup', async () => {
+  for (const topic of ['english', 'custom']) {
+    const run = app(seed({ active: null }), { realPlans: true });
+    run.click({ introAction: 'new' });
+    run.click({ introTopic: topic });
+    if (topic === 'custom') run.input('intro-goal', 'Learn to draw a landscape');
+    run.click({ introAction: 'next' });
+    run.click({ introMinutes: '20' });
+    run.click({ introAction: 'start' });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(run.roadmapRequests, [], 'neither choice automatically requests a generated roadmap');
+    if (topic === 'english') {
+      assert.equal(run.current.view, 'discover');
+      assert.equal(run.current.html.kind, 'quiet-home');
+      assert.deepEqual(run.copiedCourses, [getStarterCourse('everyday-english', 'en', 20)]);
+    } else {
+      assert.equal(run.current.view, 'roadmap');
+      assert.equal(run.current.html.args[0].wizard.goal, 'Learn to draw a landscape');
+      assert.equal(run.current.html.args[0].wizard.minutes, 20);
+      assert.deepEqual(run.copiedCourses, []);
+    }
+  }
+});
+
+test('a saved roadmap stays the selected home after reload without forcing its setup wizard', () => {
+  const roadmap = savedRoadmap();
+  const run = app(seed({ learningPlan: savedAiCourse(), learningRoadmap: roadmap }), { realPlans: true });
+  run.click({ view: 'roadmap' });
+  assert.equal(run.saved().lastLearningType, 'roadmap');
+  run.click({ roadmapAction: 'setup' });
+  assert.ok(run.current.html.args[0].wizard);
+  run.click({ view: 'discover' });
+  assert.equal(run.current.html.kind, 'roadmap');
+  assert.equal(run.current.html.args[0].wizard, null, 'home shows the saved path rather than an unfinished setup form');
+  const reloaded = app(null, { storage: run.storage, realPlans: true });
+  assert.equal(reloaded.current.html.kind, 'roadmap');
+  assert.deepEqual(reloaded.current.html.args[0].roadmap, roadmap);
+  assert.equal(reloaded.current.html.args[0].wizard, null);
+  const roadmapOnly = app(seed({ active: null, learningRoadmap: roadmap }));
+  assert.equal(roadmapOnly.current.html.kind, 'roadmap', 'an account with only a roadmap still has a usable home');
+});
+
+test('an existing roadmap stage resumes the saved lesson and draft without another generation', async () => {
+  const id = '12345678-1234-4000-8000-123456789012';
+  const saved = savedAiCourse();
+  const course = { id, revision: 3, saved, updatedAt: new Date(NOW).toISOString() };
+  const run = app(seed({ learningRoadmap: savedRoadmap(id) }), { realPlans: true, libraryCourses: [course] });
+  run.click({ view: 'roadmap' });
+  run.click({ roadmapAction: 'start', roadmapStage: '0' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(run.loadedCourses, [id]);
+  assert.deepEqual(run.generations, []);
+  assert.equal(run.current.view, 'learning-plan');
+  assert.equal(run.current.state.learningPlan.completed, 1);
+  assert.equal(run.current.state.learningPlan.answers[1], 'My current draft');
+  assert.equal(run.current.state.learningPlan.study[1].page, 1);
+  assert.equal(run.saved().lastLearningType, 'roadmap');
+  run.click({ view: 'discover' });
+  assert.equal(run.current.html.kind, 'roadmap', 'leaving a linked lesson returns to its full learning path');
+  const reloaded = app(null, { storage: run.storage, realPlans: true, libraryCourses: [course] });
+  assert.equal(reloaded.current.html.kind, 'roadmap', 'reopening the app preserves the parent path');
+  reloaded.click({ roadmapAction: 'start', roadmapStage: '0' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(reloaded.current.view, 'learning-plan', 'the stage button on restored home must actually open the lesson');
+  assert.deepEqual(reloaded.loadedCourses, [id]);
+  assert.equal(reloaded.current.state.learningPlan.answers[1], 'My current draft');
+});
+
+test('opening an archived roadmap preserves the other path and reloads the selected path', () => {
+  const first = { ...savedRoadmap('12345678-1234-4000-8000-123456789011'), id: '12345678-1234-4000-8000-123456789001' };
+  first.progress[0].completed = true;
+  const second = { ...savedRoadmap('12345678-1234-4000-8000-123456789012'), id: '12345678-1234-4000-8000-123456789002', title: 'Another learning path' };
+  const run = app(seed({ learningRoadmap: first, learningRoadmaps: [second] }));
+  run.click({ learningRoadmap: second.id });
+  assert.equal(run.current.view, 'roadmap');
+  assert.equal(run.saved().learningRoadmap.id, second.id);
+  assert.deepEqual(run.saved().learningRoadmaps, [first]);
+  const reloaded = app(null, { storage: run.storage });
+  assert.equal(reloaded.current.html.kind, 'roadmap');
+  assert.equal(reloaded.current.html.args[0].roadmap.id, second.id);
+  assert.deepEqual(reloaded.current.state.learningRoadmaps, [first]);
+});
+
+test('a library lesson opens its archived parent path before resuming the same lesson', async () => {
+  const id = '12345678-1234-4000-8000-123456789012';
+  const parent = { ...savedRoadmap(id), id: '12345678-1234-4000-8000-123456789002' };
+  const current = { ...savedRoadmap(), id: '12345678-1234-4000-8000-123456789001' };
+  const course = { id, revision: 2, saved: savedAiCourse(), updatedAt: new Date(NOW).toISOString() };
+  const run = app(seed({ learningRoadmap: current, learningRoadmaps: [parent] }), { realPlans: true, libraryCourses: [course] });
+  run.click({ learningOpen: id });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'roadmap');
+  assert.equal(run.saved().learningRoadmap.id, parent.id);
+  assert.deepEqual(run.loadedCourses, [], 'the library first shows the owning path');
+  run.click({ roadmapAction: 'start', roadmapStage: '0' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'learning-plan');
+  assert.deepEqual(run.loadedCourses, [id]);
+  assert.equal(run.current.state.learningPlan.answers[1], 'My current draft');
+  assert.equal(run.current.state.learningRoadmaps[0].id, current.id);
+});
+
+for (const succeeds of [true, false]) test(`a roadmap request settling on home clears busy controls (${succeeds ? 'success' : 'retry'})`, async () => {
+  let finish;
+  const stageGeneration = new Promise(resolve => { finish = resolve; });
+  const run = app(seed({ learningRoadmap: savedRoadmap(), lastLearningType: 'roadmap' }), { stageGeneration });
+  run.click({ roadmapAction: 'start', roadmapStage: '0' });
+  run.click({ view: 'discover' });
+  assert.equal(run.current.html.args[0].busy, 'stage');
+  finish(succeeds);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'discover', 'a completed request never steals navigation');
+  assert.equal(run.current.html.kind, 'roadmap');
+  assert.equal(Boolean(run.current.html.args[0].busy), false);
+  if (succeeds) assert.equal(run.current.html.args[0].active[0].status, 'active');
+  else assert.match(run.current.html.args[0].error, /Try again/);
+});
+
+test('real lesson checks apply hearts and correct-answer rewards once per checked response', () => {
+  const id = '12345678-1234-4000-8000-123456789012';
+  const saved = savedAiCourse();
+  saved.completed = 0;
+  saved.study[0] = { ...saved.study[0], page: 2, response: null, checked: false };
+  const run = app(seed({ learningPlan: saved, learningCourse: { id, ownerId: 'test-user' } }), { realPlans: true });
+  run.click({ view: 'learning-plan' });
+  run.click({ learningChoice: '0' });
+  run.click({ learningPage: 'check' });
+  assert.equal(run.saved().learningRewards.hearts, 4);
+  run.click({ learningPage: 'check' });
+  assert.equal(run.saved().learningRewards.hearts, 4, 'repeating the checked response is not another penalty');
+  run.click({ learningChoice: '1' });
+  run.click({ learningPage: 'check' });
+  assert.equal(run.saved().learningRewards.daily.correct, 1);
+  run.click({ learningPage: 'check' });
+  assert.equal(run.saved().learningRewards.daily.correct, 1, 'a passed checkpoint cannot earn repeated credit');
+});
+
+test('finishing a roadmap lesson unlocks its next stage and persists one claimable reward', () => {
+  const id = '12345678-1234-4000-8000-123456789012';
+  const saved = getStarterCourse('python-basics', 'en', 5);
+  saved.completed = 1;
+  saved.answers = ['print("Hello")', 'print("Hello, Ada")'];
+  saved.reviews[1] = { answer: saved.answers[1], observation: 'Your greeting is clear.', nextAction: 'Try a different name.' };
+  const run = app(seed({ learningPlan: saved, learningCourse: { id, ownerId: 'test-user' }, learningRoadmap: savedRoadmap(id) }), { realPlans: true });
+  run.click({ view: 'learning-plan' });
+  run.click({ learningStep: 'continue' });
+  assert.equal(run.saved().learningPlan.completed, 2);
+  assert.equal(run.saved().learningRoadmap.progress[0].completed, true);
+  assert.equal(run.saved().learningRewards.lessons, 1);
+  assert.equal(run.saved().learningRewards.gems, 25);
+  run.click({ learningStep: 'continue' });
+  assert.equal(run.saved().learningRewards.lessons, 1);
+  run.click({ view: 'roadmap' });
+  assert.deepEqual(run.current.html.args[0].active.map(stage => stage.status), ['completed', 'ready', 'locked', 'locked']);
+  run.click({ roadmapClaim: 'finish-lesson' });
+  assert.equal(run.saved().learningRewards.gems, 35);
+  run.click({ roadmapClaim: 'finish-lesson' });
+  assert.equal(run.saved().learningRewards.gems, 35, 'a daily reward is claimed once');
+  run.click({ roadmapBuy: 'freeze' });
+  assert.equal(run.saved().learningRewards.freezes, 1);
+  assert.equal(run.saved().learningRewards.gems, 10);
+  const reloaded = app(null, { storage: run.storage, realPlans: true });
+  assert.equal(reloaded.current.state.learningRewards.gems, 10);
+  assert.equal(reloaded.current.state.learningRoadmap.progress[0].completed, true);
+});
+
 test('switching accounts selects separate local workspaces and signout hides learning', async () => {
   const run = app(seed({ notes: { design: 'First account note' } }));
   run.signIn({ id: 'second-user' });
@@ -487,8 +721,11 @@ test('switching accounts selects separate local workspaces and signout hides lea
   assert.deepEqual(run.current.state.notes, {});
 });
 
-test('budget reload opens the overdue review and retains the reading page', () => {
+test('budget reload opens a quiet home, then continuing requires the overdue review and preserves the reading page', () => {
   const run = app(seed({ active: 'budget', budgetActivity: { view: 'lesson', step: 0 }, sessions: { budget: { lastSeen: NOW - RECAP_AFTER_MS - 1, cursor: { step: 0, page: 2 } } } }));
+  assert.equal(run.current.view, 'discover');
+  assert.equal(run.current.html.kind, 'quiet-home');
+  run.click({ action: 'resume-course', id: 'budget' });
   assert.equal(run.current.view, 'return-review');
   assert.equal(run.saved().sessions.budget.cursor.page, 2);
 });

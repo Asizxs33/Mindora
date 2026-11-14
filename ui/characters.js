@@ -147,6 +147,8 @@ function visibleDialogue(element) {
   const scenes = [
     ['.guided-content,.learning-hub-guide,.quiet-home', '.guided-dialogue'],
     ['.return-review-tutor', '.return-review-speech'],
+    ['.roadmap-tutor', '.roadmap-tutor-speech'],
+    ['.roadmap-wizard-intro', ':scope > div:last-child'],
     ['.account-guide-scene', '.account-intro-copy'],
     ['.course-path-header', ':scope > div'],
     ['.resume-mentor', ':scope > span'],

@@ -1,7 +1,6 @@
 // Explicit mock API boundary: this checks browser flows, not live credentials.
 // PLAYWRIGHT_MODULE may point to a locally installed Playwright package.
 import { createRequire } from 'node:module';
-import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,19 +12,8 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const user = { id: 'browser-qa', name: 'Aruzhan', email: 'qa@example.test' };
 const key = 'mindora.workspace.v1.browser-qa';
 const errors = [];
-let signupPayload;
-const roadmapRequests = [];
 const lessonRequests = [];
-const roadmap = {
-  title: 'Build useful spreadsheet formulas', outcome: 'Produce a monthly expense report.',
-  level: 'intermediate', levelReason: 'You already know how to use SUM.',
-  stages: [
-    { title: 'Use SUMIF', objective: 'Total rows for a given category.' },
-    { title: 'Count expenses', objective: 'Write an expense count by category.' },
-    { title: 'Check subtotals', objective: 'Compare conditional and overall totals.' },
-    { title: 'Make a fresh report', objective: 'Build a report from a new dataset.' },
-  ],
-};
+let signupPayload;
 async function context({ signedIn = true, saved = null } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   let identity = signedIn, revision = 0;
@@ -38,21 +26,20 @@ async function context({ signedIn = true, saved = null } = {}) {
       body = { available: true, user: identity ? user : null, profile: identity ? { name: 'Aruzhan', interests: [] } : null };
     } else if (url.pathname === '/api/learning-workspace') {
       body = request.method() === 'PUT' ? { workspace: { data: request.postDataJSON().data, revision: ++revision } } : { workspace: null };
+    } else if (url.pathname === '/api/learning-courses' && request.method() === 'POST') {
+      const course = { id: `00000000-0000-4000-8000-${String(courses.size + 1).padStart(12, '0')}`, saved: request.postDataJSON().saved, revision: 1, updatedAt: new Date().toISOString() };
+      courses.set(course.id, course); body = { course };
     } else if (url.pathname === '/api/learning-roadmap') {
       const input = request.postDataJSON();
-      roadmapRequests.push(input);
-      body = { roadmap: { ...roadmap, title: input.goal, goal: input.goal, minutes: input.minutes, language: input.language } };
+      body = { roadmap: { ...input, title: 'My Python journey', outcome: 'Build a small program one lesson at a time.', level: 'beginner', levelReason: 'Fixture: you selected starting from scratch.',
+        stages: ['Print a message', 'Store a value', 'Work with numbers', 'Build a tiny project'].map(title => ({ title, objective: `Practise: ${title.toLowerCase()}.` })) } };
     } else if (url.pathname === '/api/learning-plan') {
-      const input = request.postDataJSON();
+      const input = request.postDataJSON(), saved = getStarterCourse('python-basics', input.language, input.minutes);
       lessonRequests.push(input);
-      const saved = getStarterCourse('python-basics', 'en');
-      Object.assign(saved.plan, { title: input.roadmapStage.title, goal: input.goal });
-      const course = { id: randomUUID(), saved, revision: 1, updatedAt: new Date().toISOString() };
-      courses.set(course.id, course);
-      body = { plan: saved.plan, course };
-    } else if (url.pathname === '/api/learning-courses' && request.method() === 'POST') {
-      const course = { id: randomUUID(), saved: request.postDataJSON().saved, revision: 1, updatedAt: new Date().toISOString() };
-      courses.set(course.id, course); body = { course };
+      saved.plan.goal = input.goal;
+      saved.plan.title = input.roadmapStage?.title || saved.plan.title;
+      const course = { id: `00000000-0000-4000-8000-${String(courses.size + 1).padStart(12, '0')}`, saved, revision: 1, updatedAt: new Date().toISOString() };
+      courses.set(course.id, course); body = { plan: saved.plan, course };
     } else if (url.pathname === '/api/learning-courses' && url.searchParams.has('id')) {
       body = { course: courses.get(url.searchParams.get('id')) };
     } else if (url.pathname === '/api/learning-courses' && request.method() === 'PUT') {
@@ -83,74 +70,48 @@ async function context({ signedIn = true, saved = null } = {}) {
 const size = page => page.evaluate(() => ({ width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight, vw: innerWidth, vh: innerHeight }));
 const state = page => page.evaluate(key => JSON.parse(localStorage.getItem(key)), key);
 const nav = (page, view) => page.locator(`#navigation [data-view="${view}"], #mobile-navigation [data-view="${view}"]`).filter({ visible: true }).first();
-async function buildPath(page, goal, evidence) {
-  const next = page.locator('#roadmap-form button[type="submit"]');
-  await page.locator('#roadmap-form input[name="goal"]').fill(goal);
-  await next.click();
-  await page.locator('#roadmap-form input[name="experience"][value="some"]').check();
-  await page.locator('#roadmap-form textarea[name="evidence"]').fill(evidence);
-  await next.click();
-  await page.locator('#roadmap-form input[name="motivation"][value="work"]').check();
-  await next.click();
-  await page.locator('#roadmap-form input[name="minutes"][value="5"]').check();
-  await next.click();
-  await page.waitForSelector('.roadmap-layout');
-}
 try {
-  // Optional greeting leads to signup, followed by the single questionnaire.
+  // First entry: one short question at a time; the account form reuses the name.
   const first = await context({ signedIn: false });
   const page = first.page;
-  await page.locator('[data-intro-action="show"]').click();
   for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(viewport);
     const bounds = await size(page);
-    assert.equal(bounds.width, bounds.vw);
+    assert.equal(bounds.width, bounds.vw); assert.equal(bounds.height, bounds.vh);
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('[data-intro-action="next"]').click();
-  await page.locator('#account-name').fill('Aruzhan');
-  await page.locator('.account-primary').click();
-  await page.locator('.account-primary').click();
+  assert.equal(await page.locator('[data-intro-action="next"]').isDisabled(), true);
+  await page.locator('#intro-name').fill('Aruzhan');
+  await page.locator('[data-intro-action="next"]').click();
+  await page.locator('[data-intro-topic="design"]').click();
+  await page.locator('[data-intro-action="next"]').click();
+  await page.locator('[data-intro-minutes="5"]').click();
+  await page.locator('[data-intro-action="start"]').click();
   await page.locator('#account-email').fill(user.email);
+  assert.equal(await page.locator('#account-name').count(), 0);
   await page.locator('#account-password').fill('Browser-fixture-8');
   await page.locator('#account-confirm').fill('Browser-fixture-8');
   await page.screenshot({ path: join(tmpdir(), 'mindora-clean-quick-signup.png'), fullPage: true });
   await page.locator('.account-primary').click();
-  await buildPath(page, 'Learn spreadsheet formulas', 'I already use SUM.');
-  assert.equal(roadmapRequests[0].evidence, 'I already use SUM.');
-  assert.equal(lessonRequests.length, 0);
-  assert.equal(await page.locator('.roadmap-stage.is-locked').count(), 3);
+  await page.waitForSelector('.learning-hub');
   for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(viewport);
     const bounds = await size(page);
     assert.equal(bounds.width, bounds.vw);
+    await page.screenshot({ path: join(tmpdir(), `mindora-clean-hub-${viewport.width}.png`), fullPage: true });
+    // Lesson paths scroll naturally; large nodes and readable labels take priority.
+    const nodes = await page.locator('.learning-hub-node').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().width));
+    assert.ok(nodes.every(width => width >= 44));
     console.log('Learning path viewport:', JSON.stringify(bounds));
     await page.screenshot({ path: join(tmpdir(), `mindora-clean-hub-${viewport.width}.png`), fullPage: true });
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator('[data-roadmap-stage="0"]').click();
-  await page.waitForSelector('.ai-lesson-reader');
+  await page.locator('.learning-hub-actions [data-action="resume-course"]').click();
+  await page.waitForSelector('#main[data-page="lesson"]');
   assert.equal(signupPayload.name, 'Aruzhan');
   assert.equal((await state(page)).minutes, 5);
-  assert.equal(lessonRequests[0].roadmapStage.level, 'intermediate');
-  assert.equal(lessonRequests[0].roadmapStage.title, 'Use SUMIF');
-  const firstPath = (await state(page)).learningRoadmap;
-  assert.ok(firstPath.progress[0].courseId);
-
-  // Creating another path preserves the first path and its saved lesson.
-  await page.locator('.ai-lesson-exit').click();
-  await page.locator('[data-roadmap-action="setup"]').click();
-  await buildPath(page, 'Practice weekly reporting', 'I can design simple reports.');
-  assert.equal(lessonRequests.length, 1);
-  assert.equal((await state(page)).learningRoadmap.goal, 'Practice weekly reporting');
-  await nav(page, 'courses').click();
-  assert.equal(await page.locator('[data-learning-roadmap]').count(), 2);
-  await page.locator(`[data-learning-roadmap="${firstPath.id}"]`).click();
-  await page.waitForSelector('.roadmap-layout');
-  assert.equal((await state(page)).learningRoadmap.progress[0].courseId, firstPath.progress[0].courseId);
-  await page.locator('[data-roadmap-stage="0"]').click();
-  await page.waitForSelector('.ai-lesson-reader');
-  assert.equal(lessonRequests.length, 1);
+  assert.equal((await state(page)).active, 'design');
   await first.ctx.close();
 
   // An overdue learner reviews, leaves midway, returns, repairs and resumes.
@@ -162,18 +123,13 @@ try {
   };
   const returning = await context({ saved });
   const r = returning.page;
-  await nav(r, 'courses').click();
-  await r.locator('.ready-course[data-course="design"]').click();
-  await r.waitForSelector('#main[data-page="path"]');
-  await nav(r, 'profile').click();
-  await nav(r, 'my-path').click();
-  await r.waitForSelector('#main[data-page="path"]');
-  await r.locator('.course-path-actions [data-action="resume-course"]').click();
+  await r.locator('.learning-hub-actions [data-action="resume-course"]').click();
   await r.waitForSelector('#main[data-page="return-review"]');
   await r.locator('[data-return-action="next"]').click();
   await r.locator('[data-return-choice="0"]').click();
   await r.locator('[data-return-action="check"]').click();
   await r.reload();
+  await r.locator('.learning-hub-actions [data-action="resume-course"]').click();
   await r.waitForSelector('[data-return-action="next"]');
   assert.deepEqual((await state(r)).returnReview.firstPass, [false, null]);
   await r.locator('[data-return-action="next"]').click();
@@ -196,8 +152,7 @@ try {
   assert.deepEqual(restored.drafts, saved.drafts);
   assert.equal(restored.sessions.design.cursor.quizIndex, 1);
   await r.reload();
-  await nav(r, 'my-path').click();
-  await r.locator('.course-path-actions [data-action="resume-course"]').click();
+  await r.locator('.learning-hub-actions [data-action="resume-course"]').click();
   await r.waitForSelector('#main[data-page="lesson"]');
   assert.equal(await r.locator('.return-review').count(), 0);
   await returning.ctx.close();
@@ -205,16 +160,11 @@ try {
   // A ready course is saved through the existing library and uses its real player.
   const ready = await context({ saved: { ...saved, sessions: {}, progress: { design: 0, budget: 0 } } });
   const p = ready.page;
-  const coursesNav = nav(p, 'courses');
-  await coursesNav.click();
+  await p.locator('.learning-hub-actions [data-view="courses"]').click();
   assert.equal(await p.locator('.ready-course').count(), 6);
   await p.locator('[data-course-minutes="5"]').click();
   await p.locator('[data-starter-course="python-basics"]').click();
-  await p.waitForSelector('#main[data-page="course-path"]');
-  assert.equal(await p.locator('.ai-lesson-reader').count(), 0);
-  await nav(p, 'profile').click();
-  await nav(p, 'my-path').click();
-  await p.waitForSelector('#main[data-page="course-path"]');
+  await p.waitForSelector('.learning-hub').catch(async error => { console.log('Ready course failure:', JSON.stringify({ errors, state: await state(p), body: (await p.locator('#main').innerText()).slice(0,1800) })); throw error; });
   await p.locator('.learning-hub-actions [data-view="learning-plan"]').click();
   await p.waitForSelector('.ai-lesson-reader');
   await p.screenshot({ path: join(tmpdir(), 'mindora-clean-ready-lesson.png'), fullPage: true });
@@ -237,15 +187,15 @@ try {
   assert.equal((await state(p)).learningPlan.completed, 2);
   assert.equal((await state(p)).progress.design, 0);
   await p.locator('.ai-lesson-exit').click();
-  await coursesNav.click();
+  await p.locator('.learning-hub-actions [data-view="courses"]').click();
   await p.locator('[data-starter-course="python-basics"]').click();
-  await p.waitForSelector('#main[data-page="course-path"]');
+  await p.waitForSelector('.learning-hub');
   assert.equal((await state(p)).learningPlan.completed, 2);
   for (const minutes of [10, 20]) {
-    await coursesNav.click();
+    await p.locator('.learning-hub-actions [data-view="courses"]').click();
     await p.locator(`[data-course-minutes="${minutes}"]`).click();
     await p.locator('[data-starter-course="python-basics"]').click();
-    await p.waitForSelector('#main[data-page="course-path"]');
+    await p.waitForSelector('.learning-hub');
     assert.equal((await state(p)).learningPlan.plan.minutes, minutes);
     assert.equal(await p.locator('.learning-hub-node').count(), minutes === 10 ? 3 : 4);
     await p.locator('.learning-hub-actions [data-view="learning-plan"]').click();
@@ -261,36 +211,107 @@ try {
     await p.locator('[data-learning-page="next"]:visible').click();
     await p.waitForFunction(key => !JSON.parse(localStorage.getItem(key)).learningCourse.dirty, key);
     await p.reload();
-    await p.waitForSelector('.ai-lesson-reader');
+    await p.waitForSelector('.learning-hub');
     assert.equal((await state(p)).learningPlan.completed, 1);
     assert.equal((await state(p)).learningPlan.study[1].page, 1);
+    await p.locator('.learning-hub-actions [data-view="learning-plan"]').click();
     assert.equal((await state(p)).learningPlan.plan.minutes, minutes);
     await p.locator('.ai-lesson-exit').click();
   }
   // Switching duration never erases the completed 5-minute version.
-  await coursesNav.click();
+  await p.locator('.learning-hub-actions [data-view="courses"]').click();
   await p.locator('[data-course-minutes="5"]').click();
   await p.locator('[data-starter-course="python-basics"]').click();
-  await p.waitForSelector('#main[data-page="course-path"]');
+  await p.waitForSelector('.learning-hub');
   assert.equal((await state(p)).learningPlan.completed, 2);
   assert.equal((await state(p)).learningPlan.plan.minutes, 5);
-  // Profile logout returns to the guest home. Signing in restores the chosen course.
+  // Profile logout is directly reachable on the phone and returns to Mino.
   await p.locator('#mobile-navigation [data-view="profile"]').click();
   await p.locator('[data-account-signout]').click();
-  await p.waitForSelector('[data-intro-action="show"]');
+  await p.waitForSelector('.guided-greeting');
   assert.equal(await p.locator('#mindora-account[open]').count(), 0);
+  assert.equal(await p.locator('.guided-dialogue p').isVisible(), true);
   await p.reload();
-  await p.locator('[data-intro-action="show"]').click();
-  await p.locator('.guided-signin[data-account-open="signin"]').click();
+  await p.waitForSelector('.guided-greeting');
+  await p.locator('.guided-signin').click();
   await p.locator('#account-email').fill(user.email);
   await p.locator('#account-password').fill('Browser-fixture-8');
   await p.locator('.account-primary').click();
   await p.waitForSelector('.account-signout');
   await p.locator('.account-close').click();
-  await p.waitForSelector('#main[data-page="course-path"]');
+  await p.waitForSelector('.learning-hub');
   assert.equal((await state(p)).learningPlan.completed, 2);
   assert.equal((await state(p)).learningPlan.plan.minutes, 5);
   await ready.ctx.close();
+  // The latest backend's personal roadmap coexists with the short-course catalog.
+  const journey = await context({ saved: { ...saved, active: null, sessions: {}, progress: { design: 0, budget: 0 } } });
+  const j = journey.page;
+  await j.locator('[data-intro-topic="custom"]').click();
+  await j.locator('#intro-goal').fill('Learn Python for my work');
+  await j.locator('[data-intro-action="next"]').click();
+  await j.locator('[data-intro-minutes="5"]').click();
+  await j.locator('[data-intro-action="start"]').click();
+  await j.locator('input[name="experience"][value="new"]').check();
+  await j.locator('#roadmap-form button[type="submit"]').click();
+  await j.locator('input[name="motivation"][value="work"]').check();
+  await j.locator('#roadmap-form button[type="submit"]').click();
+  await j.locator('input[name="minutes"][value="5"]').check();
+  await j.locator('#roadmap-form button[type="submit"]').click();
+  await j.waitForSelector('.roadmap-layout');
+  assert.equal(await j.locator('.roadmap-stage.is-locked').count(), 3);
+  await j.locator('[data-roadmap-stage="0"]').click();
+  await j.waitForSelector('.ai-lesson-reader');
+  await j.locator('[data-learning-page="next"]:visible').click();
+  await j.locator('[data-learning-page="next"]:visible').click();
+  await j.locator('[data-learning-gap]').fill('"Hello"');
+  await j.locator('[data-learning-page="check"]').click();
+  await j.locator('[data-learning-page="next"]:visible').click();
+  await j.locator('[data-learning-page="next"]:visible').click();
+  for (const answer of ['print("My lesson")', 'print("Hello")\nprint("Mindora")']) {
+    await j.locator('#learning-step-form textarea').fill(answer);
+    await j.locator('#learning-step-form button[type="submit"]').click();
+    await j.locator('[data-learning-step="continue"]').click();
+  }
+  await j.waitForSelector('#learning-plan-complete');
+  assert.equal((await state(j)).learningRoadmap.progress[0].completed, true);
+  await j.locator('.ai-lesson-exit').click();
+  await j.waitForSelector('.roadmap-layout');
+  assert.equal(await j.locator('[data-roadmap-stage="1"]').count(), 1);
+  await j.reload();
+  await j.waitForSelector('.roadmap-layout');
+  assert.equal((await state(j)).learningRoadmap.progress[0].completed, true);
+  await j.screenshot({ path: join(tmpdir(), 'mindora-personal-roadmap-phone.png'), fullPage: true });
+  await j.locator('[data-roadmap-stage="1"]').click();
+  await j.waitForSelector('.ai-lesson-reader');
+  assert.equal((await state(j)).learningRoadmap.progress[1].courseId !== null, true);
+  await j.locator('.ai-lesson-exit').click();
+  await j.waitForSelector('.roadmap-stage.is-active');
+  // A second personal course keeps the first path and its generated lessons.
+  const firstPath = (await state(j)).learningRoadmap;
+  const generated = lessonRequests.length;
+  await j.locator('[data-roadmap-action="setup"]').click();
+  await j.locator('#roadmap-form input[name="goal"]').fill('Build a weekly report');
+  await j.locator('#roadmap-form button[type="submit"]').click();
+  await j.locator('input[name="experience"][value="some"]').check();
+  await j.locator('#roadmap-form button[type="submit"]').click();
+  await j.locator('input[name="motivation"][value="work"]').check();
+  await j.locator('#roadmap-form button[type="submit"]').click();
+  await j.locator('input[name="minutes"][value="5"]').check();
+  await j.locator('#roadmap-form button[type="submit"]').click();
+  await j.waitForSelector('.roadmap-layout');
+  assert.equal(lessonRequests.length, generated, 'a new outline does not eagerly generate lessons');
+  await nav(j, 'courses').click();
+  assert.equal(await j.locator('[data-learning-roadmap]').count(), 2);
+  await j.locator(`[data-learning-roadmap="${firstPath.id}"]`).click();
+  await j.waitForSelector('.roadmap-layout');
+  assert.equal((await state(j)).learningRoadmap.progress[0].completed, true);
+  await nav(j, 'profile').click();
+  await nav(j, 'my-path').click();
+  await j.waitForSelector('.roadmap-layout');
+  await j.locator('[data-roadmap-stage="1"]').click();
+  await j.waitForSelector('.ai-lesson-reader');
+  assert.equal(lessonRequests.length, generated, 'opening an archived lesson loads its saved copy');
+  await journey.ctx.close();
   assert.deepEqual(errors, []);
-  console.log('PASS: greeting → signup → personal paths retained, recall and repair, duration-specific starter paths and saved progress, mobile sign-out and sign-in. API mocked explicitly.');
+  console.log('PASS: responsive greeting/path, signup → lesson, interrupted recall, low-score repair, saved cursor/drafts, 5/10/20-minute courses, mobile signout → greeting → signin, personalized roadmap → completion → unlock → reload → next lesson. API mocked explicitly.');
 } finally { await browser.close(); }

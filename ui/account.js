@@ -146,9 +146,9 @@ function content() {
   const title = signup ? titles[view.step] : profile ? t('Your profile.', 'Ваш профиль.', 'Сіздің профиліңіз.') : t('Welcome back.', 'С возвращением.', 'Қайта қош келдіңіз.');
   const description = signup ? descriptions[view.step] : profile ? t('Your learning, your way.', 'Учитесь в своём ритме.', 'Өз қарқыныңызбен оқыңыз.') : t('Let’s pick up where you left off.', 'Продолжим с того места, где остановились.', 'Тоқтаған жеріңізден жалғастырайық.');
   const primary = view.pending ? (profile ? t('Saving…', 'Сохраняем…', 'Сақталуда…') : signup ? t('Creating your account…', 'Создаём аккаунт…', 'Аккаунт құрылуда…') : t('Signing in…', 'Входим…', 'Кіруде…')) : profile ? t('Save profile', 'Сохранить профиль', 'Профильді сақтау') : signup ? view.step === 2 ? t('Create account', 'Создать аккаунт', 'Аккаунт құру') : t('Continue', 'Продолжить', 'Жалғастыру') : t('Sign in', 'Войти', 'Кіру');
-  return `<form id="mindora-account-form" class="account-form account-${view.mode}" novalidate aria-busy="${view.pending}">
-    <div class="account-form-body">${signup ? progress() : ''}
-    ${signup && view.step > 0 ? `<button type="button" class="account-back" data-account-action="back" ${view.pending ? 'disabled' : ''}>${arrow} ${t('Back', 'Назад', 'Артқа')}</button>` : ''}
+  return `<form id="mindora-account-form" class="account-form account-${view.mode}${view.guided ? ' account-guided' : ''}" novalidate aria-busy="${view.pending}">
+    <div class="account-form-body">${signup && !view.guided ? progress() : ''}
+    ${signup && view.step > 0 && !view.guided ? `<button type="button" class="account-back" data-account-action="back" ${view.pending ? 'disabled' : ''}>${arrow} ${t('Back', 'Назад', 'Артқа')}</button>` : ''}
     <div class="account-intro"><h1 id="account-heading" tabindex="-1">${title}</h1><div class="account-guide-scene"><div class="account-guide">${character('mino', view.pending ? 'thinking' : profile ? 'explaining' : signup && view.step === 2 ? 'celebrate' : signup && view.step === 1 ? 'explaining' : 'welcome', 'account-mino')}</div><div class="account-intro-copy"><span class="account-speaker">Mino</span><p>${signup && view.step === 1 && view.draft.name ? `${t('Nice to meet you,', 'Рад знакомству,', 'Танысқаныма қуаныштымын,')} ${esc(view.draft.name.trim())}! ` : ''}${description}</p></div></div></div>
     <div class="account-error" id="account-error" role="alert" ${view.error ? '' : 'hidden'}>${esc(view.error)}</div><div class="account-notice" id="account-notice" role="status" ${view.notice ? '' : 'hidden'}>${esc(view.notice)}</div><div class="account-service-note" data-account-service ${session.available === false ? '' : 'hidden'}>${t('Accounts are temporarily unavailable. Please try again shortly.', 'Вход в аккаунт временно недоступен. Попробуй чуть позже.', 'Аккаунтқа кіру уақытша қолжетімсіз. Біраздан кейін қайталап көр.')}</div>
     <fieldset class="account-inputs" ${view.pending ? 'disabled' : ''}><legend class="account-sr-only">${title}</legend>
@@ -323,14 +323,14 @@ async function signOut() {
 
 function switchMode(mode) {
   view.mode = mode;
-  view.step = 0;
+  view.step = mode === 'signup' && view.guided ? 2 : 0;
   view.error = ''; view.notice = '';
   view.draft.password = ''; view.draft.confirm = '';
   view.showPassword = false; view.showConfirm = false;
   render();
 }
 
-export function openAccount(mode = 'signup') {
+export function openAccount(mode = 'signup', introduction = null) {
   mountAccount();
   if (view.pending) { if (!dialog.open) { dialog.showModal(); document.body.classList.add('account-open'); } return; }
   returnFocus = document.activeElement;
@@ -338,6 +338,13 @@ export function openAccount(mode = 'signup') {
   if (session.user) mode = 'profile';
   else if (mode === 'profile' && !loadingSession) mode = 'signup';
   view = { ...view, mode, step: 0, error: '', notice: mode === 'profile' && pendingUserProfile() ? 'Your details are still here. Choose Save profile to finish setting up your profile.' : '', showPassword: false, showConfirm: false, draft: mode === 'profile' && session.user ? profileDraft() : { ...view.draft, password: '', confirm: '' } };
+  view.guided = mode === 'signup' && typeof introduction?.name === 'string' && Boolean(introduction.name.trim());
+  if (view.guided) {
+    view.step = 2;
+    view.draft.name = introduction.name.trim().slice(0, 80);
+    view.draft.age = ''; view.draft.gender = '';
+    view.draft.interests = (Array.isArray(introduction.interests) ? introduction.interests : []).filter(item => typeof item === 'string').slice(0, 8).map(item => item.slice(0, 40));
+  }
   render();
   if (!dialog.open) dialog.showModal();
   document.body.classList.add('account-open');

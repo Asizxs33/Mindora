@@ -72,7 +72,7 @@ try {
       document.body.className = kind === 'intro' ? 'quiet-shell is-guided' : kind === 'hub' ? 'quiet-shell' : kind === 'path' ? '' : 'is-learning';
       let html;
       if (kind === 'mentor') html = scenes.mentorScene(mentor, pose, '<h1>One idea at a time.</h1><p>A clear example helps you understand. Try a small step, then see what happens.</p>', '', { hint: 'Take your time. The main explanation stays visible.' });
-      if (kind === 'intro') html = guided.guidedStartView();
+      if (kind === 'intro') html = guided.guidedStartView({ step, name: 'Aruzhan', topic: 'design' });
       if (kind === 'setup') html = roadmap.roadmapView({ wizard: { step, goal: 'Make a poster', minutes: 10 } });
       if (kind === 'hub') html = guided.quietHomeView(state);
       if (kind === 'path') html = views.pathView(state);
@@ -110,7 +110,7 @@ try {
       }
     }
     for (const kind of ['intro', 'setup', 'hub', 'path', 'lesson', 'review']) {
-      for (const step of kind === 'setup' ? [0, 1, 2, 3] : kind === 'review' ? [0, 1] : [0]) {
+      for (const step of ['intro', 'setup'].includes(kind) ? [0, 1, 2, 3] : kind === 'review' ? [0, 1] : [0]) {
         await render({ kind, step, mentor: 'mia' });
         if (kind === 'intro' && step === 0) {
           await page.waitForFunction(() => document.querySelector('.guided-mino')?.dataset.characterPlaying === 'true');
@@ -152,10 +152,10 @@ try {
   await account.goto(base);
   for (const size of sizes) {
     await account.setViewportSize(size);
-    for (const mode of ['signup', 'signin']) {
+    for (const mode of ['signup', 'signin', 'guided']) {
       await account.evaluate(async mode => {
         const { openAccount, closeAccount } = await import('/ui/account.js'); closeAccount();
-        await openAccount(mode);
+        await openAccount(mode === 'guided' ? 'signup' : mode, mode === 'guided' ? { name: 'Aruzhan', goal: 'Make a poster' } : null);
       }, mode);
       await account.waitForTimeout(100);
       await geometry(account, `${size.width}/account-${mode}`);
@@ -192,7 +192,7 @@ try {
     await profile.setViewportSize({ width: size.width, height: 450 });
     await profile.locator('[data-account-action="signout"]').click();
     await profile.waitForFunction(() => !document.querySelector('dialog[open]'));
-    await profile.locator('[data-intro-action="show"]').waitFor();
+    await profile.locator('.guided-greeting').waitFor();
     await profile.setViewportSize(size);
     await profile.screenshot({ path: join(tmpdir(), `mindora-layout-after-signout-${size.width}.png`), fullPage: true });
     assert.equal(await profile.evaluate(async () => (await import('/ui/account.js')).getAccountState().user), null);

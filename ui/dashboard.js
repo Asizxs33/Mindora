@@ -25,17 +25,16 @@ export function brandNav(icon, view, place, signedIn = false) {
   const items = [['discover', 'home', t('Learn','Обучение','Оқу')], ['courses', 'book', t('My courses','Мои курсы','Курстарым')], ['work', 'folder', t('My work','Мои работы','Жұмыстарым')], ['profile', 'user', t('Profile','Профиль','Профиль')]];
   if (signedIn) {
     items.splice(1, 0, ['my-path', 'path', t('My path','Мой путь','Оқу жолым')]);
-    if (place !== 'bottom') items.splice(-1, 0, ['quests', 'flag', t('Quests','Задания','Тапсырмалар')], ['shop', 'store', t('Shop','Магазин','Дүкен')]);
   }
   return items.map(([key, symbol, name]) => {
     const learningViews = ['path', 'course-path', 'roadmap', 'lesson', 'learning-plan', 'recap', 'return-review', 'result', 'certificate'];
     const active = view === key || (key === (signedIn ? 'my-path' : 'discover') && learningViews.includes(view))
-      || (key === 'profile' && (['practice', 'achievements', 'community'].includes(view) || (place === 'bottom' && ['quests', 'shop'].includes(view))));
+      || (key === 'profile' && ['practice', 'achievements', 'community', 'quests', 'shop'].includes(view));
     return `<button class="nav-item ${active ? 'active' : ''}" data-view="${key}" ${active ? 'aria-current="page"' : ''}>${icon(symbol, place === 'bottom' ? 22 : 23)}<span>${name}</span></button>`;
   }).join('');
 }
 
-function goalBanner(minutes, compact = false, showIntro = false) {
+function goalBanner(minutes, compact = false) {
   return `<section class="learn-home ${compact ? 'new-goal-section' : ''}" aria-labelledby="welcome-title">
     ${compact ? '' : `<div class="home-introduction"><div class="hero-character">${character('mino', 'welcome', 'home-character')}</div><div class="speech-bubble"><span class="home-guide-label">${t('Mino · your learning buddy', 'Мино · учимся вместе', 'Мино · бірге үйренеміз')}</span><p>${t("Hi! Tell me your goal. We’ll take it one small step at a time.", "Привет! Расскажи о своей цели. Будем разбираться вместе, шаг за шагом.", "Сәлем! Мақсатыңды айт. Бірге, шағын қадамдармен үйренеміз.")}</p></div></div>`}
     <div class="goal-copy">
@@ -53,7 +52,7 @@ function goalBanner(minutes, compact = false, showIntro = false) {
       <button class="topic-shortcut" data-course="budget">${icon('sheet', 18)} ${t("Learn spreadsheets", "Изучить таблицы", "Кестелерді үйрену")}</button>
     </div>
     <p class="home-note">${t("Posters and spreadsheets are available now.", "Готовые курсы: постеры и таблицы.", "Дайын курстар: постерлер мен кестелер.")}</p>
-    ${showIntro ? `<p class="home-account-link"><button type="button" class="text-link" data-intro-action="show">${t('Meet Mino', 'Познакомиться с Мино', 'Миномын танысу')}</button> <button type="button" class="text-link" data-account-open="signup">${t('Create account', 'Создать аккаунт', 'Аккаунт жасау')}</button></p>` : ''}
+    ${compact ? '' : `<p class="home-account-link">${t('New here?', 'Впервые здесь?', 'Алғаш рет келдің бе?')} <button class="text-link" data-account-open="signup">${t("Create account", "Создать аккаунт", "Аккаунт жасау")}</button></p>`}
   </section>`;
 }
 
@@ -74,7 +73,7 @@ function resumeCard(state) {
   </section>`;
 }
 
-export function dashboard(state, { showIntro = false } = {}) {
+export function dashboard(state) {
   const saved = state.learningPlan;
   const hasPath = state.learningRoadmap || saved || Object.hasOwn(COURSES, state.active);
   const pathLink = hasPath ? `<button type="button" class="text-link roadmap-home-link" data-view="my-path">${icon('path', 18)} ${t("Open my learning path", "Открыть мой путь", "Оқу жолымды ашу")}</button>` : '';
@@ -101,7 +100,7 @@ export function dashboard(state, { showIntro = false } = {}) {
   }
   return state.active && COURSES[state.active]
     ? `${resumeCard(state)}${pathLink}${newGoal}`
-    : `${goalBanner(state.minutes, false, showIntro)}${pathLink}`;
+    : `${goalBanner(state.minutes)}${pathLink}`;
 }
 
 export function readyCoursesView(extraCourses = [], minutes = 10) {
@@ -111,16 +110,7 @@ export function readyCoursesView(extraCourses = [], minutes = 10) {
     ...extraCourses,
   ];
   const mentorNames = { mino: 'Mino', mia: 'Mia', sam: 'Sam', artist: 'Ari', copywriter: 'Nora', smm: 'Zoe' };
-  const paceLabel = t('Time for your next lesson', 'Время на новое занятие', 'Келесі сабаққа арналған уақыт');
-  return `<section class="ready-courses" aria-labelledby="ready-courses-title">
-    <h2 id="ready-courses-title">${t('Ready mini-courses', 'Готовые мини-курсы', 'Дайын шағын курстар')}</h2>
-    <fieldset class="course-pace"><legend>${paceLabel}</legend><div>${[5, 10, 20].map(value => `<button type="button" data-course-minutes="${value}" aria-pressed="${minutes === value}"><strong>${value}</strong> ${t('min', 'мин', 'мин')}</button>`).join('')}</div></fieldset>
-    <p class="course-pace-note">${t('Your unfinished lessons stay saved.', 'Начатые занятия остаются сохранёнными.', 'Бастаған сабақтарың сақталады.')}</p>
-    <div class="ready-course-grid">${courses.map(course => `<button type="button" class="ready-course" ${course.builtin ? `data-course="${escapeHtml(course.id)}"` : `data-starter-course="${escapeHtml(course.id)}" data-starter-minutes="${course.minutes}"`}>
-      <span class="ready-course-symbol" aria-hidden="true">${icon(course.icon, 24)}</span><strong>${escapeHtml(course.title)}</strong>
-      <span class="ready-course-meta"><span>${escapeHtml(mentorNames[course.mentor] || course.mentor)} · ${course.minutes} ${t('min', 'мин', 'мин')}</span>${icon('arrow', 17)}</span>
-    </button>`).join('')}</div>
-  </section>`;
+  return `<section class="ready-courses" aria-labelledby="ready-courses-title"><h2 id="ready-courses-title">${t('Ready mini-courses', 'Готовые мини-курсы', 'Дайын шағын курстар')}</h2><fieldset class="course-pace"><legend>${t('Time for your next lesson','Время на новое занятие','Келесі сабаққа арналған уақыт')}</legend><div>${[5,10,20].map(value => `<button type="button" data-course-minutes="${value}" aria-pressed="${minutes === value}"><strong>${value}</strong> ${t('min','мин','мин')}</button>`).join('')}</div></fieldset><p class="course-pace-note">${t('A little learning, at your pace. Your unfinished lessons stay saved.', 'Учись в своём темпе. Начатые занятия остаются сохранёнными.', 'Өз қарқыныңмен үйрен. Бастаған сабақтарың сақталады.')}</p><div class="ready-course-grid">${courses.map(course => `<button type="button" class="ready-course" ${course.builtin ? `data-course="${escapeHtml(course.id)}" data-course-path` : `data-starter-course="${escapeHtml(course.id)}" data-starter-minutes="${course.minutes}"`}><span class="ready-course-symbol" aria-hidden="true">${icon(course.icon, 24)}</span><strong>${escapeHtml(course.title)}</strong><span class="ready-course-meta"><span>${escapeHtml(mentorNames[course.mentor] || course.mentor)} · ${course.minutes} ${t('min', 'мин', 'мин')}</span>${icon('arrow', 17)}</span></button>`).join('')}</div></section>`;
 }
 
 export function coursesPage(state, { showHeading = true, showCurrentLesson = true, showReadyCourses = false, readyCourses = [] } = {}) {

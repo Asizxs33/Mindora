@@ -25,11 +25,11 @@ import { downloadCertificate } from './certificate.js';
 import { getAccountState, openAccount, closeAccount, expireAccountSession } from '../ui/account.js';
 import { learningLibraryView, learningSyncView, loginRequiredView } from '../ui/learning-library.js';
 import { showWorkspaceConflict } from '../ui/workspace-conflict.js';
-import { roadmapView, rewardsView } from '../ui/roadmap.js';
-import { guidedStartView, quietHomeView } from '../ui/guided-start.js';
+import { guidedStartView, quietHomeView, startTopics } from '../ui/guided-start.js';
 import { needsReturnReview, learningHasProgress, learningReviewQuestions, createReturnReview, restoreReturnReview } from './return-review.js';
 import { returnReviewView, mountReturnReview } from '../ui/return-review.js';
 import { getStarterCourse, starterCourses } from './starter-courses.js';
+import { roadmapView, rewardsView } from '../ui/roadmap.js';
 
 const $=s=>document.querySelector(s);
 const LEGACY_KEY='mindora.workspace.v1';
@@ -57,10 +57,9 @@ const state = readState();
 state.language = languageCode(state.language);
 setLanguage(state.language);
 const resume = readBudgetResume(state);
-let view = accountOwner
-  ? state.returnReviewOpen ? 'return-review' : state.learningPlanOpen && state.learningPlan ? 'learning-plan' : resume?.view || 'discover'
-  : 'discover';
-let showIntro = false;
+let view = 'discover';
+let startingNew = false;
+let introduction = { step: 0, name: '', topic: '', goal: '', minutes: state.minutes };
 let step = resume?.step ?? 0;
 let quizIndex = 0;
 let quizChoice = null;
@@ -81,7 +80,11 @@ const builtinData = source => Object.fromEntries(builtinFields.filter(key => sou
 let builtinSnapshot = JSON.stringify(builtinData(state));
 const plans = createPlanController({ state, save: saveLearning, render, isOpen: () => view === 'learning-plan' && Boolean(accountOwner),
     canLearn: () => ensureLearning(), beforeGenerate: () => library.flush(),
-    onGenerated: course => library.accept(course), onUnauthorized: expiredSession, accountId: () => accountOwner });
+    async onGenerated(course) {
+      const accepted = await library.accept(course);
+      if (accepted && view === 'learning-plan') { rememberLearningVisit(); saveLocal(); }
+      return accepted;
+    }, onUnauthorized: expiredSession, accountId: () => accountOwner });
 if (view === 'learning-plan' && !state.learningPlan) view = 'discover';
 
 library = createLearningLibrary({
@@ -134,7 +137,7 @@ function ensureLearning(resumeAction) {
   if (accountOwner && getAccountState().user?.id === accountOwner && accountReady) return true;
   if (resumeAction) pendingLearning = resumeAction;
   if (accountOwner && !accountReady) return false;
-  openAccount('signup');
+  openAccount('signup', introduction.name ? { name: introduction.name, interests: [startTopics().find(item => item.id === introduction.topic)?.label || introduction.goal].filter(Boolean) } : null);
   return false;
 }
 
@@ -300,6 +303,8 @@ function rememberLearningVisit() {
   if (!key || !accountReady) return;
   const visits = state.learningVisits && typeof state.learningVisits === 'object' && !Array.isArray(state.learningVisits) ? state.learningVisits : {};
   state.learningVisits = Object.fromEntries([...Object.entries(visits).filter(([id]) => id !== key).slice(-99), [key, Date.now()]]);
+  state.lastLearningType = pathForLesson(state.learningCourse?.id) ? 'roadmap' : 'ai';
+  state.pathKind = state.lastLearningType === 'roadmap' ? 'roadmap' : 'lesson';
 }
 
 function reviewLearningPlan() {
@@ -329,11 +334,11 @@ function openMyPath() {
     const linked = pathForLesson(state.learningCourse?.id);
     if (linked) return openRoadmap(linked.id ?? 'current');
   }
-  const kind = state.pathKind;
-  if (kind === 'builtin' && COURSES[state.active]) return go('path');
+  const kind = state.pathKind || (state.lastLearningType === 'ai' ? 'lesson' : state.lastLearningType);
+  if (kind === 'builtin' && COURSES[state.active]) { state.lastLearningType = 'builtin'; saveLocal(); return go('discover'); }
   if (kind === 'lesson' && state.learningPlan) return go('course-path');
   if (restoreRoadmap(state.learningRoadmap)) return go('roadmap');
-  if (COURSES[state.active]) return go('path');
+  if (COURSES[state.active]) { state.lastLearningType = 'builtin'; saveLocal(); return go('discover'); }
   if (state.learningPlan) return go('course-path');
   return go('roadmap');
 }
@@ -392,21 +397,23 @@ function modal(type, data) {
   $("#modal-content").innerHTML = dialogContent(type, data);
   if (!$("#modal").open) $("#modal").showModal();
 }
-function go(next, cursor = null) {
+function go(next, cursor = null, newCourse = false) {
   if (next === 'my-path') return openMyPath();
   if (['path', 'course-path', 'lesson', 'learning-plan', 'return-review', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop'].includes(next)
-    && !ensureLearning(() => go(next, cursor))) return;
+    && !ensureLearning(() => go(next, cursor, newCourse))) return;
   if (next === 'course-path' && !state.learningPlan) return go('courses');
   if (next === 'path' && !Object.hasOwn(COURSES, state.active)) return go('courses');
-  if (next === 'learning-plan' && reviewLearningPlan()) return;
+  if (next === 'learning-plan' && !newCourse && view !== next && reviewLearningPlan()) return;
   if (view === 'learning-plan' && next !== view && next !== 'return-review') { rememberLearningVisit(); saveLocal(); }
   view = next;
-  if (next !== 'discover') showIntro = false;
+  if (next !== 'discover') startingNew = false;
+  if (next === 'roadmap' && state.learningRoadmap) { state.lastLearningType = 'roadmap'; saveLocal(); }
   const pathKind = next === 'roadmap' ? 'roadmap' : next === 'course-path' ? 'lesson'
     : next === 'path' || next === 'lesson' ? 'builtin'
       : next === 'learning-plan' ? learningPlanPathKind() : null;
-  if (pathKind && state.pathKind !== pathKind) {
+  if (pathKind) {
     state.pathKind = pathKind;
+    state.lastLearningType = pathKind === 'lesson' ? 'ai' : pathKind;
     saveLocal();
   }
   const reviewOpen = next === 'return-review';
@@ -449,7 +456,8 @@ function render() {
     busy: roadmapOperation?.kind, error: roadmapError, rewards, quests: rewards?.quests ?? [], items: rewards?.items ?? [] };
   let html;
   switch (view) {
-    case 'discover': html = showIntro && !accountOwner ? guidedStartView() : dashboard(state, { showIntro: !accountOwner }); break;
+    case 'discover': html = !accountOwner || startingNew || (!state.active && !state.learningPlan && !roadmap)
+      ? guidedStartView({ ...introduction, signedIn: Boolean(accountOwner) }) : roadmap && (state.lastLearningType === 'roadmap' || (!state.active && !state.learningPlan)) ? roadmapView({ ...roadmapProps, wizard: null }) : quietHomeView(state); break;
     case 'courses': {
       const collection = library.screen();
       const paths = savedRoadmaps();
@@ -469,7 +477,7 @@ function render() {
     case 'shop': html = rewardsView(view, roadmapProps); break;
     case 'profile': html = sidePage(view, state, rewards ? rewardsView('profile', roadmapProps) : ''); break;
     case 'path': html = pathView(state); break;
-    case 'course-path': html = quietHomeView(state); break;
+    case 'course-path': html = quietHomeView({ ...state, lastLearningType: 'ai' }); break;
     case 'return-review': html = returnReviewView(state.returnReview); break;
     case 'certificate': html = certificateView(certificateData(state.active)); break;
     case 'lesson': {
@@ -651,7 +659,7 @@ function runRoadmapOperation(kind, work) {
     } finally {
       if (isCurrent()) {
         roadmapOperation = null;
-        if (view === 'roadmap') render();
+        if (view === 'roadmap' || (view === 'discover' && !startingNew)) render();
       }
     }
   })();
@@ -729,10 +737,13 @@ function submitRoadmap(form) {
 }
 
 function startRoadmapStage(index) {
-  if (roadmapWizard) return;
+  if (roadmapWizard && view !== 'discover') return;
   const roadmap = restoreRoadmap(state.learningRoadmap);
   const selected = roadmap && roadmapStageStatuses(roadmap)[index];
   if (!selected || selected.status === 'locked') return;
+  // The saved path also renders as home. Give its async operation the same
+  // route/error handling as a path opened from navigation.
+  if (view === 'discover') { roadmapWizard = null; go('roadmap'); }
   runRoadmapOperation('stage', async isCurrent => {
     if (selected.courseId) {
       if (!await library.load(selected.courseId)) throw new Error(roadmapErrorText('stage'));
@@ -753,6 +764,7 @@ function startRoadmapStage(index) {
 }
 
 document.addEventListener('submit', event => {
+  if (event.target.id === 'intro-name-form') { event.preventDefault(); advanceIntroduction(); return; }
   if (event.target.id === 'roadmap-form') {
     event.preventDefault();
     submitRoadmap(event.target);
@@ -768,6 +780,31 @@ document.addEventListener('submit', event => {
   if (ensureLearning(start)) start();
 });
 
+function advanceIntroduction() {
+  if (introduction.step === 1 && !introduction.name.trim()) return;
+  if (introduction.step === 2 && (!introduction.topic || (introduction.topic === 'custom' && introduction.goal.trim().length < 3))) return;
+  introduction.step = Math.min(3, introduction.step + 1);
+  render();
+  $('#guided-prompt')?.focus({ preventScroll: true });
+}
+
+function beginIntroductionCourse() {
+  const selected = startTopics().find(item => item.id === introduction.topic);
+  if (!selected || (selected.id === 'custom' && introduction.goal.trim().length < 3)) return;
+  const goal = selected.id === 'custom' ? introduction.goal.trim() : selected.goal;
+  const minutes = introduction.minutes;
+  const start = () => {
+    startingNew = false;
+    changeMinutes(minutes);
+    if (['design', 'budget'].includes(selected.id)) {
+      selectCourse(selected.id, goal);
+      state.lastLearningType = 'builtin'; state.pathKind = 'builtin'; saveLocal(); go('discover');
+    } else if (selected.id === 'english') { void startReadyCourse('everyday-english', minutes); }
+    else beginRoadmap(goal, minutes);
+  };
+  if (ensureLearning(start)) start();
+}
+
 async function startReadyCourse(id, minutes = state.minutes) {
   const duration = normalizeMinutes(minutes);
   if (!ensureLearning(() => { void startReadyCourse(id, duration); }) || openingStarter) return;
@@ -776,17 +813,14 @@ async function startReadyCourse(id, minutes = state.minutes) {
   openingStarter = true;
   const owner = accountOwner;
   try {
-    const existing = library.screen().courses.find(course => course.goal === saved.plan.goal
-      && course.title === saved.plan.title && course.language === saved.plan.language && course.minutes === duration);
-    if (!existing && !await library.flush()) {
-      if (owner === accountOwner) toast('Save your current lesson before opening another course.');
-      return;
-    }
+    const existing = library.screen().courses.find(course => course.goal === saved.plan.goal && course.title === saved.plan.title && course.language === saved.plan.language && course.minutes === duration);
+    // Importing switches the active copy. Save the old answer before replacing it;
+    // load() already performs this check for an existing account course.
+    const mayImport = existing || await library.flush();
     if (owner !== accountOwner) return;
-    const accepted = existing ? await library.load(existing.id) : await library.importLocal(saved);
+    const accepted = existing ? await library.load(existing.id) : mayImport && await library.importLocal(saved);
     if (accepted && owner === accountOwner) {
-      changeMinutes(duration);
-      go('course-path');
+      state.lastLearningType = 'ai'; state.pathKind = 'lesson'; changeMinutes(duration); saveLocal(); go('discover');
     } else if (owner === accountOwner) go('courses');
   } finally { openingStarter = false; }
 }
@@ -816,6 +850,14 @@ function openRoadmap(id) {
   roadmapError = '';
   go('roadmap');
 }
+
+document.addEventListener('input', event => {
+  if (event.target.id === 'intro-name') introduction.name = event.target.value.slice(0, 80);
+  else if (event.target.id === 'intro-goal') introduction.goal = event.target.value.slice(0, 180);
+  else return;
+  const next = $('[data-intro-action="next"]');
+  if (next) next.disabled = introduction.step === 1 ? !introduction.name.trim() : introduction.goal.trim().length < 3;
+});
 
 function updateBudgetDraft(field, value) {
   const work = draft();
@@ -877,6 +919,18 @@ document.addEventListener('change', event => {
 document.addEventListener('click', event => {
   const button = event.target.closest('button,[data-home]');
   if (!button || button.disabled) return;
+  if (button.dataset.introAction) {
+    const action = button.dataset.introAction;
+    if (action === 'next') advanceIntroduction();
+    else if (action === 'back') { introduction.step = Math.max(0, introduction.step - 1); render(); }
+    else if (action === 'start') beginIntroductionCourse();
+    else if (action === 'new') { startingNew = true; introduction = { step: 2, name: getAccountState().profile?.name || '', topic: '', goal: '', minutes: state.minutes }; view = 'discover'; render(); }
+    return;
+  }
+  if (button.dataset.introTopic) { introduction.topic = button.dataset.introTopic; render(); document.querySelector(`[data-intro-topic="${introduction.topic}"]`)?.focus({ preventScroll: true }); return; }
+  if (button.dataset.introMinutes) { introduction.minutes = normalizeMinutes(button.dataset.introMinutes); render(); document.querySelector(`[data-intro-minutes="${introduction.minutes}"]`)?.focus({ preventScroll: true }); return; }
+  if (button.dataset.courseMinutes) { changeMinutes(button.dataset.courseMinutes); render(); document.querySelector(`[data-course-minutes="${state.minutes}"]`)?.focus({ preventScroll: true }); return; }
+  if (button.dataset.starterCourse) { void startReadyCourse(button.dataset.starterCourse, button.dataset.starterMinutes); return; }
   const { roadmapAction, roadmapStage, roadmapBuy, roadmapClaim } = button.dataset;
   if (roadmapAction || roadmapBuy || roadmapClaim) {
     if (!ensureLearning() || roadmapOperation) return;
@@ -898,26 +952,6 @@ document.addEventListener('click', event => {
       save();
       render();
     }
-    return;
-  }
-  if (button.dataset.introAction) {
-    const action = button.dataset.introAction;
-    if (action === 'show' && !accountOwner) { showIntro = true; go('discover'); }
-    else if (action === 'next' && showIntro && !accountOwner) openAccount('signup');
-    else if (action === 'browse') { showIntro = false; go('discover'); }
-    else if (action === 'new') {
-      if (ensureLearning(beginRoadmap)) beginRoadmap();
-    }
-    return;
-  }
-  if (button.dataset.courseMinutes && view === 'courses') {
-    changeMinutes(button.dataset.courseMinutes);
-    render();
-    document.querySelector(`[data-course-minutes="${state.minutes}"]`)?.focus({ preventScroll: true });
-    return;
-  }
-  if (button.dataset.starterCourse) {
-    void startReadyCourse(button.dataset.starterCourse, button.dataset.starterMinutes);
     return;
   }
   const { view: destination, course, step: requestedStep, choice, color, action, id } = button.dataset;
@@ -960,8 +994,8 @@ document.addEventListener('click', event => {
   }
   if (button.matches('[data-home]')) {
     event.preventDefault();
+    startingNew = false;
     captureRoadmapAnswers($('#roadmap-form'));
-    showIntro = false;
     rememberPosition();
     return go('discover');
   }
@@ -969,7 +1003,8 @@ document.addEventListener('click', event => {
     captureRoadmapAnswers($('#roadmap-form'));
     const openCourse = () => {
       selectCourse(course);
-      if (button.hasAttribute('data-start')) resumeCourse(course);
+      if (button.hasAttribute('data-course-path')) { state.lastLearningType = 'builtin'; state.pathKind = 'builtin'; saveLocal(); go('discover'); }
+      else if (button.hasAttribute('data-start')) resumeCourse(course);
     };
     if (course && !ensureLearning(openCourse)) return;
     rememberPosition();
@@ -1072,7 +1107,7 @@ window.addEventListener('mindora:account-changed', event => {
   const account = getAccountState();
   const owner = account.user?.id || null;
   const reason = event.detail?.reason;
-  if (reason === 'signout') pendingLearning = null;
+  if (reason === 'signout') { pendingLearning = null; pendingRoadmapPrefill = null; }
   const signupComplete = reason === 'signup-complete';
   if (owner === accountOwner && accountReady && !signupComplete) { void cloud.init(); return; }
   const version = ++accountEpoch;
@@ -1091,8 +1126,9 @@ window.addEventListener('mindora:account-changed', event => {
     builtinSnapshot = JSON.stringify(builtinData(state));
     for (const field of ['sessions', 'certificates']) if (!state[field] || typeof state[field] !== 'object' || Array.isArray(state[field])) state[field] = {};
     plans.reset();
-    view = owner && !signupComplete ? 'courses' : 'discover';
-    showIntro = false;
+    view = 'discover';
+    startingNew = false;
+    if (!pendingLearning) introduction = { step: owner ? 2 : 0, name: account.profile?.name || '', topic: '', goal: '', minutes: state.minutes };
     checks = null;
     quizIndex = 0; quizChoice = null; quizFeedback = false; step = 0;
     saveWarning = false;
@@ -1106,27 +1142,12 @@ window.addEventListener('mindora:account-changed', event => {
       reconcileRoadmapCompletion(state.learningCourse.id);
     }
     if (reason === 'signup-profile-pending') return;
-    if (owner && signupComplete) {
-      const prefill = pendingRoadmapPrefill;
-      pendingRoadmapPrefill = null;
-      pendingLearning = null;
-      if (restoreRoadmap(state.learningRoadmap) && !prefill) go('roadmap');
-      else beginRoadmap(prefill?.goal, prefill?.minutes);
-    } else if (owner && pendingLearning) {
+    if (owner && pendingLearning) {
       const next = pendingLearning;
       pendingLearning = null;
-      closeAccount();
+      if (!signupComplete) closeAccount();
       next();
-    } else if (owner && view === 'courses') {
-      if (restoreOpenReview()) return;
-      if (state.learningPlanOpen && state.learningPlan && state.learningCourse?.ownerId === owner) go('learning-plan');
-      else {
-        const resume = readBudgetResume(state);
-        if (resume?.view === 'lesson' && !builtins.screen().conflict) resumeCourse(state.active, resume.step);
-        else if (state.pathKind || restoreRoadmap(state.learningRoadmap)) openMyPath();
-        else render();
-      }
-    }
+    } else render();
   });
   void cloud.init();
 });

@@ -48,12 +48,12 @@ function restoreQuizFocus(main, remembered) {
 }
 
 export function mountShell() {
-  for (const href of ['./roadmap.css', './guided-start.css']) {
-    const stylesheet = document.createElement('link');
-    stylesheet.rel = 'stylesheet';
-    stylesheet.href = new URL(href, import.meta.url).href;
-    document.head.append(stylesheet);
-  }
+  const guidedStyles = document.createElement('link'); guidedStyles.rel = 'stylesheet';
+  guidedStyles.href = new URL('./guided-start.css', import.meta.url).href; document.head.append(guidedStyles);
+  const roadmapStyles = document.createElement('link');
+  roadmapStyles.rel = 'stylesheet';
+  roadmapStyles.href = new URL('./roadmap.css', import.meta.url).href;
+  document.head.append(roadmapStyles);
   document.querySelector('#app').innerHTML = `<a class="skip-link" href="#main">Skip to learning</a>
   <header class="topbar">
     <a class="brand" data-home href="#discover" aria-label="Mindora home"><img class="brand-mark" src="ui/assets/brand-mark.svg" alt="" width="43" height="43"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
@@ -108,8 +108,9 @@ export function renderShell(view, state, stats, html, rewards) {
   $('#top-navigation').innerHTML = brandNav(icon, view, 'top', signedIn);
   $('#mobile-navigation').classList.toggle('has-roadmap', signedIn);
   $('#mobile-navigation').innerHTML = brandNav(icon, view, 'bottom', signedIn);
-  $('#top-actions').classList.toggle('has-roadmap-metrics', Boolean(rewards));
-  $('#top-actions').innerHTML = guided ? '' : `${rewardMetrics(rewards, true)}${languagePicker()}<button class="header-pace" data-view="profile" aria-label="${t('Daily learning time','Время на обучение','Оқу уақыты')}">${icon('clock', 17)}<span>${t(`${state.minutes} min a day`, `${state.minutes} мин в день`, `Күніне ${state.minutes} мин`)}</span></button><button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
+  const headerRewards = ['roadmap', 'quests', 'shop'].includes(view) ? rewards : null;
+  $('#top-actions').classList.toggle('has-roadmap-metrics', Boolean(headerRewards));
+  $('#top-actions').innerHTML = guided ? '' : `${rewardMetrics(headerRewards, true)}${languagePicker()}<button class="header-pace" data-view="profile" aria-label="${t('Daily learning time','Время на обучение','Оқу уақыты')}">${icon('clock', 17)}<span>${t(`${state.minutes} min a day`, `${state.minutes} мин в день`, `Күніне ${state.minutes} мин`)}</span></button><button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
   $('.skip-link').textContent = t('Skip to learning','К содержимому','Мазмұнға өту');
   $('.modal-close').setAttribute('aria-label', t('Close window','Закрыть окно','Терезені жабу'));
   $('.side-companion strong').textContent = t('Learn one step at a time.','Учись шаг за шагом.','Біртіндеп үйрен.');
@@ -120,12 +121,13 @@ export function renderShell(view, state, stats, html, rewards) {
   main.dataset.page = view;
   document.body.classList.toggle('is-learning', ['lesson', 'learning-plan', 'recap', 'return-review'].includes(view));
   document.body.classList.toggle('is-guided', guided);
+  document.body.classList.add('quiet-shell');
   main.innerHTML = html;
   updateAccountLinks();
   expandedPanels.forEach(selector => { const panel = main.querySelector(selector); if (panel) panel.open = true; });
   syncLessonFlow(main);
   restoreQuizFocus(main, quizFocus);
   const titles = { discover: t('Learn','Обучение','Оқу'), courses: t('My courses','Мои курсы','Курстарым'), practice: t('Practice','Практика','Жаттығу'), path: t('My learning path','Мой маршрут','Оқу жолым'), lesson: courseNames[id], 'learning-plan': t('My lesson','Моё занятие','Сабағым'), recap: t('A quick refresh','Повторение','Қайталау'), certificate: t('Your certificate','Твой сертификат','Сертификатың'), result: t('You did it','Готово','Дайын'), work: t('My work','Мои работы','Жұмыстарым'), achievements: t('Milestones','Достижения','Жетістіктер'), community: t('Community','Сообщество','Қауымдастық'), profile: t('Profile','Профиль','Профиль') };
-  const roadmapTitles = { roadmap: t('My learning path','Мой путь обучения','Оқу жолым'), 'course-path': t('My learning path','Мой путь обучения','Оқу жолым'), quests: t('Daily quests','Задания дня','Күндік тапсырмалар'), shop: t('Gem shop','Магазин алмазов','Алмас дүкені'), 'return-review': t('A quick refresh', 'Повторение', 'Қайталау') };
+  const roadmapTitles = { roadmap: t('My learning path','Мой путь обучения','Оқу жолым'), 'course-path': t('My learning path','Мой путь обучения','Оқу жолым'), quests: t('Daily quests','Задания дня','Күндік тапсырмалар'), shop: t('Gem shop','Магазин алмазов','Алмас дүкені'), 'return-review': t('A quick refresh','Повторение','Қайталау') };
   document.title = `${titles[view] || roadmapTitles[view] || 'Learn'} · Mindora`;
 }
