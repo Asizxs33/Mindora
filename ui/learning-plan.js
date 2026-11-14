@@ -53,7 +53,7 @@ function currentTask(step, answer, review, busy, reviewError, last) {
 }
 
 function sourceIllustration(resource) {
-  return (resource.images ?? []).map(image => `<figure class="lesson-source-figure"><img src="${esc(image.url)}" alt="${esc(image.alt)}" loading="lazy" referrerpolicy="no-referrer"><figcaption>${esc(image.alt)} · <a href="${esc(resource.imageSourceUrl || resource.url)}" target="_blank" rel="noopener noreferrer">${t('Source', 'Источник', 'Дереккөз')}: ${esc(resource.title)}</a></figcaption></figure>`).join('');
+  return (resource.images ?? []).map(image => `<figure class="lesson-source-figure"><img src="${esc(image.url)}" alt="${esc(image.alt.replace(/^Image\s+\d+:\s*/i, ''))}" loading="lazy" referrerpolicy="no-referrer"></figure>`).join('');
 }
 
 function stepsView({ plan, answers, reviews, completed }, busy, reviewError) {
