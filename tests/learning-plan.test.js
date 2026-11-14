@@ -11,7 +11,7 @@ const draft = {
   steps: Array.from({ length: 4 }, (_, index) => ({
     title: `Шаг ${index + 1}`, instruction: 'Прочитай пример цикла.',
     task: 'Напиши свой цикл и запиши вывод.', criterion: 'Для трёх элементов вывод содержит три строки.',
-    sourceUrl: index === 0 ? source : 'https://made-up.example.org/cycle', minutes: 999,
+    sourceId: index === 0 ? 0 : 999, minutes: 999,
   })),
 };
 
