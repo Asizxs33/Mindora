@@ -2,7 +2,7 @@ Source: C:/Users/Acer/Desktop/хакатон/team-characters/team-characters
 Source README distinguishes finished PNG illustrations from simplified editable SVG recreations.
 
 NORMAL HUMAN PORTRAITS
-The following original PNGs are copied byte-for-byte into this directory and used at every normal display size. No raster editing, cropping, recolouring, regeneration, or alternate-size artwork was applied. Each file is a single-pose 1024 x 1536 RGBA image; original transparency, faces, clothing, proportions, tools, and shoes are retained.
+The following original PNGs are copied byte-for-byte into this directory. They remain the normal portraits for Sam, Ari, Nora and Zoe and the network-error portrait for Mia. No raster editing, cropping, recolouring, regeneration, or alternate-size artwork was applied. Each file is a single-pose 1024 x 1536 RGBA image; original transparency, faces, clothing, proportions, tools, and shoes are retained.
 
 Role: Graphic design (Mia)
 File: graphic-designer-v3.png
@@ -31,8 +31,29 @@ SHA-256: 43ad58b6d72f6b902750deb3bacb3637cb3632f5df32cdca32ecd46688b08be1
 
 Identity verification: SHA-256 for each shipped PNG equals the corresponding source file above (verified 2026-11-14).
 
+SUPPLIED MIA ANIMATION
+Source: C:/Users/Acer/Desktop/хакатон/Mia-pointing.gif
+Shipped: mia-pointing.gif (744629 bytes), copied byte-for-byte without editing.
+Original dimensions: 360 x 720; 31 frames at 40 ms each (1240 ms).
+The source has no loop extension. It contains real localized arm/stylus movement,
+not only a whole-image translation. No new face or gesture was generated.
+mia-pointing-still.png is the unmodified first frame extracted to RGBA PNG.
+It is rendered initially and whenever motion is off, prefers-reduced-motion is
+enabled, the tab is hidden, or the character is offscreen. CSS alone cannot pause
+a GIF, so ui/characters.js switches the actual image source to this static frame.
+When motion is allowed, the original GIF plays once after it loads, then rests on
+its first frame for 5800 ms. A tap restarts the gesture and announces a greeting.
+Mia uses the supplied 1:2 aspect ratio; her complete figure remains contained.
+If the animated asset fails to load, the original graphic-designer-v3.png remains
+available. Failed requests can be retried when the browser comes back online.
+
+The source folder's S02-about-you-orange.gif, S03-interests.gif,
+S04-create-account.gif, S05-sign-in.gif, S06-profile.gif and
+S07-learning-goal.gif are whole-screen UI prototypes. They are not character
+assets and are deliberately not embedded into the working form or lesson UI.
+
 MOTION AND GREETINGS
-ui/characters.js and ui/characters.css contain the full image in a 2:3 portrait frame. Normal human motion is subtle whole-character breathing, sway, thoughtful tilt, or a brief celebratory lift. A tap triggers a short whole-character response and an accessible greeting. The PNG itself has one pose: no separate limb motion, blinking, or redrawn facial expressions are claimed. Mino continues to use the existing capybara pose atlas.
+ui/characters.js and ui/characters.css contain each original PNG in a 2:3 portrait frame. PNG mentors have subtle whole-character breathing, sway, thoughtful tilt, or a brief celebratory lift. A tap triggers a short response and an accessible greeting. Those PNGs each have one pose: no separate limb motion, blinking, or redrawn facial expressions are claimed. Mia uses the real animation described above; her frame is anchored rather than swaying on top of the authored gesture. Mino continues to use the existing capybara pose atlas.
 
 IMAGE-ERROR FALLBACK ONLY
 ui/character-rigs.js embeds the supplied simplified programmer.svg, graphic_designer.svg, artist.svg, copywriter.svg, and smm.svg. ui/character-rigs.css animates this fallback. It is revealed only by .character-image-error after the corresponding PNG fails to load; it is not selected by viewport size or used as the normal portrait.

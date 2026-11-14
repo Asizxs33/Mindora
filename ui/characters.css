@@ -2,7 +2,7 @@
 /* User-supplied full-body mentor illustrations and Mino's capybara. */
 :where(.mindora-character){--character-size:180px;--character-frame-size:var(--character-size);position:relative;display:inline-grid;place-items:center;flex:0 0 auto;width:var(--character-size);height:var(--character-height,var(--character-size));min-width:0;margin:0;padding:0;border:0;border-radius:24%;background:transparent;color:inherit;box-shadow:none;cursor:pointer;isolation:isolate;vertical-align:middle;touch-action:manipulation;-webkit-tap-highlight-color:transparent;overflow:visible}
 .mindora-character:hover,.mindora-character:active{background:transparent;border-color:transparent;box-shadow:none;transform:none}
-.mindora-character:focus-visible{outline:3px dashed var(--blue,#5b4cff);outline-offset:-5px}
+.mindora-character:focus-visible{outline:3px dashed var(--orange,#c24c00);outline-offset:-5px}
 .mindora-character .character-frame{position:relative;display:block;width:var(--character-frame-size);height:var(--character-frame-size);max-width:100%;max-height:100%;pointer-events:none}
 .mindora-character .character-art{position:absolute;inset:0;display:block;pointer-events:none;transform-origin:50% 92%}
 .character-atlas .character-art{background-repeat:no-repeat;background-size:200% 200%;background-position:0 0;animation:mindora-character-arrive .45s ease-out both}
@@ -18,9 +18,9 @@
 .character-atlas.character-restored[data-character-mood='welcome'] .character-art,.character-atlas.character-restored[data-character-mood='thinking'] .character-art{animation:mindora-character-breathe 8s ease-in-out infinite}
 .character-atlas.character-hello[data-character-mood] .character-art{animation:mindora-character-wave .85s ease-in-out both}
 
-/* No sprite crop or redraw: all five original 2:3 PNGs remain intact. */
+/* Original artwork stays whole. Mia's supplied animation has a 1:2 frame. */
 .character-human{--character-idle-delay:0s}
-.character-human .character-frame{width:var(--character-frame-width,66.666%);height:var(--character-frame-height,100%);aspect-ratio:2/3;align-self:center;overflow:visible;transform-origin:50% 96%;animation:mindora-human-idle 7.6s ease-in-out var(--character-idle-delay) infinite}
+.character-human .character-frame{width:var(--character-frame-width,66.666%);height:var(--character-frame-height,100%);aspect-ratio:var(--character-aspect-ratio,2/3);align-self:center;overflow:visible;transform-origin:50% 96%;animation:mindora-human-idle 7.6s ease-in-out var(--character-idle-delay) infinite}
 .character-human .character-art{background:none;inset:0;animation:none}
 .character-human .human-source-image{display:block;width:100%;height:100%;max-width:100%;object-fit:contain;margin:0;padding:0;pointer-events:none;user-select:none;-webkit-user-drag:none}
 .human-source-fallback{display:none;position:absolute;inset:0}
@@ -31,6 +31,8 @@
 .character-human[data-character-mood='incorrect'] .character-frame{animation-duration:9.5s}
 .character-human[data-character-mood='celebrate'] .character-frame{animation:mindora-human-cheer .85s ease-out both,mindora-human-idle 7.6s ease-in-out .85s infinite}
 .character-human.character-hello .character-frame{animation:mindora-human-hello .9s ease-out both,mindora-human-idle 7.6s ease-in-out .9s infinite}
+/* The authored arm gesture supplies the movement; keep Mia's feet anchored. */
+.character-human.character-animated-source:not(.character-image-error) .character-frame{animation:none;transform:none}
 .mentor-team{margin-top:28px;padding-top:24px;border-top:1px solid var(--line,#e5e5eb)}
 .mentor-team h3{margin:0 0 6px;font-size:20px}.mentor-team>p{margin:0 0 18px;font-size:15px}
 .mentor-team-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 12px}
@@ -40,7 +42,7 @@
 .mentor-team-grid strong{font-size:15px;color:var(--ink,#202124)}
 .mentor-team-grid .character-reaction{max-width:135px}
 @media(max-width:420px){.mentor-team-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mentor-team-grid .mindora-character{height:195px}}
-.character-reaction{position:absolute;left:50%;top:0;z-index:3;max-width:190px;width:max-content;padding:9px 13px;border:1px solid #ddd8ff;border-radius:14px 14px 14px 4px;background:#fff;color:var(--ink,#202124);box-shadow:0 3px 0 var(--pale,#f0edff);font-size:12px;font-weight:800;line-height:1.35;text-align:center;pointer-events:none;opacity:0;transform:translate(-50%,-8px) scale(.94);transition:opacity .15s,transform .2s}
+.character-reaction{position:absolute;left:50%;top:0;z-index:3;max-width:190px;width:max-content;padding:9px 13px;border:1px solid #efd8c5;border-radius:14px 14px 14px 4px;background:#fff;color:var(--ink,#202124);box-shadow:0 3px 0 #fff0e3;font-size:12px;font-weight:800;line-height:1.35;text-align:center;pointer-events:none;opacity:0;transform:translate(-50%,-8px) scale(.94);transition:opacity .15s,transform .2s}
 .mindora-character.character-hello{z-index:4}
 .character-hello .character-reaction{opacity:1;transform:translate(-50%,-14px) scale(1)}
 .character-live-status{position:fixed;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
