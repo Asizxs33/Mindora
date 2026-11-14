@@ -34,6 +34,17 @@ function text(value, max) {
   return clean && clean.length <= max ? clean : null;
 }
 
+function sourceImages(images) {
+  if (!Array.isArray(images)) return [];
+  const valid = new Map();
+  for (const image of images.slice(0, 8)) {
+    const url = sourceUrl(image?.url);
+    const alt = text(image?.alt, 180);
+    if (url && alt) valid.set(url, { url, alt });
+  }
+  return [...valid.values()];
+}
+
 export function taskReviewInput(raw) {
   const goal = text(raw?.goal, 180);
   const task = text(raw?.task, TASK_LENGTH_LIMIT);
@@ -64,8 +75,14 @@ export function normalizePlan(raw, input, sources) {
     const task = text(item?.task, TASK_LENGTH_LIMIT);
     const criterion = text(item?.criterion, 320);
     if (!title || !instruction || !task || !criterion) return null;
-    const resource = sources.get(sourceUrl(item.sourceUrl));
-    steps.push({ id, title, instruction, task, criterion, minutes: durations[id], resource: resource ?? null });
+    const source = sources.get(sourceUrl(item.sourceUrl));
+    const selected = Array.isArray(item.illustrationUrls) ? item.illustrationUrls.slice(0, 2) : [];
+    const resource = source ? {
+      url: source.url, title: source.title,
+      images: sourceImages(source.images).filter(image => selected.includes(image.url)),
+      imageSourceUrl: sourceUrl(source.imageSourceUrl) || source.url,
+    } : null;
+    steps.push({ id, title, instruction, task, criterion, minutes: durations[id], resource });
   }
   if (!steps.some(step => step.resource)) return null;
   return { ...input, title, outcome, steps };
@@ -78,8 +95,12 @@ export function restorePlan(saved) {
   const steps = saved.plan.steps.map(step => {
     const url = sourceUrl(step?.resource?.url);
     const title = text(step?.resource?.title, 160);
-    if (url && title) sources.set(url, { url, title });
-    return { ...step, sourceUrl: url };
+    const images = sourceImages(step?.resource?.images).slice(0, 2);
+    if (url && title) sources.set(url, {
+      url, title, images: sourceImages([...(sources.get(url)?.images ?? []), ...images]),
+      imageSourceUrl: sourceUrl(step.resource.imageSourceUrl) || url,
+    });
+    return { ...step, sourceUrl: url, illustrationUrls: images.map(image => image.url) };
   });
   const plan = normalizePlan({ ...saved.plan, steps }, input, sources);
   if (!plan) return null;

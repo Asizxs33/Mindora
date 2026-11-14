@@ -51,19 +51,7 @@ function currentTask(step, answer, review, busy, reviewError, last) {
 }
 
 function sourceIllustration(resource) {
-  const url = new URL(resource.url);
-  const isHelpArticle = url.hostname === 'help.openai.com' && /^\/[a-z-]+\/articles\/9237897(?:-|$)/i.test(url.pathname);
-  const isLearnArticle = url.hostname === 'learn.chatgpt.com' && /\/docs\/web-search\/?$/.test(url.pathname);
-  if (!isHelpArticle && !isLearnArticle) return '';
-  const screenshotSource = 'https://help.openai.com/en/articles/9237897-searching-the-web-with-chatgpt';
-  const images = [{
-    url: 'https://images.ctfassets.net/j22is2dtoxu1/intercom-img-9ce62ecef76c516e5c56a21a/78a2e1227a5a1bf23d98d53dcf32d828/Screenshot_2025-04-28_at_14_44_26.png?fm=webp&q=80&w=800',
-    alt: t('The tools button in the ChatGPT composer', 'Кнопка инструментов в поле ввода ChatGPT', 'ChatGPT хабарлама өрісіндегі құралдар батырмасы'),
-  }, {
-    url: 'https://images.ctfassets.net/j22is2dtoxu1/intercom-img-ca4f4e49315f4f902b229090/ee80e3d80aa0db09ba643e6c1b47d40d/Screenshot_2025-04-28_at_14_49_38.png?fm=webp&q=80&w=800',
-    alt: t('Search in the ChatGPT tools menu', 'Пункт поиска в меню инструментов ChatGPT', 'ChatGPT құралдар мәзіріндегі іздеу тармағы'),
-  }];
-  return images.map(image => `<figure class="lesson-source-figure"><img src="${esc(image.url)}" alt="${esc(image.alt)}" loading="lazy" referrerpolicy="no-referrer"><figcaption>${esc(image.alt)} · <a href="${esc(screenshotSource)}" target="_blank" rel="noopener noreferrer">OpenAI Help Center</a></figcaption></figure>`).join('');
+  return (resource.images ?? []).map(image => `<figure class="lesson-source-figure"><img src="${esc(image.url)}" alt="${esc(image.alt)}" loading="lazy" referrerpolicy="no-referrer"><figcaption>${esc(image.alt)} · <a href="${esc(resource.imageSourceUrl || resource.url)}" target="_blank" rel="noopener noreferrer">${t('View original illustration', 'Иллюстрация в источнике', 'Дереккөздегі сурет')}</a></figcaption></figure>`).join('');
 }
 
 function stepsView({ plan, answers, reviews, completed }, busy, reviewError) {

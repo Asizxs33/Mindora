@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { generateDeepSeekPlan } from '../backend/deepseek-plan.js';
 import { planApi } from '../backend/plan-api.js';
 import { reviewWithDeepSeek, taskReviewApi } from '../backend/task-review-api.js';
-import { restorePlan, taskReviewInput } from '../core/learning-plan.js';
+import { restorePlan, taskReviewInput, normalizePlan } from '../core/learning-plan.js';
+
+// Provider fixtures remain offline; public-page integration is tested separately.
+const offlineReader = { readPage: async () => null };
 
 const source = 'https://docs.python.org/3/tutorial/controlflow.html';
 const draft = {
@@ -50,18 +53,18 @@ function researchFixture(steps, { readable = true, verify = () => {} } = {}) {
 test('the research agent reads search results and GitHub before preparing timed lessons', async () => {
   for (const [minutes, count] of [[5, 2], [10, 3], [20, 4]]) {
     const plan = await generateDeepSeekPlan({ goal: 'Освоить циклы', minutes }, 'test-only',
-      researchFixture(draft.steps.slice(0, count), { verify: (_, input) => assert.equal(input.minutes, minutes) }));
+      researchFixture(draft.steps.slice(0, count), { verify: (_, input) => assert.equal(input.minutes, minutes) }), offlineReader);
     assert.equal(plan.steps.length, count);
     assert.equal(plan.steps.reduce((sum, step) => sum + step.minutes, 0), minutes);
     assert.deepEqual(plan.steps.filter(step => step.resource).map(step => step.resource.url), [source]);
   }
   await assert.rejects(generateDeepSeekPlan({ goal: 'Освоить циклы', minutes: 5 }, 'test-only',
-    researchFixture(draft.steps.slice(0, 2), { readable: false })), /No readable learning materials/);
+    researchFixture(draft.steps.slice(0, 2), { readable: false }), offlineReader), /No readable learning materials/);
 });
 
 test('a saved plan restores answers and opens the first unfinished task', async () => {
   const plan = await generateDeepSeekPlan({ goal: 'Освоить циклы', minutes: 10 }, 'test-only',
-    researchFixture(draft.steps.slice(0, 3)));
+    researchFixture(draft.steps.slice(0, 3)), offlineReader);
   const saved = restorePlan(JSON.parse(JSON.stringify({ plan, answers: ['Готово', 'Черновик ответа'], completed: 1 })));
   assert.equal(saved.completed, 1);
   assert.equal(saved.answers[saved.completed], 'Черновик ответа');
@@ -78,7 +81,7 @@ test('a detailed independent task can be stored and sent for review', async () =
   const steps = draft.steps.slice(0, 2);
   const longTask = 'Новый пример. '.repeat(40).trim();
   steps[1] = { ...steps[1], task: longTask };
-  const plan = await generateDeepSeekPlan({ goal: 'Освоить циклы', minutes: 5 }, 'test-only', researchFixture(steps));
+  const plan = await generateDeepSeekPlan({ goal: 'Освоить циклы', minutes: 5 }, 'test-only', researchFixture(steps), offlineReader);
   const step = restorePlan({ plan }).plan.steps.at(-1);
   assert.equal(step.task, longTask);
   assert.equal(taskReviewInput({ ...step, goal: plan.goal, answer: 'Готово' }).task, longTask);
@@ -130,7 +133,7 @@ test('a localized plan preserves its language through generation and browser res
     assert.match(request.messages[0].content, /in Kazakh/);
     assert.equal(body.language, input.language);
     assert.equal(body.goal, input.goal);
-  } }));
+  } }), offlineReader);
   assert.equal(restorePlan({ plan, answers: [], completed: 0 }).plan.language, 'kk');
 });
 
@@ -148,4 +151,40 @@ test('the endpoint validates input and limits provider requests before calling D
   assert.equal(calls, 0);
   assert.equal((await planApi(request(5), { ...configured, reserve: async () => true })).status, 200);
   assert.equal(calls, 1);
+});
+
+test('illustrations bind to retrieved sources and survive reload without crossing sources', () => {
+  const first = { url: 'https://docs.python.org/first.png', alt: 'First example' };
+  const second = { url: 'https://docs.python.org/second.png', alt: 'Second example' };
+  const input = { goal: 'Освоить циклы', minutes: 20, language: 'ru' };
+  const sources = new Map([[source, { url: source, title: 'Tutorial', images: [first, second] }]]);
+  const steps = draft.steps.map((step, index) => ({ ...step, sourceUrl: source,
+    illustrationUrls: index === 0 ? [first.url, 'https://unread.org/invented.png'] : index === 1 ? [second.url] : [],
+  }));
+  const plan = normalizePlan({ ...draft, steps }, input, sources);
+  assert.deepEqual(plan.steps[0].resource.images, [first]);
+  assert.deepEqual(plan.steps[1].resource.images, [second]);
+  assert.deepEqual(plan.steps[2].resource.images, []);
+  const saved = restorePlan(JSON.parse(JSON.stringify({ plan, answers: ['Answer'], completed: 1 })));
+  assert.deepEqual(saved.plan, plan);
+  assert.equal(saved.completed, 1);
+  const unsafe = structuredClone(plan);
+  unsafe.steps[0].resource.images.push({ url: 'javascript:alert(1)', alt: 'Unsafe' });
+  assert.deepEqual(restorePlan({ plan: unsafe }).plan.steps[0].resource.images, [first]);
+});
+
+test('the agent selects a discovered illustration by ID and cannot invent its URL', async () => {
+  const steps = structuredClone(draft.steps.slice(0, 2));
+  steps[0].imageIds = [0, 999];
+  steps[0].illustrationUrls = ['https://invented.org/fake.png'];
+  const plan = await generateDeepSeekPlan({ goal: 'Освоить циклы', minutes: 5 }, 'test-only', researchFixture(steps, {
+    verify: (_, input) => {
+      assert.equal(input.materials[0].images[0].caption, 'Loop diagram');
+      assert.equal(input.materials[0].images[0].id, 0);
+    },
+  }), { readPage: async url => url === source ? {
+    url, contentType: 'text/markdown',
+    body: 'A for loop iterates over a sequence. Write the loop and check every item.\n\n![Loop diagram](./loop.png)',
+  } : null });
+  assert.deepEqual(plan.steps[0].resource.images, [{ url: 'https://docs.python.org/3/tutorial/loop.png', alt: 'Loop diagram' }]);
 });

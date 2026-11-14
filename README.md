@@ -36,6 +36,8 @@ Open the printed local URL, normally `http://127.0.0.1:4173`.
 
 The prototype includes two curated courses, signed-in budget draft sync, and a DeepSeek learning-plan integration that needs a server API key. The budget course and generated lessons adapt to 5, 10 or 20 minutes. Community discussions, payments, and cloud sync for generated plans are outside this slice.
 
+The research agent also reads public articles and GitHub Markdown through Readability, LinkeDOM and Marked, then selects available source illustrations by ID. Generated lessons contain original practice and a separate independent task. See [course tools and limits](docs/COURSE-TOOLS.md) for the integrations, licenses, safety boundaries and evaluated alternatives. These tools need no additional API key.
+
 Browser storage is local to a device and origin. Clearing site data removes progress. Export creations to keep separate copies. A completed path records practice, not an accredited qualification or an expert assessment.
 
 ## Files
