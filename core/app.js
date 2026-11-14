@@ -1,12 +1,14 @@
 import { COURSES, DESIGN_QUIZ, matchGoal, evaluatePoster } from './engine.js';
 import { budgetCsv, budgetSession, budgetDraftKey, createBudgetDraft, evaluateBudgetSession, normalizeMinutes, readBudgetQuiz, readBudgetResume } from './budget-session.js';
 import { createCloudDrafts } from './cloud-drafts.js';
+import { createPlanController } from './plan-controller.js';
 import { dayKey, dailyCourse, learningStats } from './progress.js';
 import { posterLayout, posterSvg } from './poster.js';
 import { mountShell, renderShell } from '../ui/shell.js';
 import { dashboard, coursesPage, sidePage } from '../ui/dashboard.js';
 import { pathView, lesson, result, workView } from '../ui/views.js';
 import { dialogContent, resetWorkCheck, refreshPosterPreview, clearBudgetTotal } from '../ui/feedback.js';
+import { learningPlanView } from '../ui/learning-plan.js';
 
 const $=s=>document.querySelector(s);
 const KEY='mindora.workspace.v1';
@@ -14,13 +16,16 @@ const empty={version:1,minutes:10,active:null,goals:{},progress:{design:0,budget
 function readState(){try{const v=JSON.parse(localStorage.getItem(KEY));if(!v||v.version!==1)return structuredClone(empty);return {...empty,...v,active:['design','budget'].includes(v.active)?v.active:null,minutes:[5,10,20].includes(v.minutes)?v.minutes:10,progress:{design:Math.min(4,Math.max(0,Number(v.progress?.design)||0)),budget:Math.min(4,Math.max(0,Number(v.progress?.budget)||0))},goals:v.goals||{},drafts:v.drafts||{},works:v.works||{},notes:v.notes||{}};}catch{return structuredClone(empty);}}
 const state = readState();
 const resume = readBudgetResume(state);
-let view = resume?.view || 'discover';
+let view = state.learningPlanOpen && state.learningPlan ? 'learning-plan' : resume?.view || 'discover';
 let step = resume?.step ?? 0;
 let quizIndex = 0;
 let quizChoice = null;
 let quizFeedback = false;
 let checks = null;
 let challengeSeed = 0;
+
+const plans = createPlanController({ state, save, render, isOpen: () => view === 'learning-plan' });
+if (view === 'learning-plan' && !state.learningPlan) view = 'discover';
 
 const cloud = createCloudDrafts({
   getWorkspace() {
@@ -80,13 +85,18 @@ function modal(type, data) {
 }
 function go(next) {
   view = next;
+  const learningPlanOpen = next === 'learning-plan';
+  if (Boolean(state.learningPlanOpen) !== learningPlanOpen) {
+    state.learningPlanOpen = learningPlanOpen;
+    save();
+  }
   if (next === 'lesson') loadLessonState();
   else checks = null;
 
   if (state.active === 'budget' && ['path', 'lesson', 'result'].includes(view)) {
     state.budgetActivity = { view, step };
     save();
-  } else if (state.budgetActivity) {
+  } else if (!learningPlanOpen && state.budgetActivity) {
     delete state.budgetActivity;
     save();
   }
@@ -112,6 +122,7 @@ function render() {
   switch (view) {
     case 'discover': html = dashboard(state); break;
     case 'courses': html = coursesPage(state); break;
+    case 'learning-plan': html = learningPlanView(plans.screen()); break;
     case 'path': html = pathView(state); break;
     case 'lesson': {
       const questions = quizQuestions();
@@ -257,7 +268,10 @@ document.addEventListener('submit', event => {
   changeMinutes($('#time-select')?.value ?? state.minutes);
   const id = matchGoal(goal);
   if (id) selectCourse(id, goal);
-  else modal('unsupported', { goal });
+  else {
+    go('learning-plan');
+    void plans.generate(goal, state.minutes);
+  }
 });
 
 function updateBudgetDraft(field, value) {

@@ -46,5 +46,5 @@ export function renderShell(view, state, stats, html) {
   main.dataset.page = view;
   main.innerHTML = html;
   const titles = { discover: 'Главная', courses: 'Курсы', practice: 'Практика', path: 'Путь обучения', lesson: courseNames[id], result: 'Результат', work: 'Мои работы', achievements: 'Достижения', community: 'Сообщество', profile: 'Профиль' };
-  document.title = `${titles[view]} · Mindora`;
+  document.title = `${view === 'learning-plan' ? 'Мой маршрут' : titles[view]} · Mindora`;
 }

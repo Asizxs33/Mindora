@@ -60,6 +60,7 @@ function goalBanner(icon, minutes) {
         <button data-action="programming"><span class="topic-code">${icon('code', 23)}</span><span class="code-desktop">Программирование</span><span class="code-mobile">Код</span></button>
         <button data-view="courses"><span class="topic-more">${icon('more', 20)}</span>Ещё</button>
       </div>
+      <button class="secondary" data-view="learning-plan">Мой маршрут с ИИ</button>
     </div>
   </section>`;
 }

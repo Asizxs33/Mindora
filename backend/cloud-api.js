@@ -21,12 +21,12 @@ function config() {
   return { databaseUrl: DATABASE_URL, baseUrl: NEON_AUTH_BASE_URL.replace(/\/$/, ''), cookieSecret: NEON_AUTH_COOKIE_SECRET };
 }
 
-function allowedOrigin(request) {
+export function allowedOrigin(request) {
   const origin = request.headers.get('origin');
   return origin === new URL(request.url).origin;
 }
 
-async function readBody(request) {
+export async function readBody(request) {
   if (!request.headers.get('content-type')?.startsWith('application/json') || !request.body) return null;
   const reader = request.body.getReader();
   const decoder = new TextDecoder();
