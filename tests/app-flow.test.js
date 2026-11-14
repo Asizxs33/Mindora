@@ -415,7 +415,7 @@ test('signout opens the greeting and signing back in retains the exact lesson', 
   assert.equal(run.current.state.learningPlan, null);
   run.signIn({ id: 'test-user' });
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(run.current.html.kind, 'course-home');
+  assert.equal(run.current.html.kind, 'quiet-home');
   assert.deepEqual(run.current.state.learningPlan, saved);
 });
 
@@ -628,7 +628,7 @@ test('English and custom welcome choices both clarify a personal goal before bui
   }
 });
 
-test('a saved roadmap stays selected in the home card and opens without its setup wizard', () => {
+test('a saved roadmap stays selected on the home path and opens without its setup wizard', () => {
   const roadmap = savedRoadmap();
   const run = app(seed({ learningPlan: savedAiCourse(), learningRoadmap: roadmap }), { realPlans: true });
   run.click({ view: 'roadmap' });
@@ -636,19 +636,19 @@ test('a saved roadmap stays selected in the home card and opens without its setu
   run.click({ roadmapAction: 'setup' });
   assert.ok(run.current.html.args[0].wizard);
   run.click({ view: 'discover' });
-  assert.equal(run.current.html.kind, 'course-home');
-  assert.equal(run.current.html.args[1].current.title, roadmap.title);
+  assert.equal(run.current.html.kind, 'roadmap');
+  assert.equal(run.current.html.args[0].roadmap.title, roadmap.title);
   run.click({ view: 'my-path' });
   assert.equal(run.current.html.kind, 'roadmap');
   assert.equal(run.current.html.args[0].wizard, null, 'home shows the saved path rather than an unfinished setup form');
   const reloaded = app(null, { storage: run.storage, realPlans: true });
-  assert.equal(reloaded.current.html.kind, 'course-home');
+  assert.equal(reloaded.current.html.kind, 'roadmap');
   reloaded.click({ view: 'my-path' });
   assert.equal(reloaded.current.html.kind, 'roadmap');
   assert.deepEqual(reloaded.current.html.args[0].roadmap, roadmap);
   assert.equal(reloaded.current.html.args[0].wizard, null);
   const roadmapOnly = app(seed({ active: null, learningRoadmap: roadmap }));
-  assert.equal(roadmapOnly.current.html.args[1].current.title, roadmap.title, 'an account with only a roadmap still has a usable home');
+  assert.equal(roadmapOnly.current.html.args[0].roadmap.title, roadmap.title, 'an account with only a roadmap still has a usable home');
 });
 
 test('an existing roadmap stage resumes the saved lesson and draft without another generation', async () => {
@@ -667,9 +667,9 @@ test('an existing roadmap stage resumes the saved lesson and draft without anoth
   assert.equal(run.current.state.learningPlan.study[1].page, 1);
   assert.equal(run.saved().lastLearningType, 'roadmap');
   run.click({ view: 'discover' });
-  assert.equal(run.current.html.args[1].current.title, savedRoadmap().title);
+  assert.equal(run.current.html.args[0].roadmap.title, savedRoadmap().title);
   const reloaded = app(null, { storage: run.storage, realPlans: true, libraryCourses: [course] });
-  assert.equal(reloaded.current.html.kind, 'course-home', 'reopening the app shows the same parent course');
+  assert.equal(reloaded.current.html.kind, 'roadmap', 'reopening the app shows the same parent course');
   reloaded.click({ action: 'resume-current' });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(reloaded.current.view, 'learning-plan', 'the stage button on restored home must actually open the lesson');
@@ -758,7 +758,7 @@ test('opening an archived roadmap preserves the other path and reloads the selec
   assert.equal(run.saved().learningRoadmap.id, second.id);
   assert.deepEqual(run.saved().learningRoadmaps, [first]);
   const reloaded = app(null, { storage: run.storage });
-  assert.equal(reloaded.current.html.args[1].current.title, second.title);
+  assert.equal(reloaded.current.html.args[0].roadmap.title, second.title);
   reloaded.click({ view: 'my-path' });
   assert.equal(reloaded.current.html.kind, 'roadmap');
   assert.equal(reloaded.current.html.args[0].roadmap.id, second.id);
@@ -792,7 +792,8 @@ for (const succeeds of [true, false]) test(`a roadmap request settling on home c
   run.click({ roadmapAction: 'start', roadmapStage: '0' });
   assert.equal(run.current.html.args[0].busy, 'stage');
   run.click({ view: 'discover' });
-  assert.equal(run.current.html.kind, 'course-home');
+  assert.equal(run.current.html.kind, 'roadmap');
+  assert.equal(run.current.html.args[0].busy, 'stage');
   finish(succeeds);
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.current.view, 'discover', 'a completed request never steals navigation');
@@ -865,10 +866,10 @@ test('switching accounts selects separate local workspaces and signout hides lea
   assert.deepEqual(run.current.state.notes, {});
 });
 
-test('budget home card resumes through overdue review and preserves the reading page', () => {
+test('budget home path resumes through overdue review and preserves the reading page', () => {
   const run = app(seed({ active: 'budget', budgetActivity: { view: 'lesson', step: 0 }, sessions: { budget: { lastSeen: NOW - RECAP_AFTER_MS - 1, cursor: { step: 0, page: 2 } } } }));
   assert.equal(run.current.view, 'discover');
-  assert.equal(run.current.html.kind, 'course-home');
+  assert.equal(run.current.html.kind, 'quiet-home');
   run.click({ action: 'resume-current' });
   assert.equal(run.current.view, 'return-review');
   assert.equal(run.saved().sessions.budget.cursor.page, 2);
@@ -889,11 +890,12 @@ test('home goal draft survives navigation and reload and stays separate between 
   assert.equal(run.current.html.args[0].homeGoal, undefined);
 });
 
-test('home card and path button select the same saved course and resume its exact draft', () => {
+test('home path and path button select the same saved course and resume its exact draft', () => {
   const saved = savedAiCourse();
   const run = app(seed({ learningPlan: saved }), { realPlans: true });
-  assert.equal(run.current.html.args[1].current.title, saved.plan.title);
-  assert.equal(run.current.html.args[1].current.completed, saved.completed);
+  assert.equal(run.current.html.kind, 'quiet-home');
+  assert.equal(run.current.html.args[0].learningPlan.plan.title, saved.plan.title);
+  assert.equal(run.current.html.args[0].learningPlan.completed, saved.completed);
   run.click({ view: 'my-path' });
   assert.equal(run.current.view, 'course-path');
   run.click({ view: 'courses' });

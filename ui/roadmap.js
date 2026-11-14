@@ -150,7 +150,7 @@ function questDefinition(id) {
   return ['target', t('Answer two exercises correctly', 'Реши два упражнения верно', 'Екі жаттығуды дұрыс орында')];
 }
 
-function questRow(quest) {
+export function questRow(quest) {
   const [symbol, title] = questDefinition(quest.id);
   return `<div class="roadmap-quest">
     <span class="roadmap-symbol">${icon(symbol, 22)}</span>
