@@ -5,7 +5,7 @@ import { createPlanController } from './plan-controller.js';
 import { createLearningLibrary } from './learning-library.js';
 import { createBuiltinSync } from './builtin-sync.js';
 import { restorePlan } from './learning-plan.js';
-import { normalizeRoadmap, restoreRoadmap, roadmapInput, roadmapStageStatuses, updateRoadmapStage } from './roadmap-model.js';
+import { normalizeRoadmap, restoreRoadmap, restoreRoadmapArchive, ROADMAP_LIBRARY_LIMIT, roadmapInput, roadmapStageStatuses, updateRoadmapStage } from './roadmap-model.js';
 import { buyRewardItem, claimDailyQuest, recordCheckReward, recordLessonReward, rewardScreen } from './roadmap-rewards.js';
 import { createWorkspaceStorage } from './workspace-storage.js';
 import { dayKey, dailyCourse, learningStats } from './progress.js';
@@ -19,13 +19,17 @@ import { languageCode } from './language.js';
 import { setLanguage, t } from '../ui/language.js';
 import { message } from '../ui/messages.js';
 import { resumeCursor, needsRecap, certificateEligible } from './resume.js';
-import { recapView, recapQuestion } from '../ui/recap.js';
+import { builtinReviewContent } from '../ui/recap.js';
 import { certificateView, refreshCertificatePreview } from '../ui/certificate.js';
 import { downloadCertificate } from './certificate.js';
 import { getAccountState, openAccount, closeAccount, expireAccountSession } from '../ui/account.js';
 import { learningLibraryView, learningSyncView, loginRequiredView } from '../ui/learning-library.js';
 import { showWorkspaceConflict } from '../ui/workspace-conflict.js';
 import { roadmapView, rewardsView } from '../ui/roadmap.js';
+import { guidedStartView, quietHomeView } from '../ui/guided-start.js';
+import { needsReturnReview, learningHasProgress, learningReviewQuestions, createReturnReview, restoreReturnReview } from './return-review.js';
+import { returnReviewView, mountReturnReview } from '../ui/return-review.js';
+import { getStarterCourse, starterCourses } from './starter-courses.js';
 
 const $=s=>document.querySelector(s);
 const LEGACY_KEY='mindora.workspace.v1';
@@ -53,7 +57,10 @@ const state = readState();
 state.language = languageCode(state.language);
 setLanguage(state.language);
 const resume = readBudgetResume(state);
-let view = accountOwner ? state.learningPlanOpen && state.learningPlan ? 'learning-plan' : resume?.view || 'discover' : 'discover';
+let view = accountOwner
+  ? state.returnReviewOpen ? 'return-review' : state.learningPlanOpen && state.learningPlan ? 'learning-plan' : resume?.view || 'discover'
+  : 'discover';
+let showIntro = false;
 let step = resume?.step ?? 0;
 let quizIndex = 0;
 let quizChoice = null;
@@ -62,17 +69,19 @@ let checks = null;
 let challengeSeed = 0;
 
 let pendingLearning = null;
+let openingStarter = false;
 let library;
 let builtins;
 let roadmapWizard = null;
 let roadmapOperation = null;
 let roadmapError = '';
 let pendingRoadmapPrefill = null;
-const builtinFields = ['minutes', 'active', 'goals', 'progress', 'drafts', 'works', 'notes', 'sessions', 'certificates', 'practiceCount', 'studyDays', 'budgetQuiz', 'budgetActivity', 'learningRoadmap', 'learningRewards'];
+const builtinFields = ['minutes', 'active', 'goals', 'progress', 'drafts', 'works', 'notes', 'sessions', 'certificates', 'practiceCount', 'studyDays', 'budgetQuiz', 'budgetActivity', 'learningRoadmap', 'learningRoadmaps', 'learningRewards'];
 const builtinData = source => Object.fromEntries(builtinFields.filter(key => source[key] !== undefined).map(key => [key, source[key]]));
 let builtinSnapshot = JSON.stringify(builtinData(state));
 const plans = createPlanController({ state, save: saveLearning, render, isOpen: () => view === 'learning-plan' && Boolean(accountOwner),
-    canLearn: () => ensureLearning(), beforeGenerate: () => library.flush(), onGenerated: course => library.accept(course), onUnauthorized: expiredSession, accountId: () => accountOwner });
+    canLearn: () => ensureLearning(), beforeGenerate: () => library.flush(),
+    onGenerated: course => library.accept(course), onUnauthorized: expiredSession, accountId: () => accountOwner });
 if (view === 'learning-plan' && !state.learningPlan) view = 'discover';
 
 library = createLearningLibrary({
@@ -84,7 +93,7 @@ library = createLearningLibrary({
     const saved = restorePlan(course.saved);
     if (!saved || ownerId !== accountOwner) return;
     state.learningPlan = saved;
-    state.learningCourse = { id: course.id, revision: course.revision, ownerId, dirty: false };
+    state.learningCourse = { id: course.id, revision: course.revision, updatedAt: course.updatedAt, ownerId, dirty: false };
     plans.reset();
     if (accountReady && saved.completed === saved.plan.steps.length) reconcileRoadmapCompletion(course.id);
     saveLocal();
@@ -152,6 +161,7 @@ function canImportBuiltin() {
 
 function saveLearning(event) {
   if (event) applyLessonReward(event, state.learningCourse?.id);
+  if (view === 'learning-plan') rememberLearningVisit();
   saveLocal();
   if (!workspaceStorage.conflicted) library?.changed();
 }
@@ -168,11 +178,25 @@ function applyLessonReward(event, courseId) {
 }
 
 function reconcileRoadmapCompletion(courseId) {
-  const roadmap = restoreRoadmap(state.learningRoadmap);
-  const index = roadmap?.progress.findIndex(stage => stage.courseId === courseId && !stage.completed) ?? -1;
-  if (index < 0) return;
-  state.learningRoadmap = updateRoadmapStage(roadmap, index, courseId, true);
+  const ownerPath = pathForLesson(courseId);
+  if (!ownerPath) return;
+  const index = ownerPath.progress.findIndex(stage => stage.courseId === courseId);
+  const next = updateRoadmapStage(ownerPath, index, courseId, true);
+  if (next === ownerPath) return;
+  if (ownerPath.id === state.learningRoadmap?.id) state.learningRoadmap = next;
+  else state.learningRoadmaps = state.learningRoadmaps.map(path => path.id === ownerPath.id ? next : path);
   save();
+}
+
+function savedRoadmaps() {
+  const active = restoreRoadmap(state.learningRoadmap);
+  const archive = restoreRoadmapArchive(state.learningRoadmaps ?? [], active) ?? [];
+  return active ? [active, ...archive] : archive;
+}
+
+function pathForLesson(id) {
+  if (!id) return null;
+  return savedRoadmaps().find(path => path.progress.some(stage => stage.courseId === id)) ?? null;
 }
 
 const cloud = createCloudDrafts({
@@ -228,7 +252,6 @@ function loadLessonState() {
 }
 // These fields are additive; old workspace saves remain readable.
 for (const field of ['sessions', 'certificates']) if (!state[field] || typeof state[field] !== 'object' || Array.isArray(state[field])) state[field] = {};
-let recap = { phase: 0, choice: null, checked: false }, pendingCursor = null, pendingPractice = false;
 
 function rememberPosition(page, touch = true) {
   if (view !== 'lesson' || !state.active) return;
@@ -250,15 +273,85 @@ function restoreLesson(cursor) {
 function resumeCourse(id = state.active, requestedStep = null) {
   if (!ensureLearning(() => resumeCourse(id, requestedStep))) return;
   if (!COURSES[id]) return go('discover');
-  pendingPractice = false;
   state.active = id;
+  state.pathKind = 'builtin';
   let cursor = resumeCursor(state, id);
   if (requestedStep !== null && requestedStep !== cursor.step) {
     cursor = { step: requestedStep, page: 0, quizIndex: 0, quizChoice: null, quizFeedback: false };
   }
-  if (needsRecap(state, id)) {
-    pendingCursor = cursor; recap = { phase: 0, choice: null, checked: false }; save(); go('recap');
+  const key = `builtin:${id}`;
+  const interrupted = restoreReturnReview(state.returnReview, key);
+  if (interrupted && interrupted.phase !== 'complete') {
+    state.returnReview = interrupted; go('return-review');
+  } else if (needsRecap(state, id)) {
+    state.returnReview = createReturnReview({ key, ...builtinReviewContent(id), cursor });
+    saveLocal(); go('return-review');
   } else restoreLesson(cursor);
+}
+
+function learningVisitKey() {
+  if (!state.learningPlan) return null;
+  const plan = state.learningPlan.plan;
+  return `ai:${state.learningCourse?.id || `${plan.goal}:${plan.minutes}:${plan.language}:${plan.title}`}`.slice(0, 500);
+}
+
+function rememberLearningVisit() {
+  const key = learningVisitKey();
+  if (!key || !accountReady) return;
+  const visits = state.learningVisits && typeof state.learningVisits === 'object' && !Array.isArray(state.learningVisits) ? state.learningVisits : {};
+  state.learningVisits = Object.fromEntries([...Object.entries(visits).filter(([id]) => id !== key).slice(-99), [key, Date.now()]]);
+}
+
+function reviewLearningPlan() {
+  const key = learningVisitKey();
+  if (!key) return false;
+  state.pathKind = learningPlanPathKind();
+  const interrupted = restoreReturnReview(state.returnReview, key);
+  if (interrupted && interrupted.phase !== 'complete') state.returnReview = interrupted;
+  else {
+    const lastSeen = state.learningVisits?.[key] || Date.parse(state.learningCourse?.updatedAt || '');
+    if (!needsReturnReview(lastSeen, learningHasProgress(state.learningPlan))) return false;
+    const saved = state.learningPlan;
+    state.returnReview = createReturnReview({ key, title: saved.plan.title,
+      questions: learningReviewQuestions(saved), reminder: saved.plan.steps[Math.min(saved.completed, saved.plan.steps.length - 1)]?.instruction || saved.plan.outcome });
+  }
+  go('return-review');
+  saveLocal();
+  return true;
+}
+
+function learningPlanPathKind() {
+  return pathForLesson(state.learningCourse?.id) ? 'roadmap' : 'lesson';
+}
+
+function openMyPath() {
+  if (view === 'learning-plan' || (view === 'return-review' && state.returnReview?.key.startsWith('ai:'))) {
+    const linked = pathForLesson(state.learningCourse?.id);
+    if (linked) return openRoadmap(linked.id ?? 'current');
+  }
+  const kind = state.pathKind;
+  if (kind === 'builtin' && COURSES[state.active]) return go('path');
+  if (kind === 'lesson' && state.learningPlan) return go('course-path');
+  if (restoreRoadmap(state.learningRoadmap)) return go('roadmap');
+  if (COURSES[state.active]) return go('path');
+  if (state.learningPlan) return go('course-path');
+  return go('roadmap');
+}
+
+function restoreOpenReview() {
+  if (!state.returnReviewOpen) return false;
+  const key = state.returnReview?.key;
+  const builtinId = typeof key === 'string' && key.startsWith('builtin:') ? key.slice(8) : null;
+  if (builtinId ? !Object.hasOwn(COURSES, builtinId) : !key || key !== learningVisitKey()) return false;
+  const review = restoreReturnReview(state.returnReview, key);
+  if (!review || review.phase === 'complete') return false;
+  if (builtinId) {
+    state.active = builtinId;
+    state.pathKind = 'builtin';
+  } else state.pathKind = learningPlanPathKind();
+  state.returnReview = review;
+  go('return-review');
+  return true;
 }
 
 function certificateData(id) {
@@ -300,12 +393,27 @@ function modal(type, data) {
   if (!$("#modal").open) $("#modal").showModal();
 }
 function go(next, cursor = null) {
-  if (['path', 'lesson', 'learning-plan', 'recap', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop'].includes(next)
+  if (next === 'my-path') return openMyPath();
+  if (['path', 'course-path', 'lesson', 'learning-plan', 'return-review', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop'].includes(next)
     && !ensureLearning(() => go(next, cursor))) return;
+  if (next === 'course-path' && !state.learningPlan) return go('courses');
+  if (next === 'path' && !Object.hasOwn(COURSES, state.active)) return go('courses');
+  if (next === 'learning-plan' && reviewLearningPlan()) return;
+  if (view === 'learning-plan' && next !== view && next !== 'return-review') { rememberLearningVisit(); saveLocal(); }
   view = next;
+  if (next !== 'discover') showIntro = false;
+  const pathKind = next === 'roadmap' ? 'roadmap' : next === 'course-path' ? 'lesson'
+    : next === 'path' || next === 'lesson' ? 'builtin'
+      : next === 'learning-plan' ? learningPlanPathKind() : null;
+  if (pathKind && state.pathKind !== pathKind) {
+    state.pathKind = pathKind;
+    saveLocal();
+  }
+  const reviewOpen = next === 'return-review';
   const learningPlanOpen = next === 'learning-plan';
-  if (Boolean(state.learningPlanOpen) !== learningPlanOpen) {
+  if (Boolean(state.learningPlanOpen) !== learningPlanOpen || Boolean(state.returnReviewOpen) !== reviewOpen) {
     state.learningPlanOpen = learningPlanOpen;
+    state.returnReviewOpen = reviewOpen;
     save();
   }
   if (next === 'lesson') {
@@ -315,6 +423,7 @@ function go(next, cursor = null) {
     }
   }
   else checks = null;
+  if (next === 'learning-plan') { rememberLearningVisit(); saveLocal(); }
 
   if (state.active === 'budget' && ['path', 'lesson', 'result'].includes(view)) {
     state.budgetActivity = { view, step };
@@ -340,16 +449,28 @@ function render() {
     busy: roadmapOperation?.kind, error: roadmapError, rewards, quests: rewards?.quests ?? [], items: rewards?.items ?? [] };
   let html;
   switch (view) {
-    case 'discover': html = dashboard(state); break;
-    case 'courses': html = learningLibraryView({ ...library.screen(), available: getAccountState().available,
-      hasLocalLesson: Boolean(legacyLesson) && !state.importedLegacyLesson, hasLocalBuiltin: canImportBuiltin() }) + coursesPage(state); break;
-    case 'learning-plan': html = accountOwner ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({ ...plans.screen(), accountSaved: Boolean(state.learningCourse), onRoadmap: roadmap?.progress.some(stage => !!stage.courseId && stage.courseId === state.learningCourse?.id) }) : loginRequiredView(); break;
+    case 'discover': html = showIntro && !accountOwner ? guidedStartView() : dashboard(state, { showIntro: !accountOwner }); break;
+    case 'courses': {
+      const collection = library.screen();
+      const paths = savedRoadmaps();
+      const linked = new Set(paths.flatMap(path => path.progress.map(stage => stage.courseId).filter(Boolean)));
+      const roadmaps = paths.map(path => ({ id: path.id ?? 'current', title: path.title, goal: path.goal, minutes: path.minutes,
+        completed: path.progress.filter(stage => stage.completed).length, totalSteps: path.progress.length }));
+      const represented = linked.has(state.learningCourse?.id) || collection.courses.some(course => course.id === state.learningCourse?.id);
+      html = learningLibraryView({ ...collection, courses: collection.courses.filter(course => !linked.has(course.id)),
+        roadmaps, available: getAccountState().available,
+        hasLocalLesson: Boolean(legacyLesson) && !state.importedLegacyLesson, hasLocalBuiltin: canImportBuiltin() }, { primaryHeading: true, showEmpty: false })
+        + coursesPage(state, { showHeading: false, showCurrentLesson: !represented, showReadyCourses: true, readyCourses: starterCourses(state.language) });
+      break;
+    }
+    case 'learning-plan': html = accountOwner ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({ ...plans.screen(), accountSaved: Boolean(state.learningCourse), onRoadmap: Boolean(pathForLesson(state.learningCourse?.id)) }) : loginRequiredView(); break;
     case 'roadmap': html = roadmapView(roadmapProps); break;
     case 'quests':
     case 'shop': html = rewardsView(view, roadmapProps); break;
     case 'profile': html = sidePage(view, state, rewards ? rewardsView('profile', roadmapProps) : ''); break;
     case 'path': html = pathView(state); break;
-    case 'recap': html = recapView(state.active, recap); break;
+    case 'course-path': html = quietHomeView(state); break;
+    case 'return-review': html = returnReviewView(state.returnReview); break;
     case 'certificate': html = certificateView(certificateData(state.active)); break;
     case 'lesson': {
       const questions = quizQuestions();
@@ -370,7 +491,7 @@ function render() {
     default: html = sidePage(view, state);
   }
   renderShell(view, state, stats, html, rewards);
-  if (accountOwner && ['courses', 'path', 'lesson', 'recap', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop', 'profile'].includes(view)) {
+  if (accountOwner && ['courses', 'path', 'course-path', 'lesson', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop', 'profile'].includes(view)) {
     const main = $('#main');
     if (main.insertAdjacentHTML) main.insertAdjacentHTML(view === 'lesson' ? 'beforeend' : 'afterbegin', `<div data-builtin-sync-panel>${builtinSyncView()}</div>`);
   }
@@ -420,7 +541,12 @@ function checkWork(){
 }
 function mixPractice() {
   if (!ensureLearning(mixPractice)) return;
-  if (state.active && needsRecap(state, state.active)) { resumeCourse(); pendingPractice = true; return; }
+  const interrupted = restoreReturnReview(state.returnReview, `builtin:${state.active}`);
+  if (state.active && (needsRecap(state, state.active) || interrupted && interrupted.phase !== 'complete')) {
+    resumeCourse();
+    if (view === 'return-review') { state.returnReview.intent = 'practice'; saveLocal(); }
+    return;
+  }
   if (!state.active || state.progress[state.active] < 2) {
     return toast('Пройди урок и ответь на вопросы, чтобы открыть практику.');
   }
@@ -571,6 +697,11 @@ function submitRoadmap(form) {
     render();
     return;
   }
+  if (savedRoadmaps().length >= ROADMAP_LIBRARY_LIMIT) {
+    roadmapError = t('Your course library is full.', 'В библиотеке уже сохранено максимальное число курсов.', 'Курс кітапханасы толды.');
+    render();
+    return;
+  }
   runRoadmapOperation('roadmap', async (isCurrent, owner) => {
     let response;
     try {
@@ -588,7 +719,8 @@ function submitRoadmap(form) {
     if (!isCurrent()) return;
     const roadmap = normalizeRoadmap(data?.roadmap, input);
     if (!roadmap) throw new Error(roadmapErrorText('roadmap'));
-    state.learningRoadmap = restoreRoadmap(roadmap);
+    state.learningRoadmaps = savedRoadmaps().map(path => path.id ? path : { ...path, id: crypto.randomUUID() });
+    state.learningRoadmap = restoreRoadmap({ ...roadmap, id: crypto.randomUUID() });
     state.minutes = input.minutes;
     roadmapWizard = null;
     save();
@@ -635,6 +767,51 @@ document.addEventListener('submit', event => {
   const start = () => { pendingRoadmapPrefill = null; beginRoadmap(goal, minutes); };
   if (ensureLearning(start)) start();
 });
+
+async function startReadyCourse(id) {
+  if (!ensureLearning(() => { void startReadyCourse(id); }) || openingStarter) return;
+  const saved = getStarterCourse(id, state.language);
+  if (!saved) return;
+  openingStarter = true;
+  const owner = accountOwner;
+  try {
+    const existing = library.screen().courses.find(course => course.goal === saved.plan.goal && course.title === saved.plan.title && course.language === saved.plan.language);
+    if (!existing && !await library.flush()) {
+      if (owner === accountOwner) toast('Save your current lesson before opening another course.');
+      return;
+    }
+    const accepted = existing ? await library.load(existing.id) : await library.importLocal(saved);
+    if (accepted && owner === accountOwner) {
+      go('course-path');
+    } else if (owner === accountOwner) go('courses');
+  } finally { openingStarter = false; }
+}
+
+function openSavedCoursePath(id) {
+  if (!ensureLearning(() => openSavedCoursePath(id))) return;
+  const roadmap = pathForLesson(id);
+  if (roadmap) return openRoadmap(roadmap.id ?? 'current');
+  const owner = accountOwner;
+  void library.load(id).then(opened => {
+    if (opened && owner === accountOwner) go('course-path');
+  });
+}
+
+function openRoadmap(id) {
+  if (roadmapOperation || !ensureLearning()) return;
+  const paths = savedRoadmaps();
+  const chosen = paths.find(path => (path.id ?? 'current') === id);
+  if (!chosen) return;
+  if ((state.learningRoadmap?.id ?? 'current') !== id || !state.learningRoadmap) {
+    state.learningRoadmap = chosen;
+    state.learningRoadmaps = paths.filter(path => path !== chosen)
+      .map(path => path.id ? path : { ...path, id: crypto.randomUUID() });
+    save();
+  }
+  roadmapWizard = null;
+  roadmapError = '';
+  go('roadmap');
+}
 
 function updateBudgetDraft(field, value) {
   const work = draft();
@@ -719,15 +896,30 @@ document.addEventListener('click', event => {
     }
     return;
   }
+  if (button.dataset.introAction) {
+    const action = button.dataset.introAction;
+    if (action === 'show' && !accountOwner) { showIntro = true; go('discover'); }
+    else if (action === 'next' && showIntro && !accountOwner) openAccount('signup');
+    else if (action === 'browse') { showIntro = false; go('discover'); }
+    else if (action === 'new') {
+      if (ensureLearning(beginRoadmap)) beginRoadmap();
+    }
+    return;
+  }
+  if (button.dataset.starterCourse) { void startReadyCourse(button.dataset.starterCourse); return; }
   const { view: destination, course, step: requestedStep, choice, color, action, id } = button.dataset;
+  if (button.dataset.learningRoadmap) {
+    openRoadmap(button.dataset.learningRoadmap);
+    return;
+  }
   if (button.dataset.learningOpen) {
-    if (ensureLearning()) void library.load(button.dataset.learningOpen).then(ok => { if (ok) go('learning-plan'); });
+    openSavedCoursePath(button.dataset.learningOpen);
     return;
   }
   if (button.hasAttribute('data-learning-refresh')) { if (ensureLearning()) void library.refresh(); return; }
   if (button.hasAttribute('data-learning-import')) {
     if (legacyLesson && ensureLearning()) void library.importLocal(legacyLesson).then(ok => {
-      if (ok) { state.importedLegacyLesson = true; saveLocal(); go('learning-plan'); }
+      if (ok) { state.importedLegacyLesson = true; saveLocal(); go('course-path'); }
     });
     return;
   }
@@ -756,6 +948,7 @@ document.addEventListener('click', event => {
   if (button.matches('[data-home]')) {
     event.preventDefault();
     captureRoadmapAnswers($('#roadmap-form'));
+    showIntro = false;
     rememberPosition();
     return go('discover');
   }
@@ -785,7 +978,6 @@ document.addEventListener('click', event => {
     refreshPosterPreview(work);
     return;
   }
-  if (button.dataset.recapChoice !== undefined && view === 'recap') { recap.choice = Number(button.dataset.recapChoice); recap.checked = false; render(); return; }
   if (dashboardAction(action, id)) return;
   switch (action) {
     case 'resume-course': resumeCourse(id); break;
@@ -798,12 +990,6 @@ document.addEventListener('click', event => {
       state.certificates[state.active].name = name.slice(0, 80); save();
       downloadCertificate(certificateData(state.active)); toast('Your certificate is ready to download.'); break;
     }
-    case 'recap-check': if (recap.choice !== null) { recap.checked = true; render(); } break;
-    case 'recap-next':
-      if (recap.phase && (!recap.checked || recap.choice !== recapQuestion(state.active, recap.phase - 1).answer)) return;
-      if (recap.phase === 2) { const cursor = pendingCursor || resumeCursor(state, state.active); const practice = pendingPractice; pendingCursor = null; pendingPractice = false; restoreLesson(cursor); if (practice) mixPractice(); }
-      else { recap = { phase: recap.phase + 1, choice: null, checked: false }; go('recap'); }
-      break;
     case 'about': modal('about'); break;
     case 'close-modal': $('#modal').close(); break;
     case 'finish-learn': finishStep(); break;
@@ -840,6 +1026,7 @@ window.addEventListener('mindora:learn-page', event => {
 });
 window.addEventListener('pagehide', () => {
   rememberPosition(undefined, false);
+  if (view === 'learning-plan' && !document.hidden) { rememberLearningVisit(); saveLocal(); }
   if (accountReady) { void library.flush(); void builtins.flush(); }
 });
 window.addEventListener('storage', event => {
@@ -852,9 +1039,11 @@ window.addEventListener('storage', event => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     rememberPosition();
+    if (view === 'learning-plan') { rememberLearningVisit(); saveLocal(); }
     if (accountReady) { void library.flush(); void builtins.flush(); }
   }
   else if (view === 'lesson' && needsRecap(state, state.active)) resumeCourse();
+  else if (view === 'learning-plan' && accountReady) reviewLearningPlan();
 });
 document.addEventListener('input', event => {
   if (view === 'lesson' && event.target.closest('#main')) rememberPosition();
@@ -886,6 +1075,7 @@ window.addEventListener('mindora:account-changed', event => {
     for (const field of ['sessions', 'certificates']) if (!state[field] || typeof state[field] !== 'object' || Array.isArray(state[field])) state[field] = {};
     plans.reset();
     view = owner && !signupComplete ? 'courses' : 'discover';
+    showIntro = false;
     checks = null;
     quizIndex = 0; quizChoice = null; quizFeedback = false; step = 0;
     saveWarning = false;
@@ -911,11 +1101,12 @@ window.addEventListener('mindora:account-changed', event => {
       closeAccount();
       next();
     } else if (owner && view === 'courses') {
+      if (restoreOpenReview()) return;
       if (state.learningPlanOpen && state.learningPlan && state.learningCourse?.ownerId === owner) go('learning-plan');
       else {
         const resume = readBudgetResume(state);
         if (resume?.view === 'lesson' && !builtins.screen().conflict) resumeCourse(state.active, resume.step);
-        else if (restoreRoadmap(state.learningRoadmap)) go('roadmap');
+        else if (state.pathKind || restoreRoadmap(state.learningRoadmap)) openMyPath();
         else render();
       }
     }
@@ -923,9 +1114,29 @@ window.addEventListener('mindora:account-changed', event => {
   void cloud.init();
 });
 mountShell();
+mountReturnReview({
+  getReview: () => state.returnReview,
+  isActive: () => view === 'return-review' && accountReady,
+  onChange(review, options) { state.returnReview = review; saveLocal(); if (options.render && review.phase !== 'complete') render(); },
+  onComplete(review) {
+    delete state.returnReview;
+    if (review.key.startsWith('builtin:')) {
+      const id = review.key.slice(8);
+      if (!COURSES[id]) return go('discover');
+      state.active = id;
+      state.sessions[id] = { ...state.sessions[id], lastSeen: Date.now() };
+      save(); restoreLesson(review.cursor || resumeCursor(state, id));
+      if (review.intent === 'practice') mixPractice();
+    } else if (review.key === learningVisitKey()) {
+      rememberLearningVisit(); saveLocal(); go('learning-plan');
+    } else { saveLocal(); go('courses'); }
+  },
+});
 
 $('#modal').addEventListener('click',e=>{if(e.target===$('#modal')){const r=$('#modal').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('#modal').close();}});
-if (view === 'lesson') resumeCourse(state.active, step);
+if (view === 'return-review' && !restoreOpenReview()) go('discover');
+else if (view === 'learning-plan') go('learning-plan');
+else if (view === 'lesson') resumeCourse(state.active, step);
 else render();
 void cloud.init();
 if (accountOwner) {

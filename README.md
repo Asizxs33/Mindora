@@ -50,6 +50,8 @@ Browser storage is local to a device and origin. Clearing site data removes prog
 
 See the [team guide](docs/TEAM.md) and [Codex prompt for design work](docs/CODEX-DESIGN-PROMPT.md).
 
+The [guided learning guide](docs/GUIDED-LEARNING.md) covers the simplified character-led entry, saved-place continuation, first-attempt return review, and reusable lesson scenes, including persistence and backend limits.
+
 ## Verification
 
 ```sh

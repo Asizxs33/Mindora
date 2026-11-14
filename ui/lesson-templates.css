@@ -1,3 +1,4 @@
+@import url('./learning-scenes.css');
 /* Shared lesson building blocks; no dependency on a course subject. */
 .lesson-template { min-width: 0; overflow-wrap: anywhere; }
 .lesson-template > .ai-lesson-mentor { margin-top: 0; }

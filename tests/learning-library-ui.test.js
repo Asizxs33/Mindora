@@ -25,8 +25,22 @@ test('saved lesson cards escape content and expose real progress and course acti
   assert.equal(cards[0].querySelector('progress').getAttribute('value'), '1');
   assert.equal(cards[0].querySelector('progress').getAttribute('max'), '2');
   assert.equal(cards[0].querySelector('[data-learning-open]').dataset.learningOpen, course.id);
-  assert.match(cards[0].querySelector('button').textContent, /Continue lesson/);
-  assert.match(cards[1].querySelector('button').textContent, /View my work/);
+  assert.match(cards[0].querySelector('button').textContent, /Open path/);
+  assert.match(cards[1].querySelector('button').textContent, /Open path/);
+});
+
+test('a generated roadmap opens its own path and presents progress across lessons', () => {
+  const document = documentFor(learningLibraryView({
+    user: { id: 'user' }, courses: [course],
+    roadmaps: [{ id: 'roadmap-1', title: 'Learn spreadsheets', language: 'en', completed: 2, totalSteps: 4 }],
+  }, { primaryHeading: true, showEmpty: false }));
+  const roadmap = document.querySelector('[data-learning-roadmap="roadmap-1"]').closest('li');
+  assert.equal(roadmap.querySelector('h3').textContent, 'Learn spreadsheets');
+  assert.equal(roadmap.querySelector('progress').getAttribute('aria-label'), 'Completed lessons');
+  assert.equal(roadmap.querySelector('progress').getAttribute('value'), '2');
+  assert.equal(roadmap.querySelector('progress').getAttribute('max'), '4');
+  assert.match(roadmap.querySelector('button').textContent, /Open path/);
+  assert.ok(document.querySelector('[data-learning-open]'));
 });
 
 test('loading and failure states keep retry controls clear and hide backend error details', () => {

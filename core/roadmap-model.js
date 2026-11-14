@@ -1,6 +1,7 @@
 import { planInput } from './learning-plan.js';
 
 export const ROADMAP_STAGE_COUNT = 4;
+export const ROADMAP_LIBRARY_LIMIT = 16;
 export const ROADMAP_LEVELS = Object.freeze(['beginner', 'intermediate', 'advanced']);
 export const ROADMAP_LIMITS = Object.freeze({
   goal: 180, evidence: 360, title: 90, outcome: 300,
@@ -45,6 +46,8 @@ export function roadmapCourseId(value) {
 export function restoreRoadmap(raw) {
   const roadmap = normalizeRoadmap(raw);
   if (!roadmap) return null;
+  const id = roadmapCourseId(raw.id);
+  if (raw.id !== undefined && !id) return null;
   const saved = raw.progress;
   const progress = [];
   const ids = new Set();
@@ -59,7 +62,26 @@ export function restoreRoadmap(raw) {
     progress.push({ courseId, completed: entry.completed });
     if (!entry.completed) locked = true;
   }
-  return { ...roadmap, progress };
+  return { ...roadmap, ...(id ? { id } : {}), progress };
+}
+
+export function restoreRoadmapArchive(raw, active) {
+  if (!Array.isArray(raw) || raw.length >= ROADMAP_LIBRARY_LIMIT) return null;
+  const ids = new Set(active?.id ? [active.id] : []);
+  const courseIds = new Set(active?.progress.flatMap(stage => stage.courseId ? [stage.courseId] : []) ?? []);
+  const archive = [];
+  for (const entry of raw) {
+    const roadmap = restoreRoadmap(entry);
+    if (!roadmap?.id || ids.has(roadmap.id)) return null;
+    ids.add(roadmap.id);
+    for (const { courseId } of roadmap.progress) {
+      if (!courseId) continue;
+      if (courseIds.has(courseId)) return null;
+      courseIds.add(courseId);
+    }
+    archive.push(roadmap);
+  }
+  return archive;
 }
 
 export function roadmapStageStatuses(roadmap) {

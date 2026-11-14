@@ -14,12 +14,7 @@ export const lessonNames = {
   get design() { return t(['Make one thing stand out', 'Train your design eye', 'Make it yours', 'Try a fresh brief'], ['Выдели главное','Проверь знания','Сделай свой постер','Новый постер'], ['Ең маңыздысын көрсет','Біліміңді тексер','Өз постеріңді жаса','Жаңа постер']); },
   get budget() { return t(['Meet your first formula', 'Think in cells', 'Build your own tracker', 'A new set of numbers'], ['Первая формула','Разберись с ячейками','Собери свою таблицу','Новые данные'], ['Алғашқы формула','Ұяшықтарды түсін','Өз кестеңді жаса','Жаңа деректер']); },
 };
-const descriptions = {
-  get design() { return t('Make a poster with a clear message.', 'Сделай постер с понятной идеей.', 'Ойы анық постер жаса.'); },
-  get budget() { return t('Track expenses with a simple formula.', 'Считай расходы простой формулой.', 'Шығындарды қарапайым формуламен есепте.'); },
-};
 const guide = id => id === 'design' ? 'designer' : 'sam';
-const guideLabel = id => id === 'design' ? t("Your design guide", "Твой наставник по дизайну", "Дизайн тәлімгерің") : t("Your numbers guide", "Твой наставник по таблицам", "Кестелер тәлімгерің");
 const startedCourses = state => Object.keys(COURSES).filter(id => state.goals[id] || state.progress[id] || state.works[id]);
 
 export function badge(icon, name, color, size = 22) {
@@ -29,19 +24,20 @@ export function badge(icon, name, color, size = 22) {
 export function brandNav(icon, view, place, signedIn = false) {
   const items = [['discover', 'home', t('Learn','Обучение','Оқу')], ['courses', 'book', t('My courses','Мои курсы','Курстарым')], ['work', 'folder', t('My work','Мои работы','Жұмыстарым')], ['profile', 'user', t('Profile','Профиль','Профиль')]];
   if (signedIn) {
-    items.splice(1, 0, ['roadmap', 'path', t('My path','Мой путь','Оқу жолым')]);
+    items.splice(1, 0, ['my-path', 'path', t('My path','Мой путь','Оқу жолым')]);
     if (place !== 'bottom') items.splice(-1, 0, ['quests', 'flag', t('Quests','Задания','Тапсырмалар')], ['shop', 'store', t('Shop','Магазин','Дүкен')]);
   }
   return items.map(([key, symbol, name]) => {
-    const active = view === key || (key === 'discover' && ['path', 'lesson', 'learning-plan', 'recap', 'result', 'certificate'].includes(view))
+    const learningViews = ['path', 'course-path', 'roadmap', 'lesson', 'learning-plan', 'recap', 'return-review', 'result', 'certificate'];
+    const active = view === key || (key === (signedIn ? 'my-path' : 'discover') && learningViews.includes(view))
       || (key === 'profile' && (['practice', 'achievements', 'community'].includes(view) || (place === 'bottom' && ['quests', 'shop'].includes(view))));
     return `<button class="nav-item ${active ? 'active' : ''}" data-view="${key}" ${active ? 'aria-current="page"' : ''}>${icon(symbol, place === 'bottom' ? 22 : 23)}<span>${name}</span></button>`;
   }).join('');
 }
 
-function goalBanner(minutes, compact = false) {
+function goalBanner(minutes, compact = false, showIntro = false) {
   return `<section class="learn-home ${compact ? 'new-goal-section' : ''}" aria-labelledby="welcome-title">
-    ${compact ? '' : `<div class="hero-character">${character('mino', 'welcome', 'home-character')}</div><div class="speech-bubble" aria-live="polite">${t("Hi! I’m Mino. Let’s learn something.", "Привет! Я Мино.", "Сәлем! Мен Мино.")}</div>`}
+    ${compact ? '' : `<div class="home-introduction"><div class="hero-character">${character('mino', 'welcome', 'home-character')}</div><div class="speech-bubble"><span class="home-guide-label">${t('Mino · your learning buddy', 'Мино · учимся вместе', 'Мино · бірге үйренеміз')}</span><p>${t("Hi! Tell me your goal. We’ll take it one small step at a time.", "Привет! Расскажи о своей цели. Будем разбираться вместе, шаг за шагом.", "Сәлем! Мақсатыңды айт. Бірге, шағын қадамдармен үйренеміз.")}</p></div></div>`}
     <div class="goal-copy">
       <${compact ? 'h2' : 'h1'} id="welcome-title">${t('What do you want to learn?', 'Чему ты хочешь научиться?', 'Не үйренгің келеді?')}</${compact ? 'h2' : 'h1'}>
       <p>${t('Choose a goal to see a learning path that fits your time.', 'Выбери цель и получи путь обучения под свой темп.', 'Мақсатыңды таңда да, өз қарқыныңа сай оқу жолын ал.')}</p>
@@ -57,7 +53,7 @@ function goalBanner(minutes, compact = false) {
       <button class="topic-shortcut" data-course="budget">${icon('sheet', 18)} ${t("Learn spreadsheets", "Изучить таблицы", "Кестелерді үйрену")}</button>
     </div>
     <p class="home-note">${t("Posters and spreadsheets are available now.", "Готовые курсы: постеры и таблицы.", "Дайын курстар: постерлер мен кестелер.")}</p>
-    ${compact ? '' : `<p class="home-account-link">${t('New here?', 'Впервые здесь?', 'Алғаш рет келдің бе?')} <button class="text-link" data-account-open="signup">${t("Create account", "Создать аккаунт", "Аккаунт жасау")}</button></p>`}
+    ${showIntro ? `<p class="home-account-link"><button type="button" class="text-link" data-intro-action="show">${t('Meet Mino', 'Познакомиться с Мино', 'Миномын танысу')}</button> <button type="button" class="text-link" data-account-open="signup">${t('Create account', 'Создать аккаунт', 'Аккаунт жасау')}</button></p>` : ''}
   </section>`;
 }
 
@@ -66,7 +62,7 @@ function resumeCard(state) {
   return `<section class="return-home" aria-labelledby="return-title">
     <div class="return-heading"><h1 id="return-title">${done ? t("You did it!", "Отличная работа!", "Жарайсың!") : t("Welcome back.", "С возвращением.", "Қайта келгеніңе қуаныштымыз.")}</h1></div>
     <section class="resume-card ${id}">
-      <div class="resume-mentor">${character(guide(id), done ? 'celebrate' : 'explaining', 'resume-character')}<span>${guideLabel(id)}</span></div>
+      <div class="resume-mentor">${character(guide(id), done ? 'celebrate' : 'explaining', 'resume-character')}<span><strong>${id === 'design' ? 'Mia' : 'Sam'}</strong>${done ? t('Look what you made! Let’s celebrate your progress.', 'Посмотри, что получилось! Отличная работа.', 'Не жасағаныңды қарашы! Жарайсың.') : t('I’ll show you an example. Then we’ll try it together.', 'Я покажу пример. А потом попробуем вместе.', 'Алдымен мысал көрсетемін. Сосын бірге жасап көреміз.')}</span></div>
       <div class="resume-body"><h2>${courseNames[id]}</h2>
         <div class="resume-progress"><span>${done ? t("Course complete", "Курс завершён", "Курс аяқталды") : t(`${completed * 25}% complete`, `Пройдено ${completed * 25}%`, `${completed * 25}% аяқталды`)}</span></div>
         <div class="progress-bar" role="progressbar" aria-label="${t("Course progress", "Прогресс курса", "Курс барысы")}" aria-valuemin="0" aria-valuemax="4" aria-valuenow="${completed}"><i style="width:${completed * 25}%"></i></div>
@@ -78,9 +74,10 @@ function resumeCard(state) {
   </section>`;
 }
 
-export function dashboard(state) {
+export function dashboard(state, { showIntro = false } = {}) {
   const saved = state.learningPlan;
-  const pathLink = state.learningRoadmap ? `<button type="button" class="text-link roadmap-home-link" data-view="roadmap">${icon('path', 18)} ${t("Open my learning path", "Открыть мой путь", "Оқу жолымды ашу")}</button>` : '';
+  const hasPath = state.learningRoadmap || saved || Object.hasOwn(COURSES, state.active);
+  const pathLink = hasPath ? `<button type="button" class="text-link roadmap-home-link" data-view="my-path">${icon('path', 18)} ${t("Open my learning path", "Открыть мой путь", "Оқу жолымды ашу")}</button>` : '';
   const newGoal = `<details class="goal-disclosure"><summary><span>${t("Learn something else", "Выбрать другую цель", "Басқа мақсат таңдау")}</span>${icon('chevron', 18)}</summary>${goalBanner(state.minutes, true)}</details>`;
   if (saved) {
     const total = saved.plan.steps.length;
@@ -91,7 +88,7 @@ export function dashboard(state) {
     return `<section class="return-home" aria-labelledby="return-title">
       <div class="return-heading"><h1 id="return-title">${done ? t("You did it!", "Отличная работа!", "Жарайсың!") : t("Welcome back.", "С возвращением.", "Қайта келгеніңе қуаныштымыз.")}</h1></div>
       <section class="resume-card personalized">
-        <div class="resume-mentor">${character('mino', done ? 'celebrate' : 'explaining', 'resume-character')}<span>${done ? t("Let’s see what you learned.", "Посмотрим, чему ты научился.", "Не үйренгеніңді көрейік.") : t("Ready for your next small step?", "Продолжим с того же места?", "Тоқтаған жерден жалғастырайық па?")}</span></div>
+        <div class="resume-mentor">${character('mino', done ? 'celebrate' : 'explaining', 'resume-character')}<span><strong>Mino</strong>${done ? t("Let’s see what you learned.", "Посмотрим, чему ты научился.", "Не үйренгеніңді көрейік.") : t("Ready for your next small step?", "Продолжим с того же места?", "Тоқтаған жерден жалғастырайық па?")}</span></div>
         <div class="resume-body"><h2>${escapeHtml(saved.plan.title)}</h2>
           <div class="resume-progress"><span>${t(`${completed} of ${total} tasks complete`, `Выполнено ${completed} из ${total} заданий`, `${total} тапсырманың ${completed} орындалды`)}</span></div>
           <div class="progress-bar" role="progressbar" aria-label="${t("Lesson progress", "Прогресс занятия", "Сабақ барысы")}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${completed}"><i style="width:${progress}%"></i></div>
@@ -104,38 +101,48 @@ export function dashboard(state) {
   }
   return state.active && COURSES[state.active]
     ? `${resumeCard(state)}${pathLink}${newGoal}`
-    : `${goalBanner(state.minutes)}${pathLink}`;
+    : `${goalBanner(state.minutes, false, showIntro)}${pathLink}`;
 }
 
-export function coursesPage(state) {
+export function readyCoursesView(extraCourses = []) {
+  const courses = [
+    { id: 'design', title: courseNames.design, minutes: 10, mentor: 'Mia', icon: 'palette', builtin: true },
+    { id: 'budget', title: courseNames.budget, minutes: 10, mentor: 'Sam', icon: 'sheet', builtin: true },
+    ...extraCourses,
+  ];
+  const mentorNames = { mino: 'Mino', mia: 'Mia', sam: 'Sam', artist: 'Ari', copywriter: 'Nora', smm: 'Zoe' };
+  return `<section class="ready-courses" aria-labelledby="ready-courses-title"><h2 id="ready-courses-title">${t('Ready mini-courses', 'Готовые мини-курсы', 'Дайын шағын курстар')}</h2><div class="ready-course-grid">${courses.map(course => `<button type="button" class="ready-course" ${course.builtin ? `data-course="${escapeHtml(course.id)}"` : `data-starter-course="${escapeHtml(course.id)}"`}><span class="ready-course-symbol" aria-hidden="true">${icon(course.icon, 24)}</span><strong>${escapeHtml(course.title)}</strong><span class="ready-course-meta"><span>${escapeHtml(mentorNames[course.mentor] || course.mentor)} · ${course.minutes} ${t('min', 'мин', 'мин')}</span>${icon('arrow', 17)}</span></button>`).join('')}</div></section>`;
+}
+
+export function coursesPage(state, { showHeading = true, showCurrentLesson = true, showReadyCourses = false, readyCourses = [] } = {}) {
   const ids = startedCourses(state);
-  // Account courses are already rendered by learningLibraryView above this section.
-  const saved = state.learningCourse ? null : state.learningPlan;
-  if (!ids.length && state.learningCourse) return `<button type="button" class="secondary new-course-button" data-home>${icon('plus', 18)} ${t('Learn something new', 'Изучить новое', 'Жаңа нәрсе үйрену')}</button>`;
+  // A combined library can supply the heading and the current account lesson.
+  const saved = showCurrentLesson && !state.learningCourse ? state.learningPlan : null;
+  const otherCoursesShown = Boolean(state.learningCourse || !showCurrentLesson);
+  const newCourse = `<button type="button" class="secondary new-course-button" data-intro-action="new">${icon('plus', 18)} ${t('Learn something new', 'Изучить новое', 'Жаңа нәрсе үйрену')}</button>`;
   let personalCourse = '';
   if (saved) {
     const total = saved.plan.steps.length;
     const completed = Math.min(total, Math.max(0, saved.completed));
     const done = completed === total;
     const progress = total ? Math.round(completed / total * 100) : 0;
-    personalCourse = `<article class="game-card catalog-tile personalized">
-      <div class="course-tile-top"><span class="course-symbol">${icon('book', 26)}</span><span class="course-state ${done ? 'complete' : ''}">${done ? t("Completed", "Завершён", "Аяқталды") : t(`${progress}% complete`, `Пройдено ${progress}%`, `${progress}% аяқталды`)}</span></div>
-      <h2>${escapeHtml(saved.plan.title)}</h2><p>${escapeHtml(saved.plan.outcome || saved.plan.goal || t("Made for your learning goal.", "Занятие для твоей цели.", "Мақсатыңа сай жасалған сабақ."))}</p>
-      <div class="progress-bar" role="progressbar" aria-label="${t("Lesson progress", "Прогресс занятия", "Сабақ барысы")}" aria-valuenow="${completed}" aria-valuemin="0" aria-valuemax="${total}"><i style="width:${progress}%"></i></div>
+    personalCourse = `<article class="game-card catalog-tile course-row personalized">
+      <div class="course-row-summary"><h2>${escapeHtml(saved.plan.title)}</h2>
+      <div class="course-row-progress"><div class="progress-bar" role="progressbar" aria-label="${t("Lesson progress", "Прогресс занятия", "Сабақ барысы")}" aria-valuenow="${completed}" aria-valuemin="0" aria-valuemax="${total}"><i style="width:${progress}%"></i></div><span>${done ? t("Completed", "Завершён", "Аяқталды") : `${progress}%`}</span></div></div>
       <button class="primary" data-view="learning-plan">${done ? t("View my lesson result", "Посмотреть результат", "Нәтижені көру") : t("Resume my lesson", "Продолжить занятие", "Сабақты жалғастыру")} ${icon('arrow', 18)}</button>
     </article>`;
   }
   const hasCourses = ids.length || saved;
-  return `<section class="my-courses">${pageBanner(t("My courses", "Мои курсы", "Курстарым"), hasCourses ? t("Pick up where you left off.", "Продолжи с того же места.", "Тоқтаған жерден жалғастыр.") : '')}
+  return `<section class="my-courses">${showHeading ? pageBanner(t("My courses", "Мои курсы", "Курстарым"), '') : ''}
     ${hasCourses ? `<div class="course-grid">${personalCourse}${ids.map(id => {
       const completed = state.progress[id], done = completed === 4;
-      return `<article class="game-card catalog-tile ${id}">
-        <div class="course-tile-top"><span class="course-symbol">${icon(id === 'design' ? 'palette' : 'sheet', 26)}</span><span class="course-state ${done ? 'complete' : ''}">${done ? t("Completed", "Завершён", "Аяқталды") : t(`${completed * 25}% complete`, `Пройдено ${completed * 25}%`, `${completed * 25}% аяқталды`)}</span></div>
-        <h2>${courseNames[id]}</h2><p>${descriptions[id]}</p>
-        <div class="progress-bar" role="progressbar" aria-label="${courseNames[id]} progress" aria-valuenow="${completed}" aria-valuemin="0" aria-valuemax="4"><i style="width:${completed * 25}%"></i></div>
+      return `<article class="game-card catalog-tile course-row ${id}">
+        <div class="course-row-summary"><h2>${courseNames[id]}</h2>
+        <div class="course-row-progress"><div class="progress-bar" role="progressbar" aria-label="${courseNames[id]} progress" aria-valuenow="${completed}" aria-valuemin="0" aria-valuemax="4"><i style="width:${completed * 25}%"></i></div><span>${done ? t("Completed", "Завершён", "Аяқталды") : `${completed * 25}%`}</span></div></div>
         <button class="primary" data-course="${id}">${done ? t("Review course", "Повторить курс", "Курсты қайталау") : t("Open course", "Открыть курс", "Курсты ашу")} ${icon('arrow', 18)}</button>
       </article>`;
-    }).join('')}</div><button class="secondary new-course-button" data-home>${icon('plus', 18)} ${t("Find a new course", "Найти новый курс", "Жаңа курс табу")}</button>` : `<div class="empty-state courses-empty">${character('copywriter', 'thinking', 'empty-character')}<h2>${t("Start your first course", "Начни первый курс", "Алғашқы курсыңды баста")}</h2><p>${t("Choose what you’d like to learn.", "Выбери, чему хочешь научиться.", "Не үйренгің келетінін таңда.")}</p><button class="primary large" data-home>${t("Choose a topic", "Выбрать тему", "Тақырып таңдау")} ${icon('arrow', 18)}</button></div>`}
+    }).join('')}</div>` : otherCoursesShown || showReadyCourses ? '' : `<div class="empty-state courses-empty">${character('copywriter', 'thinking', 'empty-character')}<h2>${t("Start your first course", "Начни первый курс", "Алғашқы курсыңды баста")}</h2><p>${t("Choose what you’d like to learn.", "Выбери, чему хочешь научиться.", "Не үйренгің келетінін таңда.")}</p><button class="primary large" data-intro-action="new">${t("Choose a topic", "Выбрать тему", "Тақырып таңдау")} ${icon('arrow', 18)}</button></div>`}
+    ${showReadyCourses ? readyCoursesView(readyCourses) : ''}${hasCourses || otherCoursesShown || showReadyCourses ? newCourse : ''}
   </section>`;
 }
 
