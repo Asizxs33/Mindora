@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { getStarterCourse } from '../core/starter-courses.js';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.MINDORA_URL || 'http://127.0.0.1:4175';
@@ -22,7 +23,7 @@ async function geometry(page, label) {
     const lines = [], walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
       const node = walker.currentNode, parent = node.parentElement;
-      if (!node.textContent.trim() || !visible(parent) || parent.closest('.mindora-character,script,style,.sr-only')) continue;
+      if (!node.textContent.trim() || !visible(parent) || parent.closest('.mindora-character,script,style,.sr-only,.visually-hidden')) continue;
       const range = document.createRange(); range.selectNodeContents(node);
       for (const box of range.getClientRects()) if (box.width && box.height) lines.push({ box, text: node.textContent.trim().slice(0, 65) });
     }
@@ -57,18 +58,22 @@ try {
   const page = await context.newPage();
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(base);
-  await page.evaluate(async () => {
-    const [characters, scenes, views, guided, reviews, reviewCore, language] = await Promise.all([
+  await page.evaluate(async starter => {
+    const [characters, scenes, views, guided, reviews, reviewCore, language, roadmap] = await Promise.all([
       import('/ui/characters.js'), import('/ui/mentor-scenes.js'), import('/ui/views.js'), import('/ui/guided-start.js'),
       import('/ui/return-review.js'), import('/core/return-review.js'), import('/ui/language.js'),
+      import('/ui/roadmap.js'),
     ]);
-    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '/ui/guided-start.css'; document.head.append(css);
-    const state = { active: 'design', progress: { design: 0, budget: 0 }, goals: { design: 'Make a poster' }, works: {}, minutes: 10 };
+    for (const href of ['/ui/guided-start.css', '/ui/roadmap.css']) {
+      const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = href; document.head.append(css);
+    }
+    const state = { active: 'design', progress: { design: 0, budget: 0 }, goals: { design: 'Make a poster' }, works: {}, minutes: 10, learningPlan: starter };
     window.renderLayoutFixture = ({ kind, mentor = 'mino', pose = 'welcome', step = 0 }) => {
       document.body.className = kind === 'intro' ? 'quiet-shell is-guided' : kind === 'hub' ? 'quiet-shell' : kind === 'path' ? '' : 'is-learning';
       let html;
       if (kind === 'mentor') html = scenes.mentorScene(mentor, pose, '<h1>One idea at a time.</h1><p>A clear example helps you understand. Try a small step, then see what happens.</p>', '', { hint: 'Take your time. The main explanation stays visible.' });
       if (kind === 'intro') html = guided.guidedStartView({ step, name: 'Aruzhan', topic: 'design' });
+      if (kind === 'setup') html = roadmap.roadmapView({ wizard: { step, goal: 'Make a poster', minutes: 10 } });
       if (kind === 'hub') html = guided.quietHomeView(state);
       if (kind === 'path') html = views.pathView(state);
       if (kind === 'lesson') html = views.lesson(state, { step: 0, questionCount: 3, quizIndex: 0, draft: {} });
@@ -80,7 +85,7 @@ try {
       characters.mountCharacters(); window.scrollTo(0, 0);
     };
     window.setLayoutLanguage = language.setLanguage;
-  });
+  }, getStarterCourse('python-basics', 'en', 20));
   const render = async fixture => {
     await page.evaluate(fixture => window.renderLayoutFixture(fixture), fixture);
     await page.waitForFunction(() => [...document.querySelectorAll('link[rel="stylesheet"]')].filter(link => link.href.includes('/ui/')).every(link => link.sheet));
@@ -104,8 +109,8 @@ try {
         }
       }
     }
-    for (const kind of ['intro', 'hub', 'path', 'lesson', 'review']) {
-      for (const step of kind === 'intro' ? [0, 1, 2, 3] : kind === 'review' ? [0, 1] : [0]) {
+    for (const kind of ['intro', 'setup', 'hub', 'path', 'lesson', 'review']) {
+      for (const step of ['intro', 'setup'].includes(kind) ? [0, 1, 2, 3] : kind === 'review' ? [0, 1] : [0]) {
         await render({ kind, step, mentor: 'mia' });
         if (kind === 'intro' && step === 0) {
           await page.waitForFunction(() => document.querySelector('.guided-mino')?.dataset.characterPlaying === 'true');
@@ -199,4 +204,3 @@ try {
 } finally {
   await browser.close();
 }
-

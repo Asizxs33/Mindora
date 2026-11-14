@@ -309,6 +309,7 @@ test('catalog built-in cards open the same roadmap and retain the selected pace'
   assert.equal(run.current.html.kind, 'quiet-home');
   assert.equal(run.current.state.active, 'budget');
   assert.equal(run.current.state.lastLearningType, 'builtin');
+  assert.equal(run.current.state.pathKind, 'builtin');
   assert.equal(run.current.state.minutes, 20);
   assert.ok(run.current.state.learningPlan, 'the previous AI course remains saved');
 });
@@ -341,6 +342,7 @@ test('duration selection creates distinct mini-courses and resumes the matching 
       language: saved.plan.language, minutes: saved.plan.minutes, revision: 1 });
     const run = app(seed({ active: null, minutes: 10 }), { realPlans: true,
       libraryCourses: [summary('other-duration', shorter), summary('matching-duration', saved)] });
+    run.click({ view: 'courses' });
     run.click({ courseMinutes: String(minutes) });
     run.click({ starterCourse: 'python-basics' });
     await new Promise(resolve => setImmediate(resolve));
@@ -363,6 +365,7 @@ test('a new duration keeps the old saved course and survives account restoration
   const course = { id: 'five-minutes', saved, title: saved.plan.title, goal: saved.plan.goal,
     language: saved.plan.language, minutes: 5, revision: 1 };
   const run = app(seed({ active: null, minutes: 5, learningPlan: saved }), { realPlans: true, libraryCourses: [course] });
+  run.click({ view: 'courses' });
   run.click({ courseMinutes: '20' });
   assert.equal(run.current.state.learningPlan.plan.minutes, 5, 'changing preference never rewrites an existing lesson');
   run.click({ starterCourse: 'ai-prompts' });
@@ -371,19 +374,23 @@ test('a new duration keeps the old saved course and survives account restoration
   assert.deepEqual(run.loadedCourses, []);
   assert.equal(course.saved.plan.minutes, 5);
 
-  const guest = app(seed({ minutes: 5 }), { account: { user: null }, realPlans: true });
-  guest.click({ courseMinutes: '20' });
-  guest.click({ starterCourse: 'ai-prompts' });
-  guest.signIn({ id: 'test-user' }, 'signup-complete');
-  await new Promise(resolve => setImmediate(resolve));
-  assert.equal(guest.copiedCourses[0].plan.minutes, 20, 'selected duration crosses the auth boundary');
+  for (const reason of [undefined, 'signup-complete']) {
+    const guest = app(seed({ minutes: 5 }), { account: { user: null }, realPlans: true });
+    guest.click({ view: 'courses' });
+    guest.click({ courseMinutes: '20' });
+    guest.click({ starterCourse: 'ai-prompts' });
+    guest.signIn({ id: 'test-user' }, reason);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(guest.copiedCourses[0].plan.minutes, 20, 'selected duration crosses the sign-in and signup boundaries');
+  }
 });
 
 test('signout opens the greeting and signing back in retains the exact lesson', async () => {
   const saved = savedAiCourse();
   const run = app(seed({ learningPlan: saved }), { realPlans: true });
-  run.signIn(null);
+  run.signIn(null, 'signout');
   await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'discover');
   assert.equal(run.current.html.kind, 'guided-start');
   assert.equal(run.current.html.args[0].step, 0);
   assert.equal(run.current.state.learningPlan, null);
@@ -410,6 +417,7 @@ test('ready mini-course requires an account and an unsuccessful save keeps prior
 test('a new starter cannot replace progress after a failed save or a changed account during saving', async () => {
   const saved = savedAiCourse();
   const run = app(seed({ learningPlan: saved }), { realPlans: true, starterFlush: Promise.resolve(false) });
+  run.click({ view: 'courses' });
   run.click({ starterCourse: 'python-basics' });
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(run.copiedCourses, []);
@@ -418,6 +426,7 @@ test('a new starter cannot replace progress after a failed save or a changed acc
   let finishSaving;
   const pending = app(seed({ learningPlan: saved }), { realPlans: true,
     starterFlush: new Promise(resolve => { finishSaving = resolve; }) });
+  pending.click({ view: 'courses' });
   pending.click({ starterCourse: 'python-basics' });
   pending.signIn({ id: 'another-user' });
   await new Promise(resolve => setImmediate(resolve));
