@@ -1,5 +1,5 @@
 import { normalizeTaskReview, taskReviewInput } from '../core/learning-plan.js';
-import { accountSession, allowedOrigin, cloudSettings, json, matchesLearningAccount, readBody } from './cloud-api.js';
+import { accountSession, allowedOrigin, isGuestLearningRequest, cloudSettings, json, matchesLearningAccount, readBody } from './cloud-api.js';
 import { LANGUAGES, languageCode } from '../core/language.js';
 
 const instructions = [
@@ -51,13 +51,14 @@ export async function taskReviewApi(request, {
 } = {}) {
   if (request.method !== 'POST') return json({ error: 'Метод недоступен.' }, 405);
   if (!allowedOrigin(request)) return json({ error: 'Источник запроса не разрешён.' }, 403);
-  if (!settings) return json({ error: 'ИИ-разбор пока недоступен.' }, 503);
+  const guest = isGuestLearningRequest(request);
+  if (!guest && !settings) return json({ error: 'ИИ-разбор пока недоступен.' }, 503);
   let cookies = [];
   try {
-    const current = await session(request, settings);
+    const current = guest ? { user: null, cookies: [] } : await session(request, settings);
     cookies = current.cookies;
-    if (!current.user) return json({ error: 'Войди в аккаунт Mindora.', code: 'UNAUTHORIZED' }, 401, cookies);
-    if (!matchesLearningAccount(request, current.user)) return json({ error: 'Аккаунт изменился. Войди снова.', code: 'ACCOUNT_CHANGED' }, 401, cookies);
+    if (!guest && !current.user) return json({ error: 'Войди в аккаунт Mindora.', code: 'UNAUTHORIZED' }, 401, cookies);
+    if (!guest && !matchesLearningAccount(request, current.user)) return json({ error: 'Аккаунт изменился. Войди снова.', code: 'ACCOUNT_CHANGED' }, 401, cookies);
     const input = taskReviewInput(await readBody(request));
     if (!input) return json({ error: 'Запиши ответ до 1500 символов.' }, 400, cookies);
     if (!apiKey) return json({ error: 'ИИ-разбор пока недоступен.' }, 503, cookies);

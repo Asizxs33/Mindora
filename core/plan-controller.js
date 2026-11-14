@@ -3,7 +3,7 @@ import { isAssessmentCorrect, isAssessmentReady, normalizeAssessmentResponse } f
 import { message } from '../ui/messages.js';
 import { createPracticeController } from './practice-controller.js';
 
-export function createPlanController({ state, save, render, isOpen, canLearn = () => true, beforeGenerate, onGenerated, onUnauthorized = () => {}, accountId = () => null }) {
+export function createPlanController({ state, save, render, isOpen, canLearn = () => true, beforeGenerate, onGenerated, onUnauthorized = () => {}, accountId = () => null, guestMode = () => false }) {
   state.learningPlan = restorePlan(state.learningPlan);
   let goal = state.learningPlan?.plan.goal ?? '';
   let minutes = state.learningPlan?.plan.minutes ?? state.minutes;
@@ -118,7 +118,7 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
       if (version !== epoch) return;
       const response = await fetch('/api/learning-plan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(accountId() ? { 'X-Mindora-Account': accountId() } : {}) },
+        headers: { 'Content-Type': 'application/json', ...(accountId() ? { 'X-Mindora-Account': accountId() } : guestMode() ? { 'X-Mindora-Guest': '1' } : {}) },
         body: JSON.stringify(roadmapStage ? { ...input, roadmapStage } : input),
         signal: AbortSignal.timeout(57000),
       });
@@ -166,7 +166,7 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
     try {
       const response = await fetch('/api/task-review', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(accountId() ? { 'X-Mindora-Account': accountId() } : {}) },
+        headers: { 'Content-Type': 'application/json', ...(accountId() ? { 'X-Mindora-Account': accountId() } : guestMode() ? { 'X-Mindora-Guest': '1' } : {}) },
         body: JSON.stringify(input),
         signal: AbortSignal.timeout(32000),
       });

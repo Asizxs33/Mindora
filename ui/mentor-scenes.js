@@ -7,6 +7,7 @@ const names = { mino: 'Mino', mia: 'Mia', sam: 'Sam', leo: 'Sam', artist: 'Ari',
 // The caller supplies escaped HTML; hints remain plain text. This layer never
 // grades work, advances a lesson or changes a learner's saved progress.
 export function mentorScene(mentor, mood, content, extraClass = '', { hint = '', focus = '' } = {}) {
+  if (['celebrate', 'incorrect', 'encourage'].includes(mood)) mentor = 'mino';
   const name = names[mentor] || 'Mino';
   return `<div class="ai-lesson-mentor mentor-scene ${esc(extraClass)}" data-mentor-scene data-mentor-tone="${esc(mood)}">
     <div class="mentor-figure">${character(mentor, mood, 'ai-lesson-mentor-character')}<span class="mentor-ground" aria-hidden="true"></span></div>

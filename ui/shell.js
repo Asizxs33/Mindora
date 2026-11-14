@@ -1,6 +1,7 @@
-import { brandNav, courseHomeView, courseNames } from './dashboard.js';
+import { landingView } from './landing.js';
+import { brandNav, courseNames } from './dashboard.js';
 import { icon } from './icons.js';
-import { character, mountCharacters } from './characters.js';
+import { mountCharacters } from './characters.js';
 import { mountPresentation } from './presentation.js';
 import { languagePicker, t } from './language.js';
 import { mountLessonFlow, syncLessonFlow } from './lesson-flow.js';
@@ -54,6 +55,8 @@ function restoreQuizFocus(main, remembered) {
 }
 
 export function mountShell() {
+  const landingStyles = document.createElement('link'); landingStyles.rel = 'stylesheet';
+  landingStyles.href = new URL('./landing.css', import.meta.url).href; document.head.append(landingStyles);
   const guidedStyles = document.createElement('link'); guidedStyles.rel = 'stylesheet';
   guidedStyles.href = new URL('./guided-start.css', import.meta.url).href; document.head.append(guidedStyles);
   const roadmapStyles = document.createElement('link');
@@ -72,10 +75,6 @@ export function mountShell() {
   </header>
   <aside class="sidebar" aria-label="Main menu">
     <nav id="navigation" aria-label="Main navigation"></nav>
-    <div class="side-companion">
-      ${character('mino', 'welcome', 'sidebar-character')}
-      <strong></strong><p></p><button type="button" class="text-link" data-action="about"></button>
-    </div>
   </aside>
   <div class="app-shell"><main id="main" tabindex="-1"></main></div>
   <nav class="mobile-navigation" id="mobile-navigation" aria-label="Main navigation"></nav>
@@ -105,7 +104,11 @@ function updateCourseHome(main, html, sameView) {
   template.innerHTML = html;
   const next = template.content.querySelector('.course-home');
   if (!next) return false;
+  const currentNav = main.querySelector('.phone-course-nav');
+  const nextNav = template.content.querySelector('.phone-course-nav');
+  if (Boolean(currentNav) !== Boolean(nextNav)) return false;
   const sameLanguage = current.dataset.language === next.dataset.language;
+  if (currentNav && !sameLanguage) currentNav.replaceWith(nextNav);
   const goalValue = current.querySelector('#goal-input')?.value;
   const retained = new Set();
   const ordered = [];
@@ -135,15 +138,18 @@ function updateCourseHome(main, html, sameView) {
   current.dataset.language = next.dataset.language;
   if (!sameLanguage && goalValue !== undefined) current.querySelector('#goal-input').value = goalValue;
   // The controller reattaches its current sync notice after rendering.
-  [...main.children].filter(child => child !== current).forEach(child => child.remove());
+  main.querySelector(':scope > [data-builtin-sync-panel]')?.remove();
   return true;
 }
 
 function updateAccountLinks() {
   const { user, profile } = getAccountState();
   document.querySelectorAll('[data-account-entry]').forEach(button => {
+    button.hidden = Boolean(user);
     button.dataset.accountOpen = user ? 'profile' : 'signin';
-    button.textContent = user ? t('My account','Мой аккаунт','Аккаунтым') : t('Sign in','Войти','Кіру');
+    if (user) { button.dataset.view = 'profile'; delete button.dataset.accountOpen; }
+    else delete button.dataset.view;
+    button.innerHTML = `${icon('user', 18)}<span>${user ? t('Profile','Профиль','Профиль') : t('Sign in','Войти','Кіру')}</span>`;
   });
   document.querySelectorAll('[data-account-summary]').forEach(slot => {
     const name = slot.querySelector('[data-account-name]');
@@ -151,7 +157,7 @@ function updateAccountLinks() {
     if (name) name.textContent = user ? (profile?.name || user.name || t('Your account','Твой аккаунт','Аккаунтың')) : t('Make yourself at home','Добро пожаловать','Қош келдің');
     if (detail) detail.textContent = user ? user.email : t('Create your profile and choose what you enjoy.','Создай профиль и выбери, что тебе интересно.','Профиль жасап, қызығушылығыңды таңда.');
     const button = slot.querySelector('[data-account-open]');
-    if (button) { button.dataset.accountOpen = user ? 'profile' : 'signup'; button.textContent = user ? t('Edit my profile','Изменить профиль','Профильді өзгерту') : t('Create account','Создать аккаунт','Аккаунт жасау'); }
+    if (button) { button.dataset.accountOpen = user ? 'profile' : 'signup'; button.innerHTML = `${icon(user ? 'edit' : 'plus', 17)}<span>${user ? t('Edit profile','Изменить профиль','Профильді өзгерту') : t('Create account','Создать аккаунт','Аккаунт жасау')}</span>`; }
     slot.querySelector('[data-account-secondary]')?.toggleAttribute('hidden', Boolean(user));
     slot.querySelector('[data-account-signout]')?.toggleAttribute('hidden', !user);
   });
@@ -162,32 +168,33 @@ export function renderShell(view, state, stats, html, rewards) {
   const main = $('#main');
   const sameView = main.dataset.page === view;
   const quizFocus = rememberQuizFocus(main, view);
-  const expandedPanels = view === 'lesson' && main.dataset.page === view
-    ? ['.style-disclosure', '.practice-hint'].filter(selector => main.querySelector(`${selector}[open]`)) : [];
+  const disclosureSelectors = view === 'lesson' ? ['.style-disclosure', '.practice-hint']
+    : view === 'courses' ? ['.phone-catalog']
+    : view === 'profile' ? ['.profile-rewards', '.profile-draft'] : [];
+  const expandedPanels = sameView
+    ? disclosureSelectors.filter(selector => main.querySelector(`${selector}[open]`)) : [];
   const owner = getAccountState().user?.id || '';
   const signedIn = Boolean(owner);
   const guestGreeting = !signedIn && html.includes('data-guided-step="0"');
   const originalHtml = html;
   resizeGreeting = guestGreeting ? () => renderShell(view, state, stats, originalHtml, rewards) : null;
-  if (guestGreeting && desktopLayout.matches) html = courseHomeView(state, { guest: true });
+  if (guestGreeting) html = landingView();
   const guided = html.includes('data-guided-step=');
   $('#navigation').innerHTML = brandNav(icon, view, 'side', signedIn);
   $('#top-navigation').innerHTML = brandNav(icon, view, 'top', signedIn);
   $('#mobile-navigation').classList.remove('has-roadmap');
   $('#mobile-navigation').innerHTML = brandNav(icon, view, 'bottom', signedIn);
-  const headerRewards = ['roadmap', 'quests', 'shop'].includes(view) ? rewards : null;
+  const headerRewards = ['roadmap'].includes(view) ? rewards : null;
   $('#top-actions').classList.toggle('has-roadmap-metrics', Boolean(headerRewards));
-  $('#top-actions').innerHTML = guided ? '' : `${rewardMetrics(headerRewards, true)}${languagePicker()}<button class="header-pace" data-view="profile" aria-label="${t('Daily learning time','Время на обучение','Оқу уақыты')}">${icon('clock', 17)}<span>${t(`${state.minutes} min a day`, `${state.minutes} мин в день`, `Күніне ${state.minutes} мин`)}</span></button><button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
+  $('#top-actions').innerHTML = guided ? '' : `${rewardMetrics(headerRewards, true)}${languagePicker()}<button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
   $('.skip-link').textContent = t('Skip to learning','К содержимому','Мазмұнға өту');
   $('.modal-close').setAttribute('aria-label', t('Close window','Закрыть окно','Терезені жабу'));
-  $('.side-companion strong').textContent = t('Learn one step at a time.','Учись шаг за шагом.','Біртіндеп үйрен.');
-  $('.side-companion p').textContent = t('Go at your own pace.','Продолжай в своём темпе.','Өз қарқыныңмен жалғастыр.');
-  $('.side-companion .text-link').innerHTML = `${t('About Mindora','О Mindora','Mindora туралы')} ${icon('arrow', 15)}`;
   main.classList.toggle('dashboard-main', view === 'discover');
   main.classList.toggle('inside-main', view !== 'discover');
   main.dataset.page = view;
   document.body.classList.toggle('is-learning', ['lesson', 'learning-plan', 'recap', 'return-review'].includes(view));
   document.body.classList.toggle('is-guided', guided);
+  document.body.classList.toggle('is-landing', guestGreeting);
   document.body.classList.add('quiet-shell');
   document.body.classList.toggle('has-course-home', html.includes('class="course-home"'));
   if (!updateCourseHome(main, html, sameView && main.dataset.courseHomeOwner === owner)) {

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { createGuestCourseRequest, BROWSER_GUEST } from '../core/guest-courses.js';
 import * as engine from '../core/engine.js';
 import * as progress from '../core/progress.js';
 import * as budget from '../core/budget-session.js';
@@ -120,7 +121,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
   const screen = kind => (...args) => ({ kind, args: clone(args) });
   const context = vm.createContext({
     ...engine, ...progress, ...budget, ...learningModel, ...assessments, ...returnReview, ...roadmapModel, ...rewardsModel,
-    resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, startTopics, getStarterCourse, starterCourses, createPracticeController,
+    createGuestCourseRequest, BROWSER_GUEST, resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, startTopics, getStarterCourse, starterCourses, createPracticeController,
     needsReturnReview: (lastSeen, learned) => returnReview.needsReturnReview(lastSeen, learned, time),
     languageCode: value => value || 'en', setLanguage() {}, message: value => value, t: value => value,
     createCloudDrafts: () => ({ render() {}, async init() {} }),
@@ -136,7 +137,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
       screen: () => ({ user: account.user, courses: libraryCourses }),
       async setUser() { await reconcile; return true; }, changed() {}, async flush() { return starterFlush; },
       async importLocal(saved) {
-        const owner = account.user?.id;
+        const owner = account.user?.id || BROWSER_GUEST;
         copiedCourses.push(clone(saved));
         if (!await starterCopy) return false;
         const course = { id: `ready-${copiedCourses.length}`, revision: 1, updatedAt: new Date(time).toISOString(), saved: clone(saved) };
@@ -147,7 +148,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
         loadedCourses.push(id);
         const course = libraryCourses.find(item => item.id === id);
         if (!course?.saved) return false;
-        hooks.setCurrent(course, account.user?.id);
+        hooks.setCurrent(course, account.user?.id || BROWSER_GUEST);
         return true;
       },
     }),
@@ -192,7 +193,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
         ? { dataset: { index: presentation.get(`mindora.reading.${state.active}.v1`) || '0' } } : null;
       if (view === 'certificate') elements.get('#certificate-name').value = html.args[0].name;
     },
-    courseHomeView: screen('course-home'), readyCoursesView: () => '', coursesPage: screen('courses'), sidePage: screen('side'),
+    phoneCourseLibrary: screen('course-library'), courseHomeView: screen('course-home'), readyCoursesView: () => '', coursesPage: screen('courses'), sidePage: screen('side'),
     guidedStartView: screen('guided-start'), quietHomeView: screen('quiet-home'), returnReviewView: screen('return-review'),
     pathView: screen('path'), lesson: screen('lesson'), result: screen('result'), workView: screen('work'),
     recapView: screen('recap'), certificateView: screen('certificate'),
@@ -255,13 +256,13 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
   };
 }
 
-test('starting either built-in course requires authentication and does not expose prior account work', () => {
-  const run = app(seed({ progress: { design: 4, budget: 4 } }), { account: { user: null, profile: null } });
-  run.click({ action: 'resume-course', id: 'design' });
-  run.click({ course: 'budget' }, { attributes: ['data-start'] });
-  assert.equal(run.current.view, 'discover');
-  assert.equal(run.accountOpens, 2);
-  assert.deepEqual(run.current.state.progress, { design: 0, budget: 0 });
+test('guests can start a built-in course without opening an account', () => {
+  const run = app(seed({ active: null }), { account: { user: null, profile: null } });
+  run.click({ course: 'budget' });
+  assert.equal(run.current.view, 'path');
+  assert.equal(run.accountOpens, 0);
+  assert.equal(run.current.state.guestLearning, true);
+  assert.equal(run.current.state.active, 'budget');
 });
 
 test('a first visit asks one thing at a time, then opens the selected built-in course path before the lesson', async () => {
@@ -281,8 +282,8 @@ test('a first visit asks one thing at a time, then opens the selected built-in c
   assert.equal(run.current.html.args[0].step, 3);
   run.click({ introMinutes: '5' });
   run.click({ introAction: 'start' });
-  run.signIn({ id: 'test-user' }, 'signup-complete');
   await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.accountOpens, 0);
   assert.equal(run.current.view, 'builtin-path', 'onboarding ends at the course path, not inside a lesson');
   assert.equal(run.current.html.kind, 'quiet-home');
   assert.equal(run.current.state.active, 'design');
@@ -396,9 +397,9 @@ test('a new duration keeps the old saved course and survives account restoration
     guest.click({ view: 'courses' });
     guest.click({ courseMinutes: '20' });
     guest.click({ starterCourse: 'ai-prompts' });
-    guest.signIn({ id: 'test-user' }, reason);
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(guest.copiedCourses[0].plan.minutes, 20, 'selected duration crosses the sign-in and signup boundaries');
+    assert.equal(guest.accountOpens, 0);
+    assert.equal(guest.copiedCourses[0].plan.minutes, 20, 'selected duration is used by the browser guest course');
   }
 });
 
@@ -417,11 +418,12 @@ test('signout opens the greeting and signing back in retains the exact lesson', 
   assert.deepEqual(run.current.state.learningPlan, saved);
 });
 
-test('ready mini-course requires an account and an unsuccessful save keeps prior work', async () => {
+test('ready mini-course opens without an account and an unsuccessful save keeps prior work', async () => {
   const guest = app(seed(), { account: { user: null, profile: null } });
   guest.click({ starterCourse: 'everyday-english' });
-  assert.equal(guest.accountOpens, 1);
-  assert.deepEqual(guest.copiedCourses, []);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(guest.accountOpens, 0);
+  assert.equal(guest.copiedCourses.length, 1);
   const existing = savedAiCourse();
   const run = app(seed({ learningPlan: existing }), { realPlans: true, starterCopy: Promise.resolve(false) });
   run.click({ starterCourse: 'ai-prompts' });
@@ -468,21 +470,14 @@ test('a starter copy finishing after account switch cannot replace the next acco
   assert.equal(run.current.html.kind, 'course-home');
 });
 
-test('a guest goal waits for account restoration, then prefills the requested roadmap without generating a lesson', async () => {
-  let ready;
-  const reconcile = new Promise(resolve => { ready = resolve; });
-  const run = app(seed(), { account: { user: null, profile: null }, reconcile });
+test('a guest goal opens the personal roadmap setup without registration or eager lesson generation', async () => {
+  const run = app(seed({ active: null }), { account: { user: null, profile: null } });
   run.startGoal('Learn to use ChatGPT', 20);
-  assert.equal(run.accountOpens, 1);
-  assert.deepEqual(run.generations, []);
-  run.signIn({ id: 'test-user' });
   await new Promise(resolve => setImmediate(resolve));
-  assert.deepEqual(run.generations, [], 'do not race generation against restoring the old saved lesson');
-  ready();
-  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.accountOpens, 0);
   assert.deepEqual(run.generations, []);
   assert.equal(run.current.view, 'roadmap');
-  assert.equal(run.current.html.args[0].wizard.goal, 'Learn to use ChatGPT');
+  assert.equal(run.current.html.args[0].wizard.originalGoal, 'Learn to use ChatGPT');
   assert.equal(run.current.html.args[0].wizard.minutes, 20);
 });
 
@@ -533,18 +528,16 @@ test('an explicitly requested roadmap builds a personalized path and starts only
   assert.equal(run.current.view, 'learning-plan');
 });
 
-test('a signup started from a goal resumes it only after the signup profile is saved', async () => {
-  const run = app(seed(), { account: { user: null, profile: null } });
-  const user = { id: 'new-learner' };
-  run.startGoal('Learn to use ChatGPT', 20);
-  run.signIn(user, 'signup-profile-pending');
+test('signing into an account keeps the guest goal in its separate browser workspace', async () => {
+  const run = app(seed({ active: null }), { account: { user: null, profile: null } });
+  run.startGoal('Learn to use spreadsheets', 10);
+  assert.equal(run.accountOpens, 0);
+  run.signIn({ id: 'member' }, 'signup-complete');
   await new Promise(resolve => setImmediate(resolve));
-  assert.deepEqual(run.generations, []);
-  run.signIn(user, 'signup-complete');
+  assert.equal(run.current.state.guestLearning, undefined);
+  run.signIn(null, 'signout');
   await new Promise(resolve => setImmediate(resolve));
-  assert.deepEqual(run.generations, []);
-  assert.equal(run.current.view, 'roadmap');
-  assert.equal(run.current.html.args[0].wizard.goal, 'Learn to use ChatGPT');
+  assert.equal(run.current.state.guestLearning, true);
 });
 
 test('clarification failure retains the topic and allows a retry before any course is generated', async () => {
@@ -592,7 +585,7 @@ test('changing the chosen focus clears an answer to the old diagnostic', async (
   assert.match(run.current.html.args[0].wizard.diagnosticQuestion, /100/);
 });
 
-test('signup preserves a pending built-in introduction instead of replacing it with roadmap onboarding', async () => {
+test('a guest introduction opens the chosen built-in course without signup', async () => {
   const run = app(seed({ active: null }), { account: { user: null, profile: null } });
   run.click({ introAction: 'next' });
   run.input('intro-name', 'Aida');
@@ -601,17 +594,11 @@ test('signup preserves a pending built-in introduction instead of replacing it w
   run.click({ introAction: 'next' });
   run.click({ introMinutes: '20' });
   run.click({ introAction: 'start' });
-  assert.equal(run.accountOpens, 1);
-  run.signIn({ id: 'new-learner' }, 'signup-profile-pending');
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(run.current.state.active, null);
-  run.signIn({ id: 'new-learner' }, 'signup-complete');
-  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.accountOpens, 0);
   assert.equal(run.current.view, 'builtin-path');
-  assert.equal(run.current.html.kind, 'quiet-home');
   assert.equal(run.current.state.active, 'budget');
   assert.equal(run.current.state.minutes, 20);
-  assert.deepEqual(run.roadmapRequests, []);
 });
 
 test('English introduction opens the ready course while a custom topic explicitly starts roadmap setup', async () => {
@@ -834,6 +821,8 @@ test('home goal draft survives navigation and reload and stays separate between 
   run.input('goal-input', 'Learn video editing');
   run.click({ view: 'profile' });
   run.click({ view: 'courses' });
+  assert.equal(run.current.html.kind, 'course-library');
+  run.click({ view: 'discover' });
   assert.equal(run.current.html.args[0].homeGoal, 'Learn video editing');
   const reloaded = app(null, { storage: run.storage });
   assert.equal(reloaded.current.html.args[0].homeGoal, 'Learn video editing');

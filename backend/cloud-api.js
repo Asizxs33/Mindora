@@ -22,6 +22,11 @@ export function cloudSettings() {
   return { databaseUrl: DATABASE_URL, baseUrl: NEON_AUTH_BASE_URL.replace(/\/$/, ''), cookieSecret: NEON_AUTH_COOKIE_SECRET };
 }
 
+// Public learning requests never read or write an account's saved courses.
+export function isGuestLearningRequest(request) {
+  return request.headers.get('X-Mindora-Guest') === '1' && !request.headers.has('X-Mindora-Account');
+}
+
 export function allowedOrigin(request) {
   const origin = request.headers.get('origin');
   return origin === new URL(request.url).origin;

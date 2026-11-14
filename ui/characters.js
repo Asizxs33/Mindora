@@ -6,40 +6,38 @@ import { t } from './language.js';
 import { rigMarkup } from './character-rigs.js';
 import { interactWithMentor } from './mentor-interactions.js';
 
-// Most supplied gestures are one-shot GIFs lasting about 1.3 seconds. A seven
-// second poster between plays made a visible mentor look like a static image.
-// Keep a short, quiet beat between gestures; offscreen/reduced-motion mentors
-// still use the PNG and never run this loop.
-const pose = (stem, width = 294, height = 512, duration = 1280, pause = 1000) => ({ image: stem + '.gif', still: stem + '.png', width, height, duration, pause });
-const humanPose = (stem, width, height, duration) => pose(stem, width, height, duration, 3000);
-const humanPoses = (name, action, width, height, duration) => ({
-  welcome: humanPose(name + '-welcome'), thinking: humanPose(name + '-thinking', 294, 512, 8400),
-  celebrate: humanPose(name + '-celebrate', 294, 512, 1400),
-  explaining: humanPose(name + '-' + action, width, height, duration),
-  encourage: humanPose(name + '-welcome'), incorrect: humanPose(name + '-thinking', 294, 512, 8400),
+// Each WebP keeps the authored gesture and a resting frame in one native loop.
+const pose = (stem, width, height, directory = 'design-pack') => ({
+  image: stem + '.webp', still: stem + '.png', width, height, directory,
 });
-const minoScene = (stem, duration, pause = 1000) => ({ ...pose(stem, 288, 288, duration, pause), directory: 'characters/mino-scenes' });
+function humanPoses(name, action, width, height) {
+  const gesture = pose(name + '-' + action, width, height);
+  return Object.fromEntries(['welcome', 'thinking', 'celebrate', 'explaining', 'encourage', 'incorrect'].map(mood => [mood, gesture]));
+}
+const minoScene = stem => pose(stem, 288, 288, 'characters/mino-scenes');
 const characters = Object.freeze({
   mino: { name: 'Mino', atlas: 'mino-poses-v3.png', fallback: 'capybara.png', poses: {
-    ...Object.fromEntries(Object.entries({ welcome: 'welcome', thinking: 'thinking', explaining: 'explain', encourage: 'explain', incorrect: 'surprise', celebrate: 'celebrate' }).map(([mood, name]) => [mood, pose('mino-' + name, 320, 320, name === 'thinking' ? 6440 : 1280)])),
-    listening: minoScene('01-listening', 1600),
-    idea: minoScene('02-bright-idea', 1600),
-    map: minoScene('03-learning-map', 2920),
-    waiting: minoScene('04-patient-wait', 4080, 1200),
-    drawing: minoScene('05-draw-a-poster', 2080),
-    chart: minoScene('06-show-a-chart', 2600),
-    applause: minoScene('07-applause', 1720),
-    encouragement: minoScene('08-encouragement', 2040),
-    break: minoScene('09-tea-break', 4620, 1200),
-    trophy: minoScene('10-trophy', 1960),
+    welcome: minoScene('03-learning-map'), thinking: minoScene('01-listening'),
+    explaining: minoScene('02-bright-idea'), celebrate: minoScene('07-applause'),
+    encourage: minoScene('08-encouragement'), incorrect: minoScene('08-encouragement'),
+    listening: minoScene('01-listening'),
+    idea: minoScene('02-bright-idea'),
+    map: minoScene('03-learning-map'),
+    waiting: minoScene('04-patient-wait'),
+    drawing: minoScene('05-draw-a-poster'),
+    chart: minoScene('06-show-a-chart'),
+    applause: minoScene('07-applause'),
+    encouragement: minoScene('08-encouragement'),
+    break: minoScene('09-tea-break'),
+    trophy: minoScene('10-trophy'),
   } },
   mia: { name: 'Mia', role: 'graphic_designer', image: 'graphic-designer-v3.png', order: 0,
-    poses: humanPoses('mia', 'pointing', 360, 720, 1240) },
-  sam: { name: 'Sam', role: 'programmer', image: 'programmer-v3.png', order: 1, poses: humanPoses('sam', 'keypress', 380, 768, 1400) },
-  leo: { name: 'Sam', role: 'programmer', image: 'programmer-v3.png', order: 1, poses: humanPoses('sam', 'keypress', 380, 768, 1400) },
-  artist: { name: 'Ari', role: 'artist', image: 'artist-v3.png', order: 2, poses: humanPoses('ari', 'brush', 450, 768, 1960) },
-  copywriter: { name: 'Nora', role: 'copywriter', image: 'copywriter-v3.png', order: 3, poses: humanPoses('nora', 'writing', 450, 768, 2240) },
-  smm: { name: 'Zoe', role: 'smm', image: 'smm-v3.png', order: 4, poses: humanPoses('zoe', 'wave', 420, 768, 1480) },
+    poses: humanPoses('mia', 'pointing', 360, 720) },
+  sam: { name: 'Sam', role: 'programmer', image: 'programmer-v3.png', order: 1, poses: humanPoses('sam', 'keypress', 380, 768) },
+  leo: { name: 'Sam', role: 'programmer', image: 'programmer-v3.png', order: 1, poses: humanPoses('sam', 'keypress', 380, 768) },
+  artist: { name: 'Ari', role: 'artist', image: 'artist-v3.png', order: 2, poses: humanPoses('ari', 'brush', 450, 768) },
+  copywriter: { name: 'Nora', role: 'copywriter', image: 'copywriter-v3.png', order: 3, poses: humanPoses('nora', 'writing', 450, 768) },
+  smm: { name: 'Zoe', role: 'smm', image: 'smm-v3.png', order: 4, poses: humanPoses('zoe', 'wave', 420, 768) },
 });
 const aliases = { programmer: 'leo', designer: 'mia', graphic_designer: 'mia', teacher: 'sam', capybara: 'mino', art: 'artist', writing: 'copywriter', social: 'smm' };
 const MOTION_KEY = 'mindora.characters.motion.v1';
@@ -91,10 +89,6 @@ function syncAnimatedCharacter(element, restart = false) {
       if (image.src !== playback.animation || !playback.enabled || !canAnimate(element)) return;
       clearTimeout(playback.timer); clearTimeout(playback.retryTimer); playback.retryTimer = null;
       playback.retries = 0; element.dataset.characterPlaying = 'true';
-      playback.timer = setTimeout(() => {
-        image.src = playback.still; element.dataset.characterPlaying = 'false';
-        playback.timer = setTimeout(() => syncAnimatedCharacter(element, true), playback.motion.pause);
-      }, playback.motion.duration);
     });
     image.addEventListener('error', () => {
       clearTimeout(playback.timer); clearTimeout(playback.retryTimer); playback.retryTimer = null;
@@ -244,6 +238,7 @@ export function mountCharacters() {
       ? t(`Let’s try ${field.value} minutes.`, `Начнём с ${field.value} минут.`, `${field.value} минуттан бастайық.`)
       : hasGoal ? t('Let’s make a plan!', 'Составим план!', 'Жоспар құрайық!')
         : t('I’m listening.', 'Я слушаю.', 'Тыңдап тұрмын.');
+    if (!mino || !speech) return;
     if (mino.dataset.characterMood !== mood) mino.dataset.characterMood = mood;
     if (speech.textContent !== message) speech.textContent = message;
   }

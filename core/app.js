@@ -2,7 +2,8 @@ import { COURSES, DESIGN_QUIZ, evaluatePoster } from './engine.js';
 import { budgetCsv, budgetSession, budgetDraftKey, createBudgetDraft, evaluateBudgetSession, normalizeMinutes, readBudgetQuiz, readBudgetResume } from './budget-session.js';
 import { createCloudDrafts } from './cloud-drafts.js';
 import { createPlanController } from './plan-controller.js';
-import { createLearningLibrary } from './learning-library.js';
+import { createGuestCourseRequest, BROWSER_GUEST } from './guest-courses.js';
+import { apiRequest, createLearningLibrary } from './learning-library.js';
 import { createBuiltinSync } from './builtin-sync.js';
 import { restorePlan } from './learning-plan.js';
 import { normalizeClarification, normalizeRoadmap, restoreRoadmap, restoreRoadmapArchive, ROADMAP_LIBRARY_LIMIT, roadmapInput, roadmapStageStatuses, updateRoadmapStage } from './roadmap-model.js';
@@ -11,7 +12,7 @@ import { createWorkspaceStorage } from './workspace-storage.js';
 import { dayKey, dailyCourse, learningStats } from './progress.js';
 import { posterLayout, posterSvg } from './poster.js';
 import { mountShell, renderShell } from '../ui/shell.js';
-import { courseHomeView, readyCoursesView, coursesPage, sidePage, courseNames, lessonNames } from '../ui/dashboard.js';
+import { phoneCourseNav, phoneCourseLibrary, courseHomeView, readyCoursesView, coursesPage, sidePage, courseNames, lessonNames } from '../ui/dashboard.js';
 import { pathView, lesson, result, workView } from '../ui/views.js';
 import { dialogContent, resetWorkCheck, refreshPosterPreview, clearBudgetTotal } from '../ui/feedback.js';
 import { learningPlanView } from '../ui/learning-plan.js';
@@ -42,6 +43,10 @@ const makeWorkspaceStorage = () => createWorkspaceStorage({
   writeValue: value => localStorage.setItem(KEY, value),
 });
 let workspaceStorage = makeWorkspaceStorage();
+const canStudy = () => Boolean(accountOwner || state.guestLearning);
+const learningOwner = () => accountOwner || (state.guestLearning ? BROWSER_GUEST : null);
+const guestUser = () => ({ id: BROWSER_GUEST, guest: true });
+const learningHeaders = (owner = learningOwner()) => owner === BROWSER_GUEST ? { 'X-Mindora-Guest': '1' } : { 'X-Mindora-Account': owner };
 let legacyLesson = null;
 let legacyWorkspace = null;
 try {
@@ -57,6 +62,7 @@ const state = readState();
 state.language = languageCode(state.language);
 setLanguage(state.language);
 const resume = readBudgetResume(state);
+const phoneLayout = window.matchMedia?.('(max-width: 920px)');
 let view = 'discover';
 let startingNew = false;
 let introduction = { step: 0, name: '', topic: '', goal: '', minutes: state.minutes };
@@ -78,23 +84,34 @@ let pendingRoadmapPrefill = null;
 const builtinFields = ['minutes', 'active', 'goals', 'progress', 'drafts', 'works', 'notes', 'sessions', 'certificates', 'practiceCount', 'studyDays', 'budgetQuiz', 'budgetActivity', 'learningRoadmap', 'learningRoadmaps', 'learningRewards'];
 const builtinData = source => Object.fromEntries(builtinFields.filter(key => source[key] !== undefined).map(key => [key, source[key]]));
 let builtinSnapshot = JSON.stringify(builtinData(state));
-const plans = createPlanController({ state, save: saveLearning, render, isOpen: () => view === 'learning-plan' && Boolean(accountOwner),
+const plans = createPlanController({ state, save: saveLearning, render, isOpen: () => view === 'learning-plan' && canStudy(),
     canLearn: () => ensureLearning(), beforeGenerate: () => library.flush(),
     async onGenerated(course) {
+      if (!accountOwner && !guestRequest.remember(course)) return false;
       const accepted = await library.accept(course);
       if (accepted && view === 'learning-plan') { rememberLearningVisit(); saveLocal(); }
       return accepted;
-    }, onUnauthorized: expiredSession, accountId: () => accountOwner });
+    }, onUnauthorized: expiredSession, accountId: () => accountOwner, guestMode: () => !accountOwner && Boolean(state.guestLearning) });
 if (view === 'learning-plan' && !state.learningPlan) view = 'discover';
 
+const guestRequest = createGuestCourseRequest({
+  read: () => state.guestCourses,
+  active: () => !accountOwner && Boolean(state.guestLearning),
+  write: courses => {
+    if (workspaceStorage.conflicted) throw new Error('Reload this tab before saving more changes.');
+    state.guestCourses = courses; saveLocal();
+  },
+});
 library = createLearningLibrary({
+  request: (path, method, body, owner) => owner === BROWSER_GUEST
+    ? guestRequest(path, method, body) : apiRequest(path, method, body, owner),
   getCurrent() {
     const meta = state.learningCourse;
     return meta && state.learningPlan ? { ...meta, saved: state.learningPlan } : null;
   },
   setCurrent(course, ownerId) {
     const saved = restorePlan(course.saved);
-    if (!saved || ownerId !== accountOwner) return;
+    if (!saved || ownerId !== learningOwner()) return;
     state.learningPlan = saved;
     state.learningCourse = { id: course.id, revision: course.revision, updatedAt: course.updatedAt, ownerId, dirty: false };
     plans.reset();
@@ -138,6 +155,14 @@ builtins = createBuiltinSync({
 
 function ensureLearning(resumeAction) {
   if (accountOwner && getAccountState().user?.id === accountOwner && accountReady) return true;
+  if (!accountOwner) {
+    if (!state.guestLearning) {
+      state.guestLearning = true;
+      saveLocal();
+      void library.setUser(guestUser());
+    }
+    return true;
+  }
   if (resumeAction) pendingLearning = resumeAction;
   if (accountOwner && !accountReady) return false;
   openAccount('signup', introduction.name ? { name: introduction.name, interests: [startTopics().find(item => item.id === introduction.topic)?.label || introduction.goal].filter(Boolean) } : null);
@@ -173,7 +198,7 @@ function saveLearning(event) {
 }
 
 function applyLessonReward(event, courseId) {
-  if (!accountReady || !courseId) return;
+  if (!canStudy() || !courseId) return;
   if (event.type === 'check') {
     state.learningRewards = recordCheckReward(state.learningRewards, courseId, event.index, event.correct);
   } else {
@@ -303,7 +328,7 @@ function learningVisitKey() {
 
 function rememberLearningVisit() {
   const key = learningVisitKey();
-  if (!key || !accountReady) return;
+  if (!key || !canStudy()) return;
   const visits = state.learningVisits && typeof state.learningVisits === 'object' && !Array.isArray(state.learningVisits) ? state.learningVisits : {};
   state.learningVisits = Object.fromEntries([...Object.entries(visits).filter(([id]) => id !== key).slice(-99), [key, Date.now()]]);
   state.lastLearningType = pathForLesson(state.learningCourse?.id) ? 'roadmap' : 'ai';
@@ -401,7 +426,8 @@ function modal(type, data) {
   if (!$("#modal").open) $("#modal").showModal();
 }
 function go(next, cursor = null, newCourse = false) {
-  if (next === 'my-path') return openMyPath();
+  if (next === 'my-path') { roadmapWizard = null; return openMyPath(); }
+  if (next === 'new-course') { roadmapWizard = null; if (!accountOwner) ensureLearning(); }
   if (['path', 'builtin-path', 'course-path', 'lesson', 'learning-plan', 'return-review', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop'].includes(next)
     && !ensureLearning(() => go(next, cursor, newCourse))) return;
   if (next === 'course-path' && !state.learningPlan) return go('courses');
@@ -508,26 +534,46 @@ function courseLibraryHtml() {
     + coursesPage(state, { showHeading: false, showCurrentLesson: !represented, showReadyCourses: false });
 }
 
+function followingStage() {
+  const path = pathForLesson(state.learningCourse?.id);
+  if (!path || path.id !== state.learningRoadmap?.id) return null;
+  const index = path.progress.findIndex(stage => stage.courseId === state.learningCourse?.id);
+  if (index < 0 || !path.progress[index].completed || index + 1 >= path.stages.length) return null;
+  return index + 1;
+}
+
 function homeScreen() {
   return courseHomeView(state, { current: currentHomeCourse(), libraryHtml: courseLibraryHtml(),
     readyHtml: readyCoursesView(starterCourses(state.language, state.minutes), state.minutes) });
 }
 
+function phonePath(roadmapProps) {
+  const kind = selectedHomeKind();
+  if (kind === 'builtin' || kind === 'lesson') {
+    return quietHomeView({ ...state, lastLearningType: kind === 'builtin' ? 'builtin' : 'ai' });
+  }
+  return roadmapView({ ...roadmapProps, wizard: null, rewards: null });
+}
+
 function render() {
   const stats = learningStats(state);
-  const rewards = accountOwner ? rewardScreen(state.learningRewards) : null;
-  const roadmap = accountOwner ? restoreRoadmap(state.learningRoadmap) : null;
+  const rewards = canStudy() ? rewardScreen(state.learningRewards) : null;
+  const roadmap = canStudy() ? restoreRoadmap(state.learningRoadmap) : null;
   const roadmapProps = { roadmap, wizard: roadmapWizard, active: roadmap ? roadmapStageStatuses(roadmap) : [],
     busy: roadmapOperation?.kind, error: roadmapError, rewards, quests: rewards?.quests ?? [], items: rewards?.items ?? [] };
   let html;
   switch (view) {
-    case 'discover': html = !accountOwner || startingNew
-      ? guidedStartView({ ...introduction, signedIn: Boolean(accountOwner) }) : homeScreen(); break;
-    case 'courses': {
-      html = homeScreen();
+    case 'discover':
+      if (!canStudy() || startingNew) html = guidedStartView({ ...introduction, signedIn: Boolean(accountOwner) });
+      else html = phoneLayout?.matches ? phonePath(roadmapProps) : homeScreen();
       break;
-    }
-    case 'learning-plan': html = accountOwner ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({ ...plans.screen(), accountSaved: Boolean(state.learningCourse), onRoadmap: Boolean(pathForLesson(state.learningCourse?.id)), rewards }) : loginRequiredView(); break;
+    case 'new-course': html = courseHomeView(state, { composerOnly: true }); break;
+    case 'courses':
+      html = canStudy()
+        ? phoneCourseLibrary(courseLibraryHtml(), readyCoursesView(starterCourses(state.language, state.minutes), state.minutes))
+        : homeScreen();
+      break;
+    case 'learning-plan': html = canStudy() ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({ ...plans.screen(), accountSaved: Boolean(accountOwner && state.learningCourse), nextStage: followingStage(), onRoadmap: Boolean(pathForLesson(state.learningCourse?.id)), rewards }) : loginRequiredView(); break;
     case 'roadmap': html = roadmapView(roadmapProps); break;
     case 'quests':
     case 'shop': html = rewardsView(view, roadmapProps); break;
@@ -554,6 +600,12 @@ function render() {
     case 'result': html = result(state); break;
     case 'work': html = workView(state); break;
     default: html = sidePage(view, state);
+  }
+  if (canStudy() && phoneLayout?.matches && !startingNew) {
+    const section = view === 'roadmap' && roadmapWizard ? 'new-course'
+      : ['discover', 'path', 'builtin-path', 'course-path', 'roadmap'].includes(view) ? 'my-path'
+      : ['courses', 'new-course'].includes(view) ? view : null;
+    if (section) html = phoneCourseNav(section) + html;
   }
   renderShell(view, state, stats, html, rewards);
   if (accountOwner && ['discover', 'courses', 'path', 'builtin-path', 'course-path', 'lesson', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop', 'profile'].includes(view)) {
@@ -720,7 +772,7 @@ function clarifyRoadmap() {
     let response;
     try {
       response = await fetch('/api/learning-roadmap', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Mindora-Account': owner },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...learningHeaders(owner) },
         body: JSON.stringify({ action: 'clarify', goal: wizard.originalGoal, minutes: wizard.minutes, language: state.language }),
         signal: AbortSignal.timeout(38000),
       });
@@ -740,8 +792,8 @@ function clarifyRoadmap() {
 
 function runRoadmapOperation(kind, work) {
   if (roadmapOperation || !ensureLearning()) return;
-  const operation = { kind, owner: accountOwner };
-  const isCurrent = () => roadmapOperation === operation && accountOwner === operation.owner;
+  const operation = { kind, owner: learningOwner() };
+  const isCurrent = () => roadmapOperation === operation && learningOwner() === operation.owner;
   roadmapOperation = operation;
   roadmapError = '';
   render();
@@ -854,7 +906,7 @@ function submitRoadmap(form) {
     let response;
     try {
       response = await fetch('/api/learning-roadmap', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Mindora-Account': owner },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...learningHeaders(owner) },
         body: JSON.stringify(input), signal: AbortSignal.timeout(38000),
       });
     } catch {
@@ -1072,17 +1124,19 @@ document.addEventListener('click', event => {
     if (action === 'next') advanceIntroduction();
     else if (action === 'back') { introduction.step = Math.max(0, introduction.step - 1); render(); }
     else if (action === 'start') beginIntroductionCourse();
+    else if (action === 'new' && canStudy() && phoneLayout?.matches) go('new-course');
     else if (action === 'new') { startingNew = true; introduction = { step: 2, name: getAccountState().profile?.name || '', topic: '', goal: '', minutes: state.minutes }; view = 'discover'; render(); }
     return;
   }
   if (button.dataset.introTopic) { introduction.topic = button.dataset.introTopic; render(); document.querySelector(`[data-intro-topic="${introduction.topic}"]`)?.focus({ preventScroll: true }); return; }
   if (button.dataset.introMinutes) { introduction.minutes = normalizeMinutes(button.dataset.introMinutes); render(); document.querySelector(`[data-intro-minutes="${introduction.minutes}"]`)?.focus({ preventScroll: true }); return; }
-  if (button.dataset.courseMinutes) { changeMinutes(button.dataset.courseMinutes); render(); document.querySelector(`[data-course-minutes="${state.minutes}"]`)?.focus({ preventScroll: true }); return; }
+  if (button.dataset.courseMinutes) { const catalogOpen = Boolean(button.closest('.phone-catalog[open]')); changeMinutes(button.dataset.courseMinutes); render(); if (catalogOpen && $('.phone-catalog')) $('.phone-catalog').open = true; document.querySelector(`[data-course-minutes="${state.minutes}"]`)?.focus({ preventScroll: true }); return; }
   if (button.dataset.starterCourse) { void startReadyCourse(button.dataset.starterCourse, button.dataset.starterMinutes); return; }
   const { roadmapAction, roadmapStage, roadmapBuy, roadmapClaim } = button.dataset;
   if (roadmapAction || roadmapBuy || roadmapClaim) {
     if (!ensureLearning() || roadmapOperation) return;
-    if (roadmapAction === 'setup') beginRoadmap();
+    if (roadmapAction === 'setup' && phoneLayout?.matches) go('new-course');
+    else if (roadmapAction === 'setup') beginRoadmap();
     else if (roadmapAction === 'skip' && roadmapWizard) {
       roadmapWizard = null;
       roadmapError = '';
@@ -1108,6 +1162,11 @@ document.addEventListener('click', event => {
     return;
   }
   const { view: destination, course, step: requestedStep, choice, color, action, id } = button.dataset;
+  if (action === 'next-path-lesson') {
+    const index = followingStage();
+    if (index !== null) { roadmapWizard = null; go('roadmap'); startRoadmapStage(index); }
+    return;
+  }
   if (action === 'resume-current') { resumeCurrentCourse(); return; }
   if (button.dataset.learningRoadmap) {
     openRoadmap(button.dataset.learningRoadmap);
@@ -1232,7 +1291,7 @@ window.addEventListener('mindora:learn-page', event => {
 window.addEventListener('pagehide', () => {
   rememberPosition(undefined, false);
   if (view === 'learning-plan' && !document.hidden) { rememberLearningVisit(); saveLocal(); }
-  if (accountReady) { void library.flush(); void builtins.flush(); }
+  if (canStudy()) { void library.flush(); if (accountReady) void builtins.flush(); }
 });
 window.addEventListener('storage', event => {
   if (event.key !== KEY && event.key !== null) return;
@@ -1245,10 +1304,10 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     rememberPosition();
     if (view === 'learning-plan') { rememberLearningVisit(); saveLocal(); }
-    if (accountReady) { void library.flush(); void builtins.flush(); }
+    if (canStudy()) { void library.flush(); if (accountReady) void builtins.flush(); }
   }
   else if (view === 'lesson' && needsRecap(state, state.active)) resumeCourse();
-  else if (view === 'learning-plan' && accountReady) reviewLearningPlan();
+  else if (view === 'learning-plan' && canStudy()) reviewLearningPlan();
 });
 document.addEventListener('input', event => {
   if (view === 'lesson' && event.target.closest('#main')) rememberPosition();
@@ -1289,7 +1348,7 @@ window.addEventListener('mindora:account-changed', event => {
     render();
   }
   if (owner && signupComplete && !pendingLearning) go('discover');
-  void Promise.all([library.setUser(account.user), builtins.setUser(account.user)]).then(() => {
+  void Promise.all([library.setUser(account.user || (state.guestLearning ? guestUser() : null)), builtins.setUser(account.user)]).then(() => {
     if (version !== accountEpoch || owner !== accountOwner) return;
     accountReady = Boolean(owner);
     if (owner && state.learningPlan?.completed === state.learningPlan?.plan.steps.length && state.learningCourse?.id) {
@@ -1306,9 +1365,13 @@ window.addEventListener('mindora:account-changed', event => {
   void cloud.init();
 });
 mountShell();
+phoneLayout?.addEventListener('change', () => {
+  if (view === 'new-course' && !phoneLayout.matches) view = 'discover';
+  render();
+});
 mountReturnReview({
   getReview: () => state.returnReview,
-  isActive: () => view === 'return-review' && accountReady,
+  isActive: () => view === 'return-review' && canStudy(),
   onChange(review, options) { state.returnReview = review; saveLocal(); if (options.render && review.phase !== 'complete') render(); },
   onComplete(review) {
     delete state.returnReview;
@@ -1331,7 +1394,7 @@ else if (view === 'learning-plan') go('learning-plan');
 else if (view === 'lesson') resumeCourse(state.active, step);
 else render();
 void cloud.init();
-if (accountOwner) {
-  void library.setUser(getAccountState().user);
+if (canStudy()) {
+  void library.setUser(getAccountState().user || guestUser());
   void builtins.setUser(getAccountState().user);
 }

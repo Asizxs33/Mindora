@@ -1,6 +1,6 @@
 import { LANGUAGES } from '../core/language.js';
 import { ROADMAP_LEVELS, ROADMAP_LIMITS, ROADMAP_STAGE_COUNT, clarificationInput, normalizeClarification, normalizeRoadmap, roadmapInput } from '../core/roadmap-model.js';
-import { accountSession, allowedOrigin, cloudSettings, json, matchesLearningAccount, readBody } from './cloud-api.js';
+import { accountSession, allowedOrigin, isGuestLearningRequest, cloudSettings, json, matchesLearningAccount, readBody } from './cloud-api.js';
 import { completeJson } from './deepseek-client.js';
 
 const unavailable = { error: 'Не удалось открыть построение пути. Попробуй позже.', code: 'ROADMAP_UNAVAILABLE' };
@@ -57,13 +57,14 @@ export async function roadmapApi(request, {
 } = {}) {
   if (request.method !== 'POST') return json({ error: 'Метод недоступен.' }, 405);
   if (!allowedOrigin(request)) return json({ error: 'Источник запроса не разрешён.' }, 403);
-  if (!settings) return json(unavailable, 503);
+  const guest = isGuestLearningRequest(request);
+  if (!guest && !settings) return json(unavailable, 503);
   let cookies = [];
   try {
-    const current = await session(request, settings);
+    const current = guest ? { user: null, cookies: [] } : await session(request, settings);
     cookies = current.cookies;
-    if (!current.user) return json({ error: 'Войди в аккаунт Mindora.', code: 'UNAUTHORIZED' }, 401, cookies);
-    if (!matchesLearningAccount(request, current.user)) {
+    if (!guest && !current.user) return json({ error: 'Войди в аккаунт Mindora.', code: 'UNAUTHORIZED' }, 401, cookies);
+    if (!guest && !matchesLearningAccount(request, current.user)) {
       return json({ error: 'Аккаунт изменился. Войди снова.', code: 'ACCOUNT_CHANGED' }, 401, cookies);
     }
     const body = await readBody(request, 8192);
