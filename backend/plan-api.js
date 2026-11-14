@@ -14,6 +14,10 @@ function roadmapStageInput(raw) {
     if (!value || /[\u0000\u000b\u000c\u007f]/u.test(value)) return null;
     stage[field] = value;
   }
+  if (raw.kind !== undefined) {
+    if (!['lesson', 'practice', 'review', 'mini-project'].includes(raw.kind)) return null;
+    stage.kind = raw.kind;
+  }
   if (raw.originalGoal !== undefined) {
     if (typeof raw.originalGoal !== 'string' || raw.originalGoal.length > ROADMAP_LIMITS.goal) return null;
     const originalGoal = raw.originalGoal.trim();

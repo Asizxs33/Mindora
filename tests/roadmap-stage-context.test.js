@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { planApi } from '../backend/plan-api.js';
 import { normalizePlan } from '../core/learning-plan.js';
 
-test('lesson generation validates and forwards the optional original subject while accepting legacy stages', async () => {
+test('lesson generation validates and forwards original subject and stage kind while accepting legacy stages', async () => {
   const stage = {
     goal: 'Summarize a short list of expenses', title: 'Add the amounts',
     objective: 'Calculate a total from sample values.', level: 'beginner',
@@ -35,8 +35,19 @@ test('lesson generation validates and forwards the optional original subject whi
     assert.equal(response.status, 400);
     assert.equal((await response.json()).code, 'INVALID_ROADMAP_STAGE');
   }
+  for (const kind of ['', null, 'quiz', 'project', 'Review', ' lesson ', 2, { value: 'review' }]) {
+    const response = await planApi(request({ ...stage, kind }), dependencies);
+    assert.equal(response.status, 400, `reject unsupported kind ${JSON.stringify(kind)}`);
+    assert.equal((await response.json()).code, 'INVALID_ROADMAP_STAGE');
+  }
   assert.equal(calls.length, 0, 'invalid metadata must not invoke generation');
   assert.equal((await planApi(request(stage), dependencies)).status, 200);
   assert.equal((await planApi(request({ ...stage, originalGoal: ' Python ' }), dependencies)).status, 200);
-  assert.deepEqual(calls, [stage, { ...stage, originalGoal: 'Python' }]);
+  const kinds = ['lesson', 'practice', 'review', 'mini-project'];
+  const previousStages = [{ title: 'Read a list', objective: 'Access the values in a literal list.' }];
+  for (const kind of kinds) {
+    assert.equal((await planApi(request({ ...stage, kind, originalGoal: 'Python', previousStages }), dependencies)).status, 200);
+  }
+  assert.deepEqual(calls, [stage, { ...stage, originalGoal: 'Python' },
+    ...kinds.map(kind => ({ ...stage, kind, originalGoal: 'Python', previousStages }))]);
 });
