@@ -92,6 +92,7 @@ function updateAccountLinks() {
     const button = slot.querySelector('[data-account-open]');
     if (button) { button.dataset.accountOpen = user ? 'profile' : 'signup'; button.textContent = user ? t('Edit my profile','Изменить профиль','Профильді өзгерту') : t('Create account','Создать аккаунт','Аккаунт жасау'); }
     slot.querySelector('[data-account-secondary]')?.toggleAttribute('hidden', Boolean(user));
+    slot.querySelector('[data-account-signout]')?.toggleAttribute('hidden', !user);
   });
 }
 

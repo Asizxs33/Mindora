@@ -104,14 +104,23 @@ export function dashboard(state, { showIntro = false } = {}) {
     : `${goalBanner(state.minutes, false, showIntro)}${pathLink}`;
 }
 
-export function readyCoursesView(extraCourses = []) {
+export function readyCoursesView(extraCourses = [], minutes = 10) {
   const courses = [
-    { id: 'design', title: courseNames.design, minutes: 10, mentor: 'Mia', icon: 'palette', builtin: true },
-    { id: 'budget', title: courseNames.budget, minutes: 10, mentor: 'Sam', icon: 'sheet', builtin: true },
+    { id: 'design', title: courseNames.design, minutes, mentor: 'Mia', icon: 'palette', builtin: true },
+    { id: 'budget', title: courseNames.budget, minutes, mentor: 'Sam', icon: 'sheet', builtin: true },
     ...extraCourses,
   ];
   const mentorNames = { mino: 'Mino', mia: 'Mia', sam: 'Sam', artist: 'Ari', copywriter: 'Nora', smm: 'Zoe' };
-  return `<section class="ready-courses" aria-labelledby="ready-courses-title"><h2 id="ready-courses-title">${t('Ready mini-courses', 'Готовые мини-курсы', 'Дайын шағын курстар')}</h2><div class="ready-course-grid">${courses.map(course => `<button type="button" class="ready-course" ${course.builtin ? `data-course="${escapeHtml(course.id)}"` : `data-starter-course="${escapeHtml(course.id)}"`}><span class="ready-course-symbol" aria-hidden="true">${icon(course.icon, 24)}</span><strong>${escapeHtml(course.title)}</strong><span class="ready-course-meta"><span>${escapeHtml(mentorNames[course.mentor] || course.mentor)} · ${course.minutes} ${t('min', 'мин', 'мин')}</span>${icon('arrow', 17)}</span></button>`).join('')}</div></section>`;
+  const paceLabel = t('Time for your next lesson', 'Время на новое занятие', 'Келесі сабаққа арналған уақыт');
+  return `<section class="ready-courses" aria-labelledby="ready-courses-title">
+    <h2 id="ready-courses-title">${t('Ready mini-courses', 'Готовые мини-курсы', 'Дайын шағын курстар')}</h2>
+    <fieldset class="course-pace"><legend>${paceLabel}</legend><div>${[5, 10, 20].map(value => `<button type="button" data-course-minutes="${value}" aria-pressed="${minutes === value}"><strong>${value}</strong> ${t('min', 'мин', 'мин')}</button>`).join('')}</div></fieldset>
+    <p class="course-pace-note">${t('Your unfinished lessons stay saved.', 'Начатые занятия остаются сохранёнными.', 'Бастаған сабақтарың сақталады.')}</p>
+    <div class="ready-course-grid">${courses.map(course => `<button type="button" class="ready-course" ${course.builtin ? `data-course="${escapeHtml(course.id)}"` : `data-starter-course="${escapeHtml(course.id)}" data-starter-minutes="${course.minutes}"`}>
+      <span class="ready-course-symbol" aria-hidden="true">${icon(course.icon, 24)}</span><strong>${escapeHtml(course.title)}</strong>
+      <span class="ready-course-meta"><span>${escapeHtml(mentorNames[course.mentor] || course.mentor)} · ${course.minutes} ${t('min', 'мин', 'мин')}</span>${icon('arrow', 17)}</span>
+    </button>`).join('')}</div>
+  </section>`;
 }
 
 export function coursesPage(state, { showHeading = true, showCurrentLesson = true, showReadyCourses = false, readyCourses = [] } = {}) {
@@ -139,10 +148,10 @@ export function coursesPage(state, { showHeading = true, showCurrentLesson = tru
       return `<article class="game-card catalog-tile course-row ${id}">
         <div class="course-row-summary"><h2>${courseNames[id]}</h2>
         <div class="course-row-progress"><div class="progress-bar" role="progressbar" aria-label="${courseNames[id]} progress" aria-valuenow="${completed}" aria-valuemin="0" aria-valuemax="4"><i style="width:${completed * 25}%"></i></div><span>${done ? t("Completed", "Завершён", "Аяқталды") : `${completed * 25}%`}</span></div></div>
-        <button class="primary" data-course="${id}">${done ? t("Review course", "Повторить курс", "Курсты қайталау") : t("Open course", "Открыть курс", "Курсты ашу")} ${icon('arrow', 18)}</button>
+        <button class="primary" data-course="${id}" data-course-path>${done ? t("Review course", "Повторить курс", "Курсты қайталау") : t("Open course", "Открыть курс", "Курсты ашу")} ${icon('arrow', 18)}</button>
       </article>`;
     }).join('')}</div>` : otherCoursesShown || showReadyCourses ? '' : `<div class="empty-state courses-empty">${character('copywriter', 'thinking', 'empty-character')}<h2>${t("Start your first course", "Начни первый курс", "Алғашқы курсыңды баста")}</h2><p>${t("Choose what you’d like to learn.", "Выбери, чему хочешь научиться.", "Не үйренгің келетінін таңда.")}</p><button class="primary large" data-intro-action="new">${t("Choose a topic", "Выбрать тему", "Тақырып таңдау")} ${icon('arrow', 18)}</button></div>`}
-    ${showReadyCourses ? readyCoursesView(readyCourses) : ''}${hasCourses || otherCoursesShown || showReadyCourses ? newCourse : ''}
+    ${showReadyCourses ? readyCoursesView(readyCourses, state.minutes) : ''}${hasCourses || otherCoursesShown || showReadyCourses ? newCourse : ''}
   </section>`;
 }
 
@@ -177,7 +186,7 @@ export function sidePage(view, state, rewardProfile = '') {
   if (view === 'achievements') return `${pageBanner(t("Milestones", "Достижения", "Жетістіктер"), t("See what you’ve achieved.", "Посмотри на свои достижения.", "Жетістіктеріңді көр."), 'cheer')}${achievementsCard(state, stats, icon, true)}`;
   if (view === 'community') return `${pageBanner(t("Learning, together.", "Сообщество", "Қауымдастық"), t("A little space for curious people.", "Место для общения учеников.", "Оқушылардың араласатын орны."))}<section class="game-card community-preview"><span class="course-symbol">${icon('users', 28)}</span><h2>${t("Our community is still growing.", "Сообщество в разработке.", "Қауымдастық әзірленіп жатыр.")}</h2><p>${t("Sharing and discussions aren’t available yet. For now, keep your projects in My work.", "Готовые проекты доступны в разделе «Мои работы».", "Дайын жобалар «Жұмыстарым» бөлімінде.")}</p><button class="secondary" data-view="work">${t("See my work", "Мои работы", "Жұмыстарым")} ${icon('arrow', 18)}</button></section>`;
   return `${pageBanner(t("Profile", "Профиль", "Профиль"), '', 'smm')}
-    <section class="account-profile-card" data-account-summary><h2 data-account-name>${t("Make yourself at home", "Добро пожаловать", "Қош келдің")}</h2><p data-account-description>${t("Create your profile and choose what you enjoy.", "Создай профиль и выбери, что тебе интересно.", "Профиль жасап, қызығушылығыңды таңда.")}</p><button class="primary" data-account-open="signup">${t("Create account", "Создать аккаунт", "Аккаунт жасау")}</button><button class="text-link" data-account-secondary data-account-open="signin">${t("Already a member? Sign in", "Уже есть аккаунт? Войти", "Аккаунтың бар ма? Кіру")}</button></section>
+    <section class="account-profile-card" data-account-summary><h2 data-account-name>${t("Make yourself at home", "Добро пожаловать", "Қош келдің")}</h2><p data-account-description>${t("Create your profile and choose what you enjoy.", "Создай профиль и выбери, что тебе интересно.", "Профиль жасап, қызығушылығыңды таңда.")}</p><button class="primary" data-account-open="signup">${t("Create account", "Создать аккаунт", "Аккаунт жасау")}</button><button class="text-link" data-account-secondary data-account-open="signin">${t("Already a member? Sign in", "Уже есть аккаунт? Войти", "Аккаунтың бар ма? Кіру")}</button><button type="button" class="secondary profile-signout" data-account-signout hidden>${t("Sign out of account", "Выйти из аккаунта", "Аккаунттан шығу")}</button></section>
     ${rewardProfile}
     <section class="profile-overview" aria-label="${t("Your progress", "Твой прогресс", "Оқу барысың")}"><div class="profile-stats"><div><strong>${stats.total}</strong><span>${t("Steps completed", "Пройдено этапов", "Аяқталған кезеңдер")}</span></div><div><strong>${Object.keys(state.works).length}</strong><span>${t("Projects saved", "Сохранено работ", "Сақталған жұмыстар")}</span></div></div></section>
     <section class="profile-settings"><div><h2>${t("Daily learning time", "Время на обучение", "Оқу уақыты")}</h2></div><label class="visually-hidden" for="profile-minutes">${t("Daily learning time", "Время на обучение", "Оқу уақыты")}</label><select class="profile-select" id="profile-minutes">${timeOptions(state.minutes)}</select></section>

@@ -143,14 +143,36 @@ function release(root) {
     clearTimeout(helloTimers.get(element)); helloTimers.delete(element);
   }
 }
+function visibleDialogue(element) {
+  const scenes = [
+    ['.guided-content,.learning-hub-guide,.quiet-home', '.guided-dialogue'],
+    ['.return-review-tutor', '.return-review-speech'],
+    ['.account-guide-scene', '.account-intro-copy'],
+    ['.course-path-header', ':scope > div'],
+    ['.resume-mentor', ':scope > span'],
+  ];
+  for (const [container, selector] of scenes) {
+    const dialogue = element.closest(container)?.querySelector(selector);
+    if (dialogue && !dialogue.hidden && dialogue.getClientRects().length) return dialogue;
+  }
+  return null;
+}
 function greet(element) {
   clearTimeout(helloTimers.get(element));
   const name = characters[element.dataset.characterKind]?.name || 'Mino';
-  const message = t('Hi! One small step at a time.', 'Привет! Давай шаг за шагом.', 'Сәлем! Бірге біртіндеп үйренеміз.');
+  // Dialogue is present from first paint. A tap acknowledges that same message,
+  // rather than placing a second floating bubble across the lesson or form.
+  const dialogue = visibleDialogue(element);
+  element.toggleAttribute('data-character-has-dialogue', Boolean(dialogue));
+  const message = dialogue?.textContent.trim() || t('Hi! One small step at a time.', 'Привет! Давай шаг за шагом.', 'Сәлем! Бірге біртіндеп үйренеміз.');
   element.querySelector('.character-reaction').textContent = message;
   statusElement.textContent = `${name}: ${message}`;
+  dialogue?.classList.add('character-dialogue-speaking');
   element.classList.add('character-hello'); syncAnimatedCharacter(element, true);
-  helloTimers.set(element, setTimeout(() => element.classList.remove('character-hello'), 2200));
+  helloTimers.set(element, setTimeout(() => {
+    element.classList.remove('character-hello');
+    dialogue?.classList.remove('character-dialogue-speaking');
+  }, 2200));
 }
 export function mountCharacters() {
   if (typeof document === 'undefined') return;

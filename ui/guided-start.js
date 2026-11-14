@@ -25,24 +25,30 @@ export function quietHomeView(state) {
   const steps = saved.plan.steps;
   const completed = saved.completed;
   const done = completed === steps.length;
+  const percent = Math.round(completed / steps.length * 100);
   const startLabel = done ? t('See my result', 'Мой результат', 'Нәтижем')
     : completed || saved.study?.some(step => step.page > 0)
       ? t('Continue learning', 'Продолжить', 'Жалғастыру')
       : t('Start lesson', 'Начать урок', 'Сабақты бастау');
   return `<section class="quiet-home learning-hub" aria-labelledby="learning-hub-title">
     <header class="learning-hub-heading">
-      <div><span>${t('Your learning path', 'Твой путь обучения', 'Сенің оқу жолың')} · ${completed}/${steps.length}</span><h1 id="learning-hub-title" lang="${esc(saved.plan.language)}">${esc(saved.plan.title)}</h1></div>
+      <div><span>${t('Your learning path', 'Твой путь обучения', 'Сенің оқу жолың')} · ${saved.plan.minutes} ${t('min', 'мин', 'мин')}</span><h1 id="learning-hub-title" lang="${esc(saved.plan.language)}">${esc(saved.plan.title)}</h1></div>
       <button type="button" class="icon-button" data-view="courses" aria-label="${t('Choose a course', 'Выбрать курс', 'Курс таңдау')}">${icon('book',23)}</button>
     </header>
+    <div class="learning-hub-progress"><span>${completed}/${steps.length} ${t('steps', 'шагов', 'қадам')}</span><progress value="${completed}" max="${steps.length}" aria-label="${t('Course progress', 'Прогресс курса', 'Курс барысы')}"></progress><strong>${percent}%</strong></div>
     <div class="learning-hub-journey">
       <ol class="learning-hub-path" aria-label="${t('Course steps', 'Шаги курса', 'Курс қадамдары')}">${steps.map(({ title }, index) => {
         const passed = index < completed, current = index === completed;
+        const final = index === steps.length - 1;
         const label = passed ? t('completed', 'пройдено', 'аяқталды') : current ? t('next', 'дальше', 'келесі') : t('locked', 'закрыто', 'құлыптаулы');
         return `<li class="${passed ? 'is-done' : current ? 'is-current' : 'is-locked'}"${current ? ' aria-current="step"' : ''}>
-          ${current
-            ? `<button type="button" class="learning-hub-node" data-view="learning-plan" aria-label="${esc(startLabel)}">${icon('play', 25)}</button>`
-            : `<span class="learning-hub-node" aria-hidden="true">${icon(passed ? 'check' : 'lock',25)}</span>`}
-          <span class="learning-hub-step-title" lang="${esc(saved.plan.language)}">${esc(title)}<span class="visually-hidden"> · ${label}</span></span>
+          ${final ? '' : '<span class="learning-hub-connector" aria-hidden="true"></span>'}
+          <div class="learning-hub-stop">
+            ${current
+              ? `<button type="button" class="learning-hub-node" data-view="learning-plan" aria-label="${esc(startLabel)}">${icon('play', 25)}</button>`
+              : `<span class="learning-hub-node" aria-hidden="true">${icon(passed ? 'check' : 'lock',25)}</span>`}
+            <span class="learning-hub-step-title" lang="${esc(saved.plan.language)}">${esc(title)}<span class="visually-hidden"> · ${label}</span></span>
+          </div>
         </li>`;
       }).join('')}</ol>
       <aside class="learning-hub-guide"><div class="guided-dialogue"><p>${done ? t('You made it!', 'У тебя получилось!', 'Жарайсың, орындап шықтың!') : t('One small step. I’m with you.', 'Один маленький шаг. Я рядом.', 'Бір шағын қадам. Мен жаныңдамын.')}</p></div>${character('mino', done ? 'celebrate' : 'welcome', 'quiet-mentor')}</aside>

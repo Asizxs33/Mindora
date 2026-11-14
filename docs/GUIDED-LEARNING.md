@@ -10,9 +10,13 @@ The interface teaches one idea at a time. Mino welcomes the learner; a mentor ex
 2. After signup, choose a goal, describe your experience, share your motivation and select 5, 10 or 20 minutes. DeepSeek estimates a starting level and saves an outline of four stages. It generates a stage lesson after its **Start lesson** button is pressed.
 3. **Courses** opens the catalog. Choosing a course opens its path. **My path** returns to the selected course. Generated courses appear once with their overall progress. Their stage lessons appear on the corresponding path.
 
-The catalog includes poster design and spreadsheets plus four curated starters in AI prompts, Python, English and clear writing. A starter is copied into the account course library through `library.importLocal(saved)`; choosing it again uses `library.load(id)` to open the existing copy. Opening a ready course uses the account storage API. AI generation is available for personal courses.
+The catalog includes poster design, spreadsheets and four curated courses in AI prompts, Python, English and clear writing. The 5-, 10- and 20-minute versions of the curated courses have 2, 3 and 4 steps respectively, with new material in each longer version. The account stores separate progress for each version and language. Opening a ready course uses the account storage API. AI generation is available for personal courses.
 
-The greeting and short question screens are designed to fit ordinary phone viewports. Longer translations, browser zoom, the on-screen keyboard and genuinely long lesson material must remain reachable with natural scrolling; never hide content merely to force a screen-height layout.
+Speech is visible immediately, before tapping a character. Supplied GIF gestures start automatically and pause between loops; device reduced-motion and the profile motion setting are respected. Tapping a character next to a visible dialogue acknowledges that dialogue instead of covering it with a second popup.
+
+The phone profile has a direct **Sign out of account** action; account settings are also available from the header, including during signed-in onboarding. Successful signout closes the account dialog and opens Mino's greeting. Failure keeps the session and an actionable error. Signing back in restores that account's course, answers and position. Leaving a tab is not signout.
+
+The greeting and short question screens are designed to fit ordinary phone viewports. A four-step roadmap fits a 390×844 phone; a shorter 320×568 phone scrolls naturally so lesson labels and touch targets remain legible. Longer translations, browser zoom, the on-screen keyboard and genuinely long lesson material must remain reachable with natural scrolling; never hide content merely to force a screen-height layout. Short-height lesson action bars remain in normal flow so they cannot cover the tutor or teaching text.
 
 ## Leave, remember, continue
 
@@ -62,3 +66,5 @@ node scripts/verify-guided-browser.mjs
 ```
 
 This browser test deliberately mocks API responses to exercise the real interface, account flow, course player and return review. It does not verify production credentials, a real provider's grading or cloud persistence. Verify those separately against the configured backend before claiming that they are live.
+
+Run `node scripts/verify-mentor-layout.mjs` with the same environment for character/text collision checks. It covers all supplied mentor poses, SVG fallbacks, the ten exercise templates, visible initial speech, automatic gestures, reduced motion, and mobile signout success and failure. The fixture APIs are explicit mocks here too.

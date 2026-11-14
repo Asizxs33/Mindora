@@ -34,7 +34,7 @@ async function context({ signedIn = true, saved = null } = {}) {
     const request = route.request(), url = new URL(request.url());
     let body = {};
     if (url.pathname === '/api/account') {
-      if (request.method() === 'POST') { signupPayload = request.postDataJSON(); identity = true; }
+      if (request.method() === 'POST') { signupPayload = request.postDataJSON(); identity = signupPayload.action !== 'signout'; }
       body = { available: true, user: identity ? user : null, profile: identity ? { name: 'Aruzhan', interests: [] } : null };
     } else if (url.pathname === '/api/learning-workspace') {
       body = request.method() === 'PUT' ? { workspace: { data: request.postDataJSON().data, revision: ++revision } } : { workspace: null };
@@ -208,6 +208,7 @@ try {
   const coursesNav = nav(p, 'courses');
   await coursesNav.click();
   assert.equal(await p.locator('.ready-course').count(), 6);
+  await p.locator('[data-course-minutes="5"]').click();
   await p.locator('[data-starter-course="python-basics"]').click();
   await p.waitForSelector('#main[data-page="course-path"]');
   assert.equal(await p.locator('.ai-lesson-reader').count(), 0);
@@ -240,7 +241,56 @@ try {
   await p.locator('[data-starter-course="python-basics"]').click();
   await p.waitForSelector('#main[data-page="course-path"]');
   assert.equal((await state(p)).learningPlan.completed, 2);
+  for (const minutes of [10, 20]) {
+    await coursesNav.click();
+    await p.locator(`[data-course-minutes="${minutes}"]`).click();
+    await p.locator('[data-starter-course="python-basics"]').click();
+    await p.waitForSelector('#main[data-page="course-path"]');
+    assert.equal((await state(p)).learningPlan.plan.minutes, minutes);
+    assert.equal(await p.locator('.learning-hub-node').count(), minutes === 10 ? 3 : 4);
+    await p.locator('.learning-hub-actions [data-view="learning-plan"]').click();
+    await p.locator('[data-learning-page="next"]:visible').click();
+    await p.locator('[data-learning-page="next"]:visible').click();
+    await p.locator('[data-learning-gap]').fill('"Hello"');
+    await p.locator('[data-learning-page="check"]').click();
+    await p.locator('[data-learning-page="next"]:visible').click();
+    await p.locator('[data-learning-page="next"]:visible').click();
+    await p.locator('#learning-step-form textarea').fill('print("My first saved task")');
+    await p.locator('#learning-step-form button[type="submit"]').click();
+    await p.locator('[data-learning-step="continue"]').click();
+    await p.locator('[data-learning-page="next"]:visible').click();
+    await p.waitForFunction(key => !JSON.parse(localStorage.getItem(key)).learningCourse.dirty, key);
+    await p.reload();
+    await p.waitForSelector('.ai-lesson-reader');
+    assert.equal((await state(p)).learningPlan.completed, 1);
+    assert.equal((await state(p)).learningPlan.study[1].page, 1);
+    assert.equal((await state(p)).learningPlan.plan.minutes, minutes);
+    await p.locator('.ai-lesson-exit').click();
+  }
+  // Switching duration never erases the completed 5-minute version.
+  await coursesNav.click();
+  await p.locator('[data-course-minutes="5"]').click();
+  await p.locator('[data-starter-course="python-basics"]').click();
+  await p.waitForSelector('#main[data-page="course-path"]');
+  assert.equal((await state(p)).learningPlan.completed, 2);
+  assert.equal((await state(p)).learningPlan.plan.minutes, 5);
+  // Profile logout returns to the guest home. Signing in restores the chosen course.
+  await p.locator('#mobile-navigation [data-view="profile"]').click();
+  await p.locator('[data-account-signout]').click();
+  await p.waitForSelector('[data-intro-action="show"]');
+  assert.equal(await p.locator('#mindora-account[open]').count(), 0);
+  await p.reload();
+  await p.locator('[data-intro-action="show"]').click();
+  await p.locator('.guided-signin[data-account-open="signin"]').click();
+  await p.locator('#account-email').fill(user.email);
+  await p.locator('#account-password').fill('Browser-fixture-8');
+  await p.locator('.account-primary').click();
+  await p.waitForSelector('.account-signout');
+  await p.locator('.account-close').click();
+  await p.waitForSelector('#main[data-page="course-path"]');
+  assert.equal((await state(p)).learningPlan.completed, 2);
+  assert.equal((await state(p)).learningPlan.plan.minutes, 5);
   await ready.ctx.close();
   assert.deepEqual(errors, []);
-  console.log('PASS: greeting → signup → personal paths retained across selection, interrupted recall, low-score repair, saved cursor/drafts, same-day resume, ready course → path → assessment → practice → result → reopen. API mocked explicitly.');
+  console.log('PASS: greeting → signup → personal paths retained, recall and repair, duration-specific starter paths and saved progress, mobile sign-out and sign-in. API mocked explicitly.');
 } finally { await browser.close(); }
