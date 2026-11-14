@@ -52,3 +52,41 @@ test('suggestions are bounded public URLs without fabricated extracted content',
   assert.equal(sourceSuggestions('Prompt engineering')[0].content, '');
   assert.notEqual(sourceSuggestions('Prompt engineering')[0].url, results[0].url);
 });
+
+test('English introductions select the A1 dialogue source in all interface languages', () => {
+  for (const topic of [
+    'English: introduce yourself and your favorite colors',
+    'English greetings: meet new people',
+    'Английский: знакомство и рассказать о себе',
+    'Ағылшын тілінде өзіңді таныстыру',
+    'Ағылшын тілінде сәлемдесу',
+  ]) {
+    const sources = sourceSuggestions(topic);
+    assert.equal(sources.length, 1, topic);
+    assert.equal(sources[0].url, 'https://learnenglish.britishcouncil.org/free-resources/speaking/a1/meeting-new-people', topic);
+    assert.equal(sources[0].content, '', topic);
+  }
+});
+
+test('SMM post writing and content calendars use different specific guides', () => {
+  for (const topic of [
+    'SMM: пост про скидку 20% в кофейне',
+    'Social media: write a coffee-shop caption with a CTA',
+    'SMM: write English captions introducing a coffee shop',
+    'Әлеуметтік желіге кофе туралы жазба мәтінін жазу',
+  ]) assert.equal(sourceSuggestions(topic)[0]?.url, 'https://buffer.com/resources/copywriting-formulas/', topic);
+  for (const topic of [
+    'SMM: контент-план для кофейни и первый пост',
+    'Social media content calendar for a cafe',
+    'Instagram content plan and captions',
+    'Әлеуметтік желіге контент жоспары',
+  ]) assert.equal(sourceSuggestions(topic)[0]?.url, 'https://buffer.com/resources/social-media-calendar/', topic);
+});
+
+test('unsupported English and SMM topics do not fall through to incidental domains', () => {
+  for (const topic of [
+    'English colors and numbers', 'Английский язык', 'Ағылшын: түстер',
+    'SMM', 'SMM: скидки и проценты', 'Instagram colors and palette',
+    'SMM аналитика', 'SMM: построить аналитику', 'Әлеуметтік желі: түстер', 'Calendar arithmetic',
+  ]) assert.deepEqual(sourceSuggestions(topic), [], topic);
+});

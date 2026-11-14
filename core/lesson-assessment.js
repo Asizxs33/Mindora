@@ -32,8 +32,10 @@ function isPermutation(values, count) {
   return distinctIndices(values, count) && values.length === count;
 }
 
-function gapText(value) {
-  return value.trim().normalize('NFC');
+function gapText(value, answerMode) {
+  const normalized = value.trim().normalize('NFC');
+  // Language keyboards may replace apostrophes; code and legacy gaps stay exact.
+  return answerMode === 'language' ? normalized.replace(/[\u2018\u2019]/g, "'") : normalized;
 }
 
 export function normalizeAssessment(raw) {
@@ -66,13 +68,14 @@ export function normalizeAssessment(raw) {
     }
     case 'gap-fill': {
       if (typeof raw.before !== 'string' || typeof raw.after !== 'string') return null;
+      if (raw.answerMode !== undefined && raw.answerMode !== 'language') return null;
       const before = raw.before.trim();
       const after = raw.after.trim();
       const normalized = Array.isArray(raw.accepted) && raw.accepted.length <= maxAccepted
-        ? Array.from(raw.accepted, value => typeof value === 'string' ? gapText(value) : null) : null;
-      const accepted = textList(normalized, 1, maxAccepted, gapAnswer);
+        ? Array.from(raw.accepted, value => typeof value === 'string' ? gapText(value, raw.answerMode) : null) : null;
+      const accepted = textList(raw.answerMode === 'language' && normalized ? [...new Set(normalized)] : normalized, 1, maxAccepted, gapAnswer);
       return (before || after) && before.length <= gapContext && after.length <= gapContext && accepted
-        ? { ...base, before, after, accepted } : null;
+        ? { ...base, before, after, accepted, ...(raw.answerMode === 'language' ? { answerMode: 'language' } : {}) } : null;
     }
     default:
       return null;
@@ -132,7 +135,7 @@ export function isAssessmentCorrect(assessment, response) {
     case 'match':
       return response.every((value, index) => value === assessment.answer[index]);
     case 'gap-fill':
-      return assessment.accepted.includes(gapText(response));
+      return assessment.accepted.includes(gapText(response, assessment.answerMode));
     default:
       return false;
   }
