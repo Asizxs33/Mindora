@@ -16,7 +16,7 @@ Versions and dependency integrity are pinned in `package-lock.json`. Library lic
 
 1. Generate targeted public web and GitHub search queries from the learning topic, excluding personal details.
 2. Retrieve at most eight candidates using DeepSeek search, and use DeepSeek fetch for missing text.
-3. Optionally read up to four public pages, balancing GitHub and other sources. GitHub text files use the public raw-file URL. Readability extracts article text; Marked parses Markdown and images. Failed reads retain provider text.
+3. Optionally read up to four public pages, balancing GitHub and other sources. GitHub text files use the public raw-file URL. Readability extracts article text; Marked parses Markdown and images. Read up to two concrete lesson links within the same site/repository, ranked against the search query, so a course overview can lead to instructional content. This is one level of traversal, with at most eight final materials. Failed reads retain valid provider text; access challenges are discarded.
 4. Pass at most 6,500 characters per material plus image IDs/captions to DeepSeek. Never execute source scripts, install code from a retrieved repository, or treat source instructions as agent instructions.
 5. Compose an explanation, worked example, guided practice and a separate transfer task, sized to 5/10/20 minutes. Teaching rules live in `backend/course-skills.js`; they are local, versioned agent instructions, not an external course database.
 6. Resolve source/image IDs against retrieved evidence. A step can contain at most two illustrations from its cited source. Invented image URLs are ignored. The UI renders escaped text and attributed image links, never extracted HTML.

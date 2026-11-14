@@ -76,3 +76,92 @@ test('blocked provider text is not revived by the optional-reader fallback', asy
   const [result] = await enrichLearningMaterials([{ url, title: 'Protected guide', content: 'Access denied. Verify you are human before accessing this page.' }], { readPage: async () => null });
   assert.equal(result.content, '');
 });
+
+test('lesson links stay within a site or GitHub repository and resolve file-relative Markdown', () => {
+  const markdown = `# Artificial intelligence course\n\n${explanation}\n\n` + [
+    '[Introduction](./lessons/intro.md)',
+    '[Python functions](./functions.md)',
+    '[Another lesson](/team/course/blob/main/lessons/other.md)',
+    '[External lesson](https://other.org/lesson)',
+    '[Other repository](https://github.com/team/other/blob/main/lesson.md)',
+    '[License](./LICENSE.md)',
+    '[Lesson image](./assets/lesson.png)',
+    '[Unclear directory](https://github.com/team/course/tree/main/lessons)',
+    '[Current section](#lesson)',
+  ].join('\n\n');
+  const result = extractLearningMaterial(markdown, 'https://github.com/team/course/blob/main/README.md');
+  assert.deepEqual(new Set(result.links.map(link => link.url)), new Set([
+    'https://raw.githubusercontent.com/team/course/main/lessons/intro.md',
+    'https://raw.githubusercontent.com/team/course/main/functions.md',
+    'https://github.com/team/course/blob/main/lessons/other.md',
+  ]));
+  for (const base of ['https://github.com/team/course', 'https://github.com/team/course/tree/main']) {
+    assert.deepEqual(extractLearningMaterial(markdown, base).links.map(link => link.url), ['https://github.com/team/course/blob/main/lessons/other.md']);
+  }
+  const htmlLinks = `<article><p>${explanation.repeat(4)}</p><a href="./lesson.html">A useful lesson</a><a href="https://other.org/lesson">External lesson</a></article>`;
+  assert.deepEqual(extractLearningMaterial(htmlLinks, url, 'text/html').links, [{ url: 'https://docs.python.org/3/tutorial/lesson.html', title: 'A useful lesson' }]);
+});
+
+test('Markdown uses a real heading after badges and caps extracted lesson links', () => {
+  const markdown = `[![Badge](https://shields.io/badge.svg)](https://example.com)\n\n# A useful lesson title\n\n${explanation}\n\n`
+    + Array.from({ length: 12 }, (_, id) => `[Lesson ${id}](./lessons/${id}.md)`).join('\n\n');
+  const result = extractLearningMaterial(markdown, 'https://raw.githubusercontent.com/team/course/main/README.md');
+  assert.equal(result.title, 'A useful lesson title');
+  assert.equal(result.links.length, 8);
+});
+
+test('links beyond the content excerpt remain available and actual lessons precede setup', () => {
+  const markdown = `# AI course\n\n[Course setup](./lessons/setup.md)\n\n${explanation.repeat(70)}\n\n[Introduction to AI](./lessons/intro.md)`;
+  const result = extractLearningMaterial(markdown, 'https://raw.githubusercontent.com/team/course/main/README.md');
+  assert.equal(result.content.length, 6500);
+  assert.equal(result.links[0].title, 'Introduction to AI');
+  assert.equal(result.links.length, 2);
+});
+
+test('enrichment reads only two ranked child lessons, dedupes and preserves child provenance', async () => {
+  const root = 'https://github.com/team/course/blob/main/README.md';
+  const overview = `# Course overview\n\n${explanation}\n\n[Python lesson](./lessons/python.md)\n\n[Vision lesson](./lessons/vision.md)\n\n[Neural networks lesson](./lessons/neural.md)\n\n[Python duplicate](https://github.com/team/course/blob/main/lessons/python.md)`;
+  const materials = [{ url: root, title: 'Course', content: overview }, ...Array.from({ length: 7 }, (_, id) => ({ url: `https://docs.python.org/guide-${id}`, title: 'Guide', content: explanation }))];
+  const calls = [];
+  const controller = new AbortController();
+  const result = await enrichLearningMaterials(materials, { query: 'neural networks vision', signal: controller.signal, readPage: async (target, { signal }) => {
+    calls.push(target);
+    assert.equal(signal, controller.signal);
+    if (!target.includes('/lessons/')) return null;
+    return { url: target, contentType: 'text/plain', body: `# ${target.includes('neural') ? 'Neural networks explained' : 'Vision explained'}\n\n${explanation}\n\n![Worked lesson](./example.png)` };
+  } });
+  assert.equal(calls.length, 6);
+  assert.deepEqual(new Set(calls.slice(4)), new Set(['https://raw.githubusercontent.com/team/course/main/lessons/neural.md', 'https://raw.githubusercontent.com/team/course/main/lessons/vision.md']));
+  assert.equal(result.length, 8);
+  assert.equal(result[0].title, 'Neural networks explained');
+  assert.equal(result[0].imageSourceUrl, result[0].url);
+  assert.equal(result[0].images[0].url, 'https://raw.githubusercontent.com/team/course/main/lessons/example.png');
+  assert.equal(result[1].title, 'Vision explained');
+});
+
+test('failed child reads preserve the overview and never follow external redirects', async () => {
+  const source = 'https://raw.githubusercontent.com/team/course/main/README.md';
+  const content = `# Course\n\n${explanation}\n\n[Lesson one](./lessons/one.md)\n\n[Lesson two](./lessons/two.md)`;
+  const result = await enrichLearningMaterials([{ url: source, title: 'Course', content }], { readPage: async target => {
+    if (target.endsWith('README.md')) return null;
+    if (target.endsWith('one.md')) throw new Error('Unavailable');
+    return { url: 'https://other.org/lesson', body: `# External course\n\n${explanation}`, contentType: 'text/markdown' };
+  } });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].url, source);
+  assert.match(result[0].content, /monthly expenses/);
+});
+
+test('already retrieved child URLs and an aborted parent do not trigger child requests', async () => {
+  const root = 'https://github.com/team/course/blob/main/README.md';
+  const content = `# Course\n\n${explanation}\n\n[Existing lesson](./lessons/one.md)`;
+  let calls = 0;
+  const result = await enrichLearningMaterials([{ url: root, title: 'Course', content }, { url: 'https://github.com/team/course/blob/main/lessons/one.md', title: 'Lesson', content: explanation }], { readPage: async () => { calls++; return null; } });
+  assert.equal(calls, 2);
+  assert.equal(result.length, 2);
+  const controller = new AbortController();
+  controller.abort();
+  calls = 0;
+  await enrichLearningMaterials([{ url: root, title: 'Course', content }], { signal: controller.signal, readPage: async () => { calls++; return null; } });
+  assert.equal(calls, 1);
+});
