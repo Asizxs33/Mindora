@@ -1,0 +1,31 @@
+.course-library-search { display:flex; align-items:center; gap:10px; margin:20px 0 0; padding:0 6px 0 14px; border:1px solid #d9cabc; border-radius:13px; color:#977256; background:#fff; }
+.course-library-search:focus-within { outline:2px solid #bc4b00; outline-offset:2px; }
+.course-library-search input { flex:1; min-width:0; height:48px; border:0; outline:0; background:transparent; color:#352c25; font:inherit; font-size:16px; }
+.course-library-search input::-webkit-search-cancel-button { appearance:none; }
+.course-library-search .icon-button { width:44px; height:44px; border:0; background:transparent; }
+.course-saved-section { position:relative; padding-top:20px; }
+.course-saved-section > .course-section-title { display:flex; align-items:center; min-height:44px; padding-right:90px; margin:0 0 12px; }
+.course-saved-section .learning-library-heading { position:absolute; top:20px; right:0; margin:0; }
+.course-library .course-pace-note { display:none; }
+.course-search-status { min-height:0; margin:9px 0 0; color:#776557; font-size:13px; line-height:1.5; }
+.course-search-status:empty { display:none; }
+.course-section-title { font-size:21px; margin:24px 0 16px; line-height:1.35; }
+.course-library .phone-catalog { border:0; margin-top:26px; }
+.course-library .courses-empty { display:none; }
+.course-library [hidden] { display:none !important; }
+.course-library .learning-library-heading > h2 { display:none; }
+.course-library .learning-library-heading { justify-content:flex-end; margin-bottom:10px; }
+.course-library .my-courses .new-course-button { display:none; }
+@media(max-width:600px) {
+  .course-library-search { margin-top:14px; }
+  .course-section-title { font-size:18px; margin-top:22px; }
+  .course-library .ready-course-grid { grid-template-columns:minmax(0,1fr); gap:10px; }
+  .course-library .ready-course { grid-template-columns:44px minmax(0,1fr); min-height:0; padding:14px; gap:10px 12px; border-radius:14px; }
+  .course-library .ready-course-symbol { width:44px; height:44px; border-radius:12px; }
+  .course-library .ready-course-symbol svg { width:25px; height:25px; }
+  .course-library .ready-course-copy strong { font-size:16px; }
+  .course-library .ready-course-copy > span { font-size:13px; line-height:1.45; margin-top:4px; }
+  .course-library .ready-course-meta { grid-column:2; padding-top:8px; }
+  .course-library .ready-course-meta > svg { width:16px; height:16px; padding:2px; }
+  .course-library .course-pace { margin-bottom:12px; }
+}

@@ -115,11 +115,11 @@ try {
         await render({ kind, step, mentor: 'mia' });
         if (kind === 'intro' && step === 0) {
           await page.waitForFunction(() => document.querySelector('.guided-mino')?.dataset.characterPlaying === 'true');
-          assert.match(await page.locator('.guided-mino [data-character-animation]').getAttribute('src'), /\.gif$/);
+          assert.match(await page.locator('.guided-mino [data-character-animation]').getAttribute('src'), /\.webp$/);
         }
         await geometry(page, `${size.width}/${kind}/${step}`);
         const speech = await page.locator('.guided-dialogue,.return-review-speech,[data-mentor-message]').allTextContents();
-        await page.locator('.mindora-character').first().click();
+        if (await page.locator('.mindora-character:visible').count()) await page.locator('.mindora-character:visible').first().click();
         await geometry(page, `${size.width}/${kind}/${step}/tap`);
         assert.deepEqual(await page.locator('.guided-dialogue,.return-review-speech,[data-mentor-message]').allTextContents(), speech, 'A tap must not replace the visible teaching content');
         if (step === 0 && ['intro', 'hub', 'path', 'lesson'].includes(kind)) await page.screenshot({ path: join(tmpdir(), `mindora-layout-${kind}-${size.width}.png`), fullPage: true });

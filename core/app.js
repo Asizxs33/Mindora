@@ -531,7 +531,7 @@ function courseLibraryHtml() {
   const represented = linked.has(state.learningCourse?.id) || collection.courses.some(course => course.id === state.learningCourse?.id);
   return learningLibraryView({ ...collection, courses: collection.courses.filter(course => !linked.has(course.id)),
     roadmaps, available: getAccountState().available,
-    hasLocalLesson: Boolean(legacyLesson) && !state.importedLegacyLesson, hasLocalBuiltin: canImportBuiltin() }, { showEmpty: false })
+    hasLocalLesson: Boolean(legacyLesson) && !state.importedLegacyLesson, hasLocalBuiltin: canImportBuiltin() }, { showEmpty: false, guest: canStudy() && !accountOwner })
     + coursesPage(state, { showHeading: false, showCurrentLesson: !represented, showReadyCourses: false });
 }
 
@@ -1127,7 +1127,7 @@ document.addEventListener('click', event => {
   }
   if (button.dataset.introTopic) { introduction.topic = button.dataset.introTopic; render(); document.querySelector(`[data-intro-topic="${introduction.topic}"]`)?.focus({ preventScroll: true }); return; }
   if (button.dataset.introMinutes) { introduction.minutes = normalizeMinutes(button.dataset.introMinutes); render(); document.querySelector(`[data-intro-minutes="${introduction.minutes}"]`)?.focus({ preventScroll: true }); return; }
-  if (button.dataset.courseMinutes) { const catalogOpen = Boolean(button.closest('.phone-catalog[open]')); changeMinutes(button.dataset.courseMinutes); render(); if (catalogOpen && $('.phone-catalog')) $('.phone-catalog').open = true; document.querySelector(`[data-course-minutes="${state.minutes}"]`)?.focus({ preventScroll: true }); return; }
+  if (button.dataset.courseMinutes) { changeMinutes(button.dataset.courseMinutes); render(); document.querySelector(`[data-course-minutes="${state.minutes}"]`)?.focus({ preventScroll: true }); return; }
   if (button.dataset.starterCourse) { void startReadyCourse(button.dataset.starterCourse, button.dataset.starterMinutes); return; }
   const { roadmapAction, roadmapStage, roadmapBuy, roadmapClaim } = button.dataset;
   if (roadmapAction || roadmapBuy || roadmapClaim) {
@@ -1363,7 +1363,6 @@ window.addEventListener('mindora:account-changed', event => {
 });
 mountShell();
 phoneLayout?.addEventListener('change', () => {
-  if (view === 'new-course' && !phoneLayout.matches) view = 'discover';
   render();
 });
 mountReturnReview({

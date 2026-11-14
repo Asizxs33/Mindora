@@ -85,7 +85,7 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('.guided-footer [data-view="new-course"]').click();
   await page.locator('.phone-course-nav [data-view="courses"]').click();
-  await page.locator('.phone-catalog > summary').click();
+  assert.ok(await page.locator('.phone-catalog .ready-course').first().isVisible());
   await page.locator('[data-course="design"][data-course-path]').click();
   await page.waitForSelector('.learning-hub');
   for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 1440, height: 900 }]) {
@@ -155,7 +155,7 @@ try {
   const p = ready.page;
   await nav(p, 'courses').click();
   assert.equal(await p.locator('.ready-course').count(), 6);
-  await p.locator('.phone-catalog summary').click();
+  assert.ok(await p.locator('.phone-catalog .ready-course').first().isVisible());
   await p.locator('[data-course-minutes="5"]').click();
   await p.locator('[data-starter-course="python-basics"]').click();
   await p.waitForSelector('.learning-hub').catch(async error => { console.log('Ready course failure:', JSON.stringify({ errors, state: await state(p), body: (await p.locator('#main').innerText()).slice(0,1800) })); throw error; });
@@ -182,13 +182,13 @@ try {
   assert.equal((await state(p)).progress.design, 0);
   await p.locator('.ai-lesson-exit').click();
   await nav(p, 'courses').click();
-  await p.locator('.phone-catalog summary').click();
+  assert.ok(await p.locator('.phone-catalog .ready-course').first().isVisible());
   await p.locator('[data-starter-course="python-basics"]').click();
   await p.waitForSelector('.learning-hub');
   assert.equal((await state(p)).learningPlan.completed, 2);
   for (const minutes of [10, 20]) {
     await nav(p, 'courses').click();
-    await p.locator('.phone-catalog summary').click();
+    assert.ok(await p.locator('.phone-catalog .ready-course').first().isVisible());
     await p.locator(`[data-course-minutes="${minutes}"]`).click();
     await p.locator('[data-starter-course="python-basics"]').click();
     await p.waitForSelector('.learning-hub');
@@ -216,7 +216,7 @@ try {
   }
   // Switching duration never erases the completed 5-minute version.
   await nav(p, 'courses').click();
-  await p.locator('.phone-catalog summary').click();
+  assert.ok(await p.locator('.phone-catalog .ready-course').first().isVisible());
   await p.locator('[data-course-minutes="5"]').click();
   await p.locator('[data-starter-course="python-basics"]').click();
   await p.waitForSelector('.learning-hub');

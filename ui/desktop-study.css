@@ -22,7 +22,7 @@
   .study-side-card .roadmap-quest h3 { font-size:14px; line-height:1.5; text-wrap:pretty; }
   .study-side-card .roadmap-quest progress { display:block; width:100%; height:9px; margin:9px 0 7px; }
   .study-side-card .roadmap-quest small { font-size:11px; }
-  .study-side-card .roadmap-quest .roadmap-gem { color:#93601c; }
+  .study-side-card .roadmap-quest .roadmap-gem { color:#ad490e; }
   .study-side-card .roadmap-quest > .primary, .study-side-card .roadmap-complete-label { grid-column:2; justify-self:start; margin-top:6px; min-height:32px; font-size:12px; padding:5px 9px; }
   .study-streak-card, .study-pace-card { display:grid; grid-template-columns:38px minmax(0,1fr); column-gap:12px; }
   .study-card-symbol { display:grid; place-items:center; width:38px; height:42px; background:#fff3e4; color:#ad541d; border-radius:12px; }

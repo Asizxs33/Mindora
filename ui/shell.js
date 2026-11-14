@@ -7,6 +7,7 @@ import { mountLessonFlow, syncLessonFlow } from './lesson-flow.js';
 import { mountAccount, getAccountState } from './account.js';
 import { rewardBalance } from './roadmap.js';
 import { desktopStudyView } from './desktop-study.js';
+import { mountCourseSearch, captureCourseSearch, syncCourseSearch } from './course-library.js';
 
 const $ = selector => document.querySelector(selector);
 let desktopLayout;
@@ -71,6 +72,8 @@ export function mountShell() {
   rewardStyles.href = new URL('./rewards.css', import.meta.url).href; document.head.append(rewardStyles);
   const studyStyles = document.createElement('link'); studyStyles.rel = 'stylesheet';
   studyStyles.href = new URL('./desktop-study.css', import.meta.url).href; document.head.append(studyStyles);
+  const journeyStyles = document.createElement('link'); journeyStyles.rel = 'stylesheet';
+  journeyStyles.href = new URL('./ux-journey.css', import.meta.url).href; document.head.append(journeyStyles);
   document.querySelector('#app').innerHTML = `<a class="skip-link" href="#main">Skip to learning</a>
   <header class="topbar">
     <a class="brand" data-home href="#discover" aria-label="Mindora home"><img class="brand-mark" src="ui/assets/brand-mark.svg" alt="" width="40" height="40"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
@@ -89,6 +92,7 @@ export function mountShell() {
   </dialog>`;
   mountCharacters();
   mountPresentation();
+  mountCourseSearch();
   mountLessonFlow();
   mountAccount();
   desktopLayout = window.matchMedia('(min-width: 921px)');
@@ -173,10 +177,11 @@ export function renderShell(view, state, stats, html, rewards) {
   const main = $('#main');
   const sameView = main.dataset.page === view;
   const wasStudyLayout = main.classList.contains('has-desktop-study');
+  const hadPath = Boolean(main.querySelector('.learning-hub,.roadmap-layout,.course-path'));
   const quizFocus = rememberQuizFocus(main, view);
+  const courseSearchFocus = sameView ? captureCourseSearch(main) : null;
   const disclosureSelectors = view === 'lesson' ? ['.style-disclosure', '.practice-hint']
-    : view === 'courses' ? ['.phone-catalog']
-    : view === 'profile' ? ['.profile-rewards', '.profile-draft', '.profile-more'] : [];
+    : view === 'profile' ? ['.profile-rewards', '.profile-draft'] : [];
   const expandedPanels = sameView
     ? disclosureSelectors.filter(selector => main.querySelector(`${selector}[open]`)) : [];
   const owner = getAccountState().user?.id || '';
@@ -210,13 +215,22 @@ export function renderShell(view, state, stats, html, rewards) {
   }
   main.dataset.courseHomeOwner = owner;
   updateAccountLinks();
-  if (studyLayout && (!sameView || !wasStudyLayout)) requestAnimationFrame(() => {
-    if (!main.classList.contains('has-desktop-study')) return;
-    const currentStep = main.querySelector('.learning-hub-node[aria-current="step"], .roadmap-stage.is-active .roadmap-stage-node, .roadmap-stage.is-ready .roadmap-stage-node, .course-path-node[aria-current="step"]');
-    if (currentStep && currentStep.getBoundingClientRect().bottom > innerHeight - 24) {
-      currentStep.scrollIntoView({ block: 'center', behavior: 'instant' });
-    }
-  });
+  syncCourseSearch(main, owner, courseSearchFocus);
+  if ((!sameView || !hadPath || studyLayout !== wasStudyLayout) && main.querySelector('.learning-hub,.roadmap-layout,.course-path')) {
+    const revealStep = () => requestAnimationFrame(() => {
+      const path = main.querySelector('.learning-hub,.roadmap-layout,.course-path');
+      if (!path || main.dataset.page !== view) return;
+      const currentStep = path.querySelector('.learning-hub-node[aria-current="step"], .roadmap-stage.is-active .roadmap-stage-node, .roadmap-stage.is-ready .roadmap-stage-node, .course-path-node[aria-current="step"]');
+      const bottom = desktopLayout.matches ? innerHeight - 24
+        : ($('#mobile-navigation')?.getBoundingClientRect().top || innerHeight) - 16;
+      if (currentStep && currentStep.getBoundingClientRect().bottom > bottom) {
+        currentStep.scrollIntoView({ block: 'center', behavior: 'instant' });
+      }
+    });
+    // Initial stylesheet loading and browser scroll restoration must settle first.
+    if (document.readyState === 'complete') revealStep();
+    else window.addEventListener('load', revealStep, { once: true });
+  }
   expandedPanels.forEach(selector => { const panel = main.querySelector(selector); if (panel) panel.open = true; });
   syncLessonFlow(main);
   restoreQuizFocus(main, quizFocus);
