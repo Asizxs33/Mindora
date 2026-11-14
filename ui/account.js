@@ -14,8 +14,8 @@ let pendingProfile = null;
 let loadingSession = false;
 let view = { mode: 'signup', step: 0, pending: false, error: '', notice: '', showPassword: false, showConfirm: false, draft: emptyDraft() };
 
-function emitSession() {
-  window.dispatchEvent(new CustomEvent('mindora:account-changed', { detail: { user: session.user, profile: session.profile } }));
+function emitSession(reason) {
+  window.dispatchEvent(new CustomEvent('mindora:account-changed', { detail: { user: session.user, profile: session.profile, reason } }));
 }
 
 async function api(method = 'GET', body) {
@@ -48,8 +48,8 @@ function pendingUserProfile() {
     ? pendingProfile.profile : null;
 }
 
-function rememberProfile(email, profile) {
-  pendingProfile = { email: normalizedEmail(email), profile: { ...profile, interests: [...profile.interests] } };
+function rememberProfile(email, profile, signup = false) {
+  pendingProfile = { email: normalizedEmail(email), profile: { ...profile, interests: [...profile.interests] }, signup };
 }
 
 function profileDraft(profile = pendingUserProfile() || session.profile) {
@@ -251,6 +251,8 @@ async function submit() {
     if (view.draft.custom.trim() && !addInterest()) return;
   } else if (!validAccount()) return;
   const mode = view.mode;
+  const finishingSignup = mode === 'signup'
+    || (mode === 'profile' && pendingProfile?.signup === true && Boolean(pendingUserProfile()));
   const profile = profilePayload();
   const payload = mode === 'profile' ? profile : { action: mode, email: view.draft.email.trim(), password: view.draft.password, ...(mode === 'signup' ? profile : {}) };
   const version = ++sessionVersion;
@@ -260,7 +262,7 @@ async function submit() {
     const data = await api(mode === 'profile' ? 'PUT' : 'POST', payload);
     if (version !== sessionVersion) return;
     if (data.verificationRequired && !data.user) {
-      rememberProfile(payload.email, profile);
+      rememberProfile(payload.email, profile, true);
       session = { available: true, user: null, profile: null };
       emitSession();
       view.mode = 'signin'; view.step = 0;
@@ -272,21 +274,30 @@ async function submit() {
     session = { available: true, user: data.user || null, profile: data.profile || null };
     if (!session.user) {
       const current = await api();
+      if (version !== sessionVersion) return;
       session = { available: current.available !== false, user: current.user || null, profile: current.profile || null };
     }
     if (!session.user) throw new Error('Your session could not be confirmed. Please sign in again.');
     if (pendingProfile && normalizedEmail(session.user.email) !== pendingProfile.email) pendingProfile = null;
-    if (data.profilePending && (mode === 'signup' || mode === 'profile')) rememberProfile(mode === 'signup' ? payload.email : session.user.email, profile);
+    if (data.profilePending && (mode === 'signup' || mode === 'profile')) {
+      rememberProfile(session.user.email, profile, finishingSignup);
+    }
     if (mode === 'profile' && !data.profilePending) pendingProfile = null;
-    emitSession();
+    if (finishingSignup && !data.profilePending) {
+      closeAccount();
+      view = { ...view, draft: emptyDraft() };
+      emitSession('signup-complete');
+      return;
+    }
+    emitSession(pendingProfile?.signup && pendingUserProfile() ? 'signup-profile-pending' : undefined);
     view.draft.password = ''; view.draft.confirm = '';
     view.showPassword = false; view.showConfirm = false;
     view.mode = 'profile'; view.step = 0;
     view.draft = profileDraft();
-    view.notice = data.profilePending ? '' : pendingUserProfile() ? 'You’re signed in. Your details are still here. Choose Save profile to finish setting up your profile.' : mode === 'profile' ? 'Your profile is saved.' : mode === 'signup' ? 'Your account is ready. Welcome to Mindora!' : 'You’re signed in. Welcome back!';
+    view.notice = data.profilePending ? '' : pendingUserProfile() ? 'You’re signed in. Your details are still here. Choose Save profile to finish setting up your profile.' : mode === 'profile' ? 'Your profile is saved.' : 'You’re signed in. Welcome back!';
     view.error = data.profilePending ? 'Your account is ready, but your profile wasn’t saved. Please try Save profile again.' : '';
   } catch (error) {
-    if (mode === 'profile' && session.user) rememberProfile(session.user.email, profile);
+    if (mode === 'profile' && session.user) rememberProfile(session.user.email, profile, finishingSignup);
     view.error = error.message;
   }
   finally {

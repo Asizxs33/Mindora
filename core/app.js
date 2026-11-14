@@ -801,10 +801,12 @@ document.addEventListener('input', event => {
     refreshCertificatePreview(certificateData(state.active));
   }
 });
-window.addEventListener('mindora:account-changed', () => {
+window.addEventListener('mindora:account-changed', event => {
   const account = getAccountState();
   const owner = account.user?.id || null;
-  if (owner === accountOwner && accountReady) { void cloud.init(); return; }
+  const reason = event.detail?.reason;
+  const signupComplete = reason === 'signup-complete';
+  if (owner === accountOwner && accountReady && !signupComplete) { void cloud.init(); return; }
   const version = ++accountEpoch;
   accountReady = false;
   if (owner !== accountOwner) {
@@ -826,13 +828,15 @@ window.addEventListener('mindora:account-changed', () => {
     saveWarning = false;
     render();
   }
+  if (owner && signupComplete && !pendingLearning) go('discover');
   void Promise.all([library.setUser(account.user), builtins.setUser(account.user)]).then(() => {
     if (version !== accountEpoch || owner !== accountOwner) return;
     accountReady = Boolean(owner);
+    if (reason === 'signup-profile-pending') return;
     if (owner && pendingLearning) {
       const next = pendingLearning;
       pendingLearning = null;
-      closeAccount();
+      if (!signupComplete) closeAccount();
       next();
     } else render();
   });

@@ -178,7 +178,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
     get accountOpens() { return accountOpens; },
     saved: () => JSON.parse(storage.get(KEY)), storage, presentation, downloads,
     generations, copiedCourses, loadedCourses,
-    signIn(user) { account.user = user; window.dispatch('mindora:account-changed'); },
+    signIn(user, reason) { account.user = user; window.dispatch('mindora:account-changed', { detail: { reason } }); },
     startGoal(goal, minutes) {
       const input = node(); input.value = goal; elements.set('#goal-input', input);
       const select = node(); select.value = String(minutes); elements.set('#time-select', select);
@@ -324,6 +324,27 @@ test('a guest goal waits for account restoration, then resumes with the selected
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(run.generations, [], 'do not race generation against restoring the old saved lesson');
   ready();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(run.generations, [{ goal: 'Learn to use ChatGPT', minutes: 20 }]);
+  assert.equal(run.current.view, 'learning-plan');
+});
+
+test('completed signup opens the signed-in home instead of My Courses', async () => {
+  const run = app(seed(), { account: { user: null, profile: null } });
+  run.signIn({ id: 'new-learner' }, 'signup-complete');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'discover');
+  assert.deepEqual(run.generations, []);
+});
+
+test('a signup started from a goal resumes it only after the signup profile is saved', async () => {
+  const run = app(seed(), { account: { user: null, profile: null } });
+  const user = { id: 'new-learner' };
+  run.startGoal('Learn to use ChatGPT', 20);
+  run.signIn(user, 'signup-profile-pending');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(run.generations, []);
+  run.signIn(user, 'signup-complete');
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(run.generations, [{ goal: 'Learn to use ChatGPT', minutes: 20 }]);
   assert.equal(run.current.view, 'learning-plan');
