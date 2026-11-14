@@ -13,7 +13,7 @@ const covers = [
   ['photography', /photograph|фотограф|фотосъ[её]м|фото түсір/i],
   ['video-editing', /video edit|edit a video|видеомонтаж|монтаж видео|монтировать видео|бейне өңде/i],
   ['copywriting', /copywriting|clear-writing|копирайт|писать текст|пиши понятно/i],
-  ['ai-literacy', /ai-prompts|chatgpt|нейросет|искусственн|жасанды интеллект|промпт/i],
+  ['ai-literacy', /ai[- ]prompts?|chatgpt|нейросет|искусственн|жасанды интеллект|промпт|запрос\s+(?:к|для)\s+ИИ|ЖИ[- ]?ге/iu],
 ];
 
 export function courseCover(course) {
@@ -24,8 +24,11 @@ export function courseCover(course) {
   if (cover === 'social-media' && /аудитори|audience|стратеги|strategy/i.test(course.title || '')) {
     cover = 'communication';
   }
+  const math = /\bmath(?:ematics)?\b|математик|алгебр|геометри/i.test(subject);
+  const code = /\bprogramming\b|программирован|бағдарламалау/i.test(subject);
+  const fallback = math ? 'chart' : code ? 'code' : 'book';
   const art = cover
     ? `<img src="${new URL(`./assets/design-pack/course-${cover}.png`, import.meta.url).href}" width="72" height="72" alt="" loading="lazy" decoding="async">`
-    : icon('book', 25);
+    : icon(fallback, 25);
   return `<span class="course-cover" aria-hidden="true">${art}</span>`;
 }
