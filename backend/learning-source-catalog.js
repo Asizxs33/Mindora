@@ -7,8 +7,9 @@ const SOURCE = {
   html: ['https://github.com/microsoft/Web-Dev-For-Beginners/blob/main/3-terrarium/1-intro-to-html/README.md', 'Microsoft: Introduction to HTML'],
   css: ['https://github.com/microsoft/Web-Dev-For-Beginners/blob/main/3-terrarium/2-intro-to-css/README.md', 'Microsoft: Introduction to CSS'],
   colors: ['https://www.adobe.com/creativecloud/design/discover/secondary-colors.html', 'Adobe: Primary, Secondary and Tertiary Colors'],
+  colorModels: ['https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Colors/Color_values', 'MDN: CSS Color Values and HSL'],
   shapes: ['https://www.adobe.com/learn/illustrator/web/illustration-techniques', 'Adobe Illustrator: Essential Techniques for Beginners'],
-  percent: ['https://openstax.org/books/prealgebra-2e/pages/6-2-solve-general-applications-of-percent', 'OpenStax: Applications of Percent'],
+  percent: ['https://en.wikibooks.org/wiki/Primary_Mathematics/Percentages', 'Wikibooks: Percentages'],
   sum: ['https://support.google.com/docs/answer/3093669?hl=en', 'Google Sheets: SUM'],
   sumif: ['https://support.google.com/docs/answer/3093583?hl=en', 'Google Sheets: SUMIF'],
   writing: ['https://developers.google.com/tech-writing/one/clear-sentences', 'Google: Clear Sentences'],
@@ -48,6 +49,7 @@ export function sourceSuggestions(topic) {
     return suggestions('prompts', 'chatgpt');
   }
   if (/\billustrator\b|векторн.{0,15}(?:рис|иллюстрац)|векторлық/u.test(text)) return suggestions('shapes');
+  if (/\bhsl\b|\bcolou?r\s+models?\b|цветов.{0,8}модел|\b(?:hue|saturation|lightness)\b/u.test(text)) return suggestions('colorModels');
   if (/\b(?:color|colour|palette)s?\b|цвет|палитр|түстер|түс\s+үйлес/u.test(text)) return suggestions('colors');
   if (/\b(?:percent(?:age)?s?|discounts?)\b|процент|скидк|пайыз|жеңілдік/u.test(text)) return suggestions('percent');
   if (/subject\s*line|email\s*(?:marketing|copy)|тем[аыу]\s+пис|рассылк|хаттың\s+тақырыб/u.test(text)) return suggestions('email');

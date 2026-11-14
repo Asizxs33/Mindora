@@ -1,5 +1,6 @@
 import { languageCode } from './language.js';
 import { normalizePractice } from './lesson-practice.js';
+import { normalizeLessonVisual } from './lesson-visual.js';
 import { isAssessmentCorrect, isAssessmentReady, normalizeAssessment, normalizeAssessmentResponse } from './lesson-assessment.js';
 
 export const PLAN_DURATIONS = Object.freeze({
@@ -88,7 +89,8 @@ function normalizeTeaching(raw, version) {
   const explanation = text(raw?.example?.explanation, 400);
   const takeaway = text(raw?.takeaway, 220);
   if (!why || !input || !output || !explanation || !takeaway) return null;
-  const teaching = { why, example: { input, output, explanation }, takeaway };
+  const visual = normalizeLessonVisual(raw?.example?.visual);
+  const teaching = { why, example: { input, output, explanation, ...(visual ? { visual } : {}) }, takeaway };
   if (version === 3) {
     const assessment = normalizeAssessment(raw?.assessment);
     return assessment ? { ...teaching, assessment } : null;
