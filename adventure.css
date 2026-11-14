@@ -619,6 +619,13 @@ main.dashboard-main { padding: 0 12px 16px 2px; }
   #toast { bottom: 76px; left: 50%; }
 }
 @media (max-width: 650px) {
+  .topbar { gap: 6px; padding-inline: 10px; }
+  .brand { font-size: clamp(22px, 6.1vw, 29px); gap: 5px; }
+  .brand-mascot { flex-basis: 33px; height: 38px; }
+  .top-actions { gap: 4px; }
+  .mobile-stat { font-size: 11px; padding-inline: 5px; gap: 3px; }
+  .mobile-stat svg { width: 13px; height: 13px; }
+  .header-profile .brand-mascot { width: 29px; height: 29px; flex-basis: 29px; }
   .adventure-hero {
     grid-template-columns: 42% minmax(0, 1fr);
     grid-template-rows: minmax(130px, auto) auto;
@@ -672,8 +679,8 @@ main.dashboard-main { padding: 0 12px 16px 2px; }
 }
 @media (max-width: 365px) {
   .topbar { padding-inline: 9px; }
-  .brand { font-size: 25px; }
-  .brand-mascot { flex-basis: 33px; height: 36px; }
+  .brand { font-size: 22px; }
+  .brand-mascot { flex-basis: 31px; height: 36px; }
   .mobile-stat { padding-inline: 5px; font-size: 11px; }
   .top-actions { gap: 4px; }
   .game-card-top h2 { font-size: 17px; }
