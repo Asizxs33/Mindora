@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { generateDeepSeekPlan } from '../backend/deepseek-plan.js';
 import { planApi } from '../backend/plan-api.js';
 import { reviewWithDeepSeek, taskReviewApi } from '../backend/task-review-api.js';
-import { restorePlan } from '../core/learning-plan.js';
+import { restorePlan, taskReviewInput } from '../core/learning-plan.js';
 
 const source = 'https://docs.python.org/3/tutorial/controlflow.html';
 const draft = {
@@ -72,6 +72,16 @@ test('a saved plan restores answers and opens the first unfinished task', async 
   assert.deepEqual(restorePlan({
     ...saved, answers: ['Готово', 'Новый ответ'], reviews: [null, review],
   }).reviews, [null, null, null]);
+});
+
+test('a detailed independent task can be stored and sent for review', async () => {
+  const steps = draft.steps.slice(0, 2);
+  const longTask = 'Новый пример. '.repeat(40).trim();
+  steps[1] = { ...steps[1], task: longTask };
+  const plan = await generateDeepSeekPlan({ goal: 'Освоить циклы', minutes: 5 }, 'test-only', researchFixture(steps));
+  const step = restorePlan({ plan }).plan.steps.at(-1);
+  assert.equal(step.task, longTask);
+  assert.equal(taskReviewInput({ ...step, goal: plan.goal, answer: 'Готово' }).task, longTask);
 });
 
 test('task review requests thinking mode and returns only shaped feedback', async () => {

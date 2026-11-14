@@ -5,6 +5,7 @@ export const PLAN_DURATIONS = Object.freeze({
   10: Object.freeze([2, 3, 5]),
   20: Object.freeze([3, 5, 5, 7]),
 });
+const TASK_LENGTH_LIMIT = 900;
 
 export function planInput(goal, minutes, language) {
   if (typeof goal !== 'string' || !Number.isInteger(minutes) || !Object.hasOwn(PLAN_DURATIONS, minutes)) return null;
@@ -35,7 +36,7 @@ function text(value, max) {
 
 export function taskReviewInput(raw) {
   const goal = text(raw?.goal, 180);
-  const task = text(raw?.task, 480);
+  const task = text(raw?.task, TASK_LENGTH_LIMIT);
   const criterion = text(raw?.criterion, 320);
   const answer = text(raw?.answer, 1500);
   return goal && task && criterion && answer
@@ -60,7 +61,7 @@ export function normalizePlan(raw, input, sources) {
   for (const [id, item] of raw.steps.entries()) {
     const title = text(item?.title, 90);
     const instruction = text(item?.instruction, 900);
-    const task = text(item?.task, 480);
+    const task = text(item?.task, TASK_LENGTH_LIMIT);
     const criterion = text(item?.criterion, 320);
     if (!title || !instruction || !task || !criterion) return null;
     const resource = sources.get(sourceUrl(item.sourceUrl));
