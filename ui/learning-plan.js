@@ -7,6 +7,7 @@ import { currentLanguage, t } from './language.js';
 import { message } from './messages.js';
 import { mentorForTopic, mentorScene, renderLessonTemplate } from './lesson-templates.js';
 import { sceneForTopic } from './learning-scenes.js';
+import { practiceEditor, practiceResult } from './lesson-practice.js';
 
 if (typeof document !== 'undefined' && !document.getElementById('mindora-template-styles')) {
   const stylesheet = document.createElement('link');
@@ -14,6 +15,10 @@ if (typeof document !== 'undefined' && !document.getElementById('mindora-templat
   stylesheet.rel = 'stylesheet';
   stylesheet.href = new URL('./lesson-templates.css', import.meta.url).href;
   document.head.append(stylesheet);
+  const practiceStyles = document.createElement('link');
+  practiceStyles.rel = 'stylesheet';
+  practiceStyles.href = new URL('./lesson-practice.css', import.meta.url).href;
+  document.head.append(practiceStyles);
 }
 
 const pageName = page => ({
@@ -51,7 +56,7 @@ function resultView({ plan, answers, reviews }, onRoadmap) {
     ${mentorView('mino', 'applause', `<span class="ai-lesson-result-icon" aria-hidden="true">${icon('check', 24)}</span><h2 id="learning-plan-complete" tabindex="-1" lang="${esc(currentLanguage())}">${t('Lesson complete', 'Занятие завершено', 'Сабақ аяқталды')}</h2><p lang="${esc(currentLanguage())}">${t('You put it into practice. Here is what you made.', 'Ты применил знания на практике. Вот твоя работа.', 'Біліміңді іс жүзінде қолдандың. Міне, жұмысың.')}</p>`, 'ai-lesson-mentor-result')}
     <h3 lang="${esc(currentLanguage())}">${t('Your independent work', 'Твоя самостоятельная работа', 'Өздік жұмысың')}</h3>
     <p>${esc(finalTask.task)}</p>
-    <div class="ai-lesson-submission learning-answer">${esc(answers.at(-1))}</div>
+    <div class="ai-lesson-submission learning-answer">${practiceResult(finalTask.practice, answers.at(-1))}</div>
     ${review ? reviewView(review) : `<div class="ai-lesson-note"><strong lang="${esc(currentLanguage())}">${t('Self-check', 'Самопроверка', 'Өзін-өзі тексеру')}</strong><p>${esc(finalTask.criterion)}</p></div>`}
     <button class="primary" type="button" data-view="${onRoadmap ? 'my-path' : 'course-path'}">${t('Back to my path', 'К карте обучения', 'Оқу жолыма оралу')} ${icon('arrow', 18)}</button>
   </section>`;
@@ -68,7 +73,7 @@ function historyView({ plan, answers, reviews, completed }) {
       <p class="ai-lesson-history-task">${esc(step.task)}</p>
       ${sourceMaterialLink(step.resource)}
       <h4 lang="${esc(currentLanguage())}">${t('Your answer', 'Твой ответ', 'Жауабың')}</h4>
-      <div class="ai-lesson-submission learning-answer">${esc(answers[index])}</div>
+      <div class="ai-lesson-submission learning-answer">${practiceResult(step.practice, answers[index])}</div>
       ${reviews[index] ? reviewView(reviews[index], true) : ''}
     </li>`).join('')}</ol>
   </details>`;
@@ -140,14 +145,14 @@ function practiceView(step, answer, review, busy, reviewError, last, mentor, use
   return `${task}
     ${review ? `
       <h3 lang="${esc(currentLanguage())}">${t('Your answer', 'Твой ответ', 'Жауабың')}</h3>
-      <div class="ai-lesson-submission learning-answer">${esc(answer)}</div>
+      <div class="ai-lesson-submission learning-answer">${practiceResult(step.practice, answer)}</div>
       <div id="learning-review-status" tabindex="-1" role="status">${reviewView(review)}</div>
       <div class="lesson-actions">
         <button class="secondary" type="button" data-learning-step="edit"${disabled}>${t('Revise answer', 'Исправить ответ', 'Жауапты түзету')}</button>
         <button class="primary" type="button" data-learning-step="continue"${disabled}>${last ? t('See my result', 'Посмотреть результат', 'Нәтижені көру') : t('Next task', 'Следующее задание', 'Келесі тапсырма')} ${icon('arrow', 18)}</button>
       </div>` : `
       <form id="learning-step-form">
-        <label class="field"><span lang="${esc(currentLanguage())}">${t('Record your result', 'Запиши результат', 'Нәтижеңді жаз')}</span><textarea name="answer" maxlength="1500" rows="5" required${disabled}>${esc(answer)}</textarea></label>
+        ${practiceEditor(step.practice, answer, busy)}
         <p class="small-note" lang="${esc(currentLanguage())}">${t('DeepSeek receives your answer and task for feedback.', 'Для разбора DeepSeek получит задание и твой ответ.', 'Талдау үшін тапсырма мен жауабың DeepSeek-ке жіберіледі.')}</p>
         <div class="lesson-actions">
           <button class="primary" type="submit"${disabled}>${busy === 'review' ? t('Checking…', 'Проверяем…', 'Тексеріліп жатыр…') : reviewError ? t('Retry feedback', 'Повторить разбор', 'Қайта тексеру') : t('Get feedback', 'Получить разбор', 'Кері байланыс алу')} ${icon('spark', 18)}</button>

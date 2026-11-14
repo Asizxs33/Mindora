@@ -15,6 +15,7 @@ import { resumeCursor, needsRecap, certificateEligible, RECAP_AFTER_MS } from '.
 import { recapQuestion, builtinReviewContent } from '../ui/recap.js';
 import { startTopics } from '../ui/guided-start.js';
 import { getStarterCourse, starterCourses } from '../core/starter-courses.js';
+import { createPracticeController } from '../core/practice-controller.js';
 
 // Run the real controller and its registered event handlers. Only DOM/rendering,
 // file download and account identity are ports; curriculum and resume rules stay real.
@@ -90,7 +91,7 @@ function node() {
   };
 }
 
-function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profile: null }, storage: priorStorage, realPlans = false, failStorageWrites = false, reconcile = Promise.resolve(), libraryCourses = [], starterCopy = Promise.resolve(true), starterFlush = Promise.resolve(true), stageGeneration = Promise.resolve(true), roadmapResponse } = {}) {
+function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profile: null }, storage: priorStorage, realPlans = false, failStorageWrites = false, reconcile = Promise.resolve(), libraryCourses = [], starterCopy = Promise.resolve(true), starterFlush = Promise.resolve(true), stageGeneration = Promise.resolve(true), roadmapResponse, clarificationResponse } = {}) {
   let time = now, current, deck = null, uuidCount = 0, reloads = 0, conflictNotice = false, accountOpens = 0;
   const storage = priorStorage || new Map([[KEY, JSON.stringify(initial)]]);
   const presentation = new Map();
@@ -103,7 +104,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
   const window = { ...emitter(), scrollTo() {}, location: { reload() { reloads++; } } };
   const downloads = [];
   const generations = [];
-  const copiedCourses = [], loadedCourses = [], roadmapRequests = [];
+  const copiedCourses = [], loadedCourses = [], roadmapRequests = [], clarificationRequests = [];
   const storePort = map => ({
     getItem: key => map.get(key) ?? null,
     setItem(key, value) {
@@ -119,7 +120,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
   const screen = kind => (...args) => ({ kind, args: clone(args) });
   const context = vm.createContext({
     ...engine, ...progress, ...budget, ...learningModel, ...assessments, ...returnReview, ...roadmapModel, ...rewardsModel,
-    resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, startTopics, getStarterCourse, starterCourses,
+    resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, startTopics, getStarterCourse, starterCourses, createPracticeController,
     needsReturnReview: (lastSeen, learned) => returnReview.needsReturnReview(lastSeen, learned, time),
     languageCode: value => value || 'en', setLanguage() {}, message: value => value, t: value => value,
     createCloudDrafts: () => ({ render() {}, async init() {} }),
@@ -162,7 +163,20 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
     FormData: class { constructor(form) { this.fields = form.fields; } get(name) { return this.fields[name] ?? null; } },
     fetch: async (url, options) => {
       if (url === '/api/learning-roadmap') {
-        roadmapRequests.push(JSON.parse(options.body));
+        const body = JSON.parse(options.body);
+        if (body.action === 'clarify') {
+          clarificationRequests.push(body);
+          if (clarificationResponse) return clarificationResponse(body);
+          return { ok: true, json: async () => ({ clarification: {
+            question: 'What would you like to make?',
+            directions: [
+              { title: 'Use formulas in a report', goal: 'Build a small spreadsheet report', diagnosticQuestion: 'A1 is 2 and A2 is 3. What does SUM(A1:A2) return, and why?' },
+              { title: 'Plan a budget', goal: 'Create a monthly spreadsheet budget', diagnosticQuestion: 'A budget is 100 and spending is 30. How much remains, and why?' },
+              { title: 'Track a project', goal: 'Track deadlines in a spreadsheet', diagnosticQuestion: 'Why should each task have a date in its own column?' },
+            ],
+          } }) };
+        }
+        roadmapRequests.push(body);
         return { ok: true, json: async () => ({ roadmap: roadmapResponse }) };
       }
       return { ok: true, json: async () => ({ review: { observation: 'Your result is complete.', nextAction: 'Try another example.' } }) };
@@ -205,7 +219,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
     get conflictNotice() { return conflictNotice; },
     get accountOpens() { return accountOpens; },
     saved: () => JSON.parse(storage.get(KEY)), storage, presentation, downloads,
-    generations, copiedCourses, loadedCourses, roadmapRequests,
+    generations, copiedCourses, loadedCourses, roadmapRequests, clarificationRequests,
     signIn(user, reason) { account.user = user; window.dispatch('mindora:account-changed', { detail: { reason } }); },
     answerRoadmap(fields) { document.dispatch('submit', { target: { id: 'roadmap-form', fields } }); },
     startGoal(goal, minutes) {
@@ -492,11 +506,19 @@ test('an explicitly requested roadmap builds a personalized path and starts only
   assert.equal(run.current.view, 'roadmap');
   assert.equal(run.current.html.args[0].wizard.step, 0);
   run.answerRoadmap({ goal: 'I want to learn spreadsheet formulas' });
-  run.answerRoadmap({ experience: 'some', evidence: 'I know SUM.' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.clarificationRequests[0].goal, 'I want to learn spreadsheet formulas');
+  assert.equal(run.current.html.args[0].wizard.directionConfirmed, false);
+  run.answerRoadmap({ direction: '0' });
+  run.answerRoadmap({ experience: 'some', evidence: 'I know SUM.', diagnosticAnswer: '5, because SUM adds the two cells.' });
   run.answerRoadmap({ motivation: 'work' });
   run.answerRoadmap({ minutes: '10' });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.roadmapRequests[0].evidence, 'I know SUM.');
+  assert.equal(run.roadmapRequests[0].goal, 'Build a small spreadsheet report');
+  assert.equal(run.roadmapRequests[0].originalGoal, 'I want to learn spreadsheet formulas');
+  assert.equal(run.roadmapRequests[0].diagnosticAnswer, '5, because SUM adds the two cells.');
+  assert.match(run.roadmapRequests[0].diagnosticQuestion, /SUM/);
   assert.equal(run.current.html.args[0].roadmap.level, 'intermediate');
   assert.deepEqual(run.current.html.args[0].active.map(stage => stage.status), ['ready', 'locked', 'locked', 'locked']);
   run.click({ roadmapAction: 'start', roadmapStage: '1' });
@@ -505,6 +527,7 @@ test('an explicitly requested roadmap builds a personalized path and starts only
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.generations[0].context.roadmapStage.level, 'intermediate');
   assert.equal(run.generations[0].context.roadmapStage.objective, roadmapResponse.stages[0].objective);
+  assert.deepEqual(run.generations[0].context.roadmapStage.previousStages, []);
   assert.equal(run.current.view, 'learning-plan');
 });
 
@@ -520,6 +543,51 @@ test('a signup started from a goal resumes it only after the signup profile is s
   assert.deepEqual(run.generations, []);
   assert.equal(run.current.view, 'roadmap');
   assert.equal(run.current.html.args[0].wizard.goal, 'Learn to use ChatGPT');
+});
+
+test('clarification failure retains the topic and allows a retry before any course is generated', async () => {
+  let reject, attempt = 0;
+  const pending = new Promise((resolve, fail) => { reject = fail; });
+  const clarification = {
+    question: 'Choose a useful result',
+    directions: ['list', 'calculator', 'report'].map(title => ({ title, goal: `Build a Python ${title}`, diagnosticQuestion: `What could a ${title} help you do? Give one example.` })),
+  };
+  const run = app(seed(), { clarificationResponse: async () => {
+    if (++attempt === 1) await pending;
+    return { ok: true, json: async () => ({ clarification }) };
+  } });
+  await new Promise(resolve => setImmediate(resolve));
+  run.startGoal('Python', 5);
+  assert.equal(run.current.html.args[0].wizard.originalGoal, 'Python');
+  assert.equal(run.current.html.args[0].busy, 'clarify');
+  reject(new Error('Network unavailable'));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(run.current.html.args[0].error, /topic is saved/);
+  assert.equal(run.current.html.args[0].wizard.goal, 'Python');
+  run.answerRoadmap({});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(run.clarificationRequests.map(item => item.goal), ['Python', 'Python']);
+  assert.deepEqual(run.current.html.args[0].wizard.clarification, clarification);
+  assert.deepEqual(run.roadmapRequests, []);
+  run.answerRoadmap({ direction: '0' });
+  run.answerRoadmap({ experience: 'new', diagnosticUnknown: 'on' });
+  assert.equal(run.current.html.args[0].wizard.step, 2, 'a beginner can honestly skip the starting check');
+});
+
+test('changing the chosen focus clears an answer to the old diagnostic', async () => {
+  const run = app(seed());
+  await new Promise(resolve => setImmediate(resolve));
+  run.startGoal('Spreadsheets', 10);
+  await new Promise(resolve => setImmediate(resolve));
+  run.answerRoadmap({ direction: '0' });
+  run.answerRoadmap({ experience: 'some', diagnosticAnswer: '5' });
+  run.click({ roadmapAction: 'back' });
+  run.click({ roadmapAction: 'back' });
+  run.answerRoadmap({ direction: '1' });
+  assert.equal(run.current.html.args[0].wizard.goal, 'Create a monthly spreadsheet budget');
+  assert.equal(run.current.html.args[0].wizard.diagnosticAnswer, '');
+  assert.equal(run.current.html.args[0].wizard.diagnosticUnknown, false);
+  assert.match(run.current.html.args[0].wizard.diagnosticQuestion, /100/);
 });
 
 test('signup preserves a pending built-in introduction instead of replacing it with roadmap onboarding', async () => {
@@ -615,6 +683,18 @@ test('an existing roadmap stage resumes the saved lesson and draft without anoth
   assert.equal(reloaded.current.view, 'learning-plan', 'the stage button on restored home must actually open the lesson');
   assert.deepEqual(reloaded.loadedCourses, [id]);
   assert.equal(reloaded.current.state.learningPlan.answers[1], 'My current draft');
+});
+
+test('the next generated stage receives only prior completed stage objectives', async () => {
+  const roadmap = savedRoadmap('12345678-1234-4000-8000-123456789011');
+  roadmap.progress[0].completed = true;
+  const run = app(seed({ learningRoadmap: roadmap }));
+  await new Promise(resolve => setImmediate(resolve));
+  run.click({ view: 'roadmap' });
+  run.click({ roadmapAction: 'start', roadmapStage: '1' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(run.generations[0].context.roadmapStage.previousStages, [roadmap.stages[0]]);
+  assert.equal(run.generations[0].context.roadmapStage.title, roadmap.stages[1].title);
 });
 
 test('opening an archived roadmap preserves the other path and reloads the selected path', () => {

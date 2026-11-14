@@ -183,6 +183,7 @@ test('roadmap stages use the saved objective and level to research and compose o
     goal: 'Automate Python reports', title: 'Work with indexes',
     objective: 'Add row numbers using enumerate.',
     level: 'intermediate', levelReason: 'Already comfortable with lists and simple for loops.',
+    previousStages: [{ title: 'Read report rows', objective: 'Store report rows in a list.' }],
   };
   const goal = 'Automate Python reports / Work with indexes';
   const create = stage => new Request('https://mindora.test/api/learning-plan', {
@@ -193,12 +194,13 @@ test('roadmap stages use the saved objective and level to research and compose o
     apiKey: 'test-only', settings: accountSettings, session: accountSession,
     generate: (input, key) => generateDeepSeekPlan(input, key, researchFixture(draft.steps.slice(0, 2), {
       verifySearch(input) {
-        const { levelReason, ...expectedSearch } = roadmapStage;
+        const { levelReason, previousStages, ...expectedSearch } = roadmapStage;
         assert.deepEqual(input.stage, expectedSearch);
       },
       verify(request, input) {
         assert.deepEqual(input.roadmapStage, roadmapStage);
         assert.match(request.messages[0].content, /Teach only the selected roadmap stage objective/);
+        assert.match(request.messages[0].content, /Build on those skills/);
       },
     }), offlineReader),
     store: () => ({ create: async (_userId, id, saved) => ({ id, saved, revision: 1 }) }),
@@ -206,6 +208,9 @@ test('roadmap stages use the saved objective and level to research and compose o
   const invalid = await planApi(create({ ...roadmapStage, level: 'expert' }), configured);
   assert.equal(invalid.status, 400);
   assert.equal((await invalid.json()).code, 'INVALID_ROADMAP_STAGE');
+  for (const previousStages of ['invalid', Array(4).fill(roadmapStage.previousStages[0]), [{ title: 'Broken', objective: '' }], [{ title: 'x'.repeat(76), objective: 'Too long' }]]) {
+    assert.equal((await planApi(create({ ...roadmapStage, previousStages }), configured)).status, 400);
+  }
   const response = await planApi(create(roadmapStage), configured);
   assert.equal(response.status, 200);
   const { plan, course } = await response.json();

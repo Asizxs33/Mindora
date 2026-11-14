@@ -31,6 +31,14 @@
 .roadmap-option input:checked+.roadmap-option-content .roadmap-option-mark svg { visibility: visible; }
 .roadmap-evidence { margin: 17px 0 0; }
 .roadmap-evidence textarea { min-height: 78px; }
+.roadmap-directions .roadmap-option-content strong { display: block; }
+.roadmap-directions .roadmap-option-content small { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; font-weight: 400; line-height: 1.5; }
+.roadmap-diagnostic { padding: 18px; margin-top: 20px; border: 1px solid var(--line); border-radius: 14px; background: #fffaf5; }
+.roadmap-diagnostic-question { font-weight: 400; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.roadmap-diagnostic .field { margin-bottom: 12px; }
+.roadmap-unknown { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.5; cursor: pointer; }
+.roadmap-unknown input { width: 20px; height: 20px; flex: 0 0 20px; accent-color: var(--accent); margin: 1px 0 0; }
+.roadmap-custom-goal { margin-top: 17px; }
 .roadmap-wizard-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-block-start: 26px; padding-block-start: 17px; border-top: 1px solid var(--line); }
 .roadmap-wizard-actions .primary { min-width: 145px; }
 .roadmap-feedback { display: flex; align-items: center; gap: 9px; margin-block: 12px; padding: 10px 13px; border-radius: 10px; background: var(--accent-soft); color: #813600; font-size: .91rem; }
