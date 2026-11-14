@@ -156,7 +156,7 @@ function budgetEditor(d, challenge, checks, minutes) {
     <div class="sheet-toolbar">${icon('grid', 19)} ${t('My expense tracker','Моя таблица расходов','Шығындар кестем')}</div>
     ${sheetTable(d.values, !challenge && minutes !== 5, total)}
     <div class="budget-controls">
-      <label class="field"><span>${t('Write your formula','Напиши формулу','Формуланы жаз')}</span><input id="budget-formula" value="${esc(d.formula)}" placeholder="=SUM(...)" autocomplete="off" autocapitalize="characters" spellcheck="false"${minutes === 5 && !challenge ? ' readonly' : ''}></label>
+      <label class="field"><span>${t('Write your formula','Напиши формулу','Формуланы жаз')}</span><input id="budget-formula" value="${esc(d.formula)}" placeholder="=SUM(...)" maxlength="50" autocomplete="off" autocapitalize="characters" spellcheck="false"${minutes === 5 && !challenge ? ' readonly' : ''}></label>
       <label class="field"><span>${t('What’s the total?','Какая общая сумма?','Жалпы сома қанша?')}</span><input id="budget-answer" type="number" inputmode="decimal" min="0" step="0.01" value="${esc(d.answer)}"></label>
       ${budgetBalanceField(d, limit)}
     </div></section><section class="game-card simple-panel" data-cloud-panel="editor"></section>`;
