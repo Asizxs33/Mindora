@@ -14,7 +14,7 @@ export function mountPresentation() {
   document.documentElement.lang = 'en';
   const favicon = document.querySelector('link[rel="icon"]');
   if (favicon) { favicon.href = new URL('./assets/brand-mark.svg', import.meta.url).href; favicon.type = 'image/svg+xml'; }
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#fffaf0');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#ffffff');
   document.querySelector('meta[name="description"]')?.setAttribute('content', 'Mindora makes learning a little easier. Short lessons, friendly guides, and real projects you can keep.');
   // The controller saves this preference without a full render. Mirror the
   // current select value in the visible header without changing app state.

@@ -1,0 +1,53 @@
+/* Motion for the original user-supplied 600×900 SVG rigs.
+   Only new outer wrappers move. Authored joint transforms remain untouched. */
+.mindora-svg-rig { display: block; width: 100%; height: 100%; overflow: visible; pointer-events: none; --rig-gesture-size: 5deg; --rig-gesture-small: -2deg; --rig-blink-delay: 0s; }
+.mindora-svg-rig[data-rig-role='smm'] { --rig-gesture-size: -6deg; --rig-gesture-small: 3deg; --rig-blink-delay: -1.4s; }
+.mindora-svg-rig[data-rig-role='graphic_designer'] { --rig-gesture-size: 4deg; --rig-blink-delay: -2.3s; }
+.mindora-svg-rig[data-rig-role='artist'] { --rig-gesture-size: -3deg; --rig-gesture-small: 1.5deg; --rig-blink-delay: -.7s; }
+.mindora-svg-rig[data-rig-role='copywriter'] { --rig-gesture-size: 3.5deg; --rig-blink-delay: -3.1s; }
+.mindora-svg-rig .rig-motion { transform-box: view-box; }
+.mindora-svg-rig .rig-body-motion { transform-origin: 300px 850px; animation: rig-breathe 8s ease-in-out infinite; }
+.mindora-svg-rig .rig-eye { transform-box: fill-box; transform-origin: center; animation: rig-blink 6.7s linear var(--rig-blink-delay) infinite; }
+
+/* A gesture plays once when the expression changes; reading stays calm. */
+[data-character-mood='welcome'] .mindora-svg-rig .rig-head-motion { animation: rig-welcome-head 1s ease-in-out both; }
+[data-character-mood='welcome'] .mindora-svg-rig .rig-gesture { animation: rig-hello-arm 1.05s ease-in-out both; }
+[data-character-mood='thinking'] .mindora-svg-rig .rig-head-motion { animation: rig-think-head .8s ease-in-out both; }
+[data-character-mood='thinking'] .mindora-svg-rig .rig-gesture { animation: rig-think-arm .8s ease-in-out both; }
+[data-character-mood='explaining'] .mindora-svg-rig .rig-head-motion { animation: rig-explain-head 1.1s ease-in-out both; }
+[data-character-mood='explaining'] .mindora-svg-rig .rig-gesture { animation: rig-explain-arm 1.15s ease-in-out both; }
+[data-character-mood='encourage'] .mindora-svg-rig .rig-head-motion,
+[data-character-mood='incorrect'] .mindora-svg-rig .rig-head-motion { animation: rig-support-head 1.1s ease-in-out both; }
+[data-character-mood='encourage'] .mindora-svg-rig .rig-gesture,
+[data-character-mood='incorrect'] .mindora-svg-rig .rig-gesture { animation: rig-support-arm 1.1s ease-in-out both; }
+[data-character-mood='celebrate'] .mindora-svg-rig .rig-body-motion { animation: rig-celebrate-body 1s ease-in-out both; }
+[data-character-mood='celebrate'] .mindora-svg-rig .rig-head-motion { animation: rig-welcome-head 1s ease-in-out both; }
+[data-character-mood='celebrate'] .mindora-svg-rig .rig-gesture { animation: rig-cheer-arm 1s ease-in-out both; }
+
+/* Tap greetings override the mood briefly. Prop and hand use the same timeline. */
+.character-hello .mindora-svg-rig .rig-body-motion { animation: rig-greeting-body .95s ease-in-out both; }
+.character-hello .mindora-svg-rig .rig-head-motion { animation: rig-greeting-head .95s ease-in-out both; }
+.character-hello .mindora-svg-rig .rig-gesture { animation: rig-greeting-arm .95s ease-in-out both; }
+
+@keyframes rig-breathe { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes rig-blink { 0%,42%,45%,100% { transform: scaleY(1); } 43%,44% { transform: scaleY(.12); } }
+@keyframes rig-welcome-head { 0%,100% { transform: rotate(0deg); } 40% { transform: rotate(-2deg); } 70% { transform: rotate(.8deg); } }
+@keyframes rig-hello-arm { 0%,100% { transform: rotate(0deg); } 35% { transform: rotate(var(--rig-gesture-size)); } 65% { transform: rotate(var(--rig-gesture-small)); } }
+@keyframes rig-think-head { from { transform: rotate(0deg); } to { transform: rotate(-2.5deg); } }
+@keyframes rig-think-arm { from { transform: rotate(0deg); } to { transform: rotate(var(--rig-gesture-small)); } }
+@keyframes rig-explain-head { 0%,100% { transform: rotate(0deg); } 40% { transform: rotate(1.5deg); } }
+@keyframes rig-explain-arm { 0%,100% { transform: rotate(0deg); } 40%,60% { transform: rotate(var(--rig-gesture-size)); } }
+@keyframes rig-support-head { 0%,100% { transform: rotate(0deg); } 30% { transform: rotate(1.8deg) translateY(1px); } 65% { transform: rotate(-.6deg); } }
+@keyframes rig-support-arm { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(var(--rig-gesture-small)); } }
+@keyframes rig-celebrate-body { 0%,100% { transform: translateY(0); } 35% { transform: translateY(-6px); } 65% { transform: translateY(0); } 80% { transform: translateY(-2px); } }
+@keyframes rig-cheer-arm { 0%,100% { transform: rotate(0deg); } 30%,65% { transform: rotate(var(--rig-gesture-size)); } 48% { transform: rotate(var(--rig-gesture-small)); } }
+@keyframes rig-greeting-body { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-3px); } }
+@keyframes rig-greeting-head { 0%,100% { transform: rotate(0deg); } 35% { transform: rotate(-1.8deg); } 70% { transform: rotate(.7deg); } }
+@keyframes rig-greeting-arm { 0%,100% { transform: rotate(0deg); } 25%,65% { transform: rotate(var(--rig-gesture-size)); } 45%,82% { transform: rotate(var(--rig-gesture-small)); } }
+
+/* Existing character controller owns visibility and the user's preference. */
+[data-character-visible='false'] .mindora-svg-rig .rig-motion,
+[hidden] .mindora-svg-rig .rig-motion,
+html[data-character-page-hidden='true'] .mindora-svg-rig .rig-motion { animation-play-state: paused!important; }
+html[data-character-animations='off'] .mindora-svg-rig .rig-motion { animation: none!important; transform: none!important; }
+@media(prefers-reduced-motion:reduce) { .mindora-svg-rig .rig-motion { animation: none!important; transform: none!important; } }

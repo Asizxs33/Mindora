@@ -13,11 +13,18 @@ if (typeof document !== 'undefined' && !document.getElementById('mindora-lesson-
   stylesheet.href = new URL('./lessons.css', import.meta.url).href;
   document.head.append(stylesheet);
 }
+if (typeof document !== 'undefined' && !document.getElementById('mindora-course-path-styles')) {
+  const stylesheet = document.createElement('link');
+  stylesheet.id = 'mindora-course-path-styles';
+  stylesheet.rel = 'stylesheet';
+  stylesheet.href = new URL('./course-path.css', import.meta.url).href;
+  document.head.append(stylesheet);
+}
 
 const guide = id => id === 'design' ? 'mia' : 'sam';
 const categories = { design: 'Design', budget: 'Spreadsheets' };
 const outcomes = { design: 'Make a poster you can download and share.', budget: 'Build a simple expense tracker you can keep.' };
-const stepTypes = ['Learn', 'Quick check', 'Try it', 'Make it yours'];
+const stepTypes = ['Learn', 'Quick check', 'Practice', 'Challenge'];
 
 function buddy(id, message, mood = 'explaining') {
   return `<div class="lesson-buddy">${character(guide(id), mood, 'lesson-character')}<div class="buddy-bubble"><span class="buddy-name">${id === 'design' ? 'Mia · your design buddy' : 'Sam · your numbers buddy'}</span><p>${message}</p></div></div>`;
@@ -28,51 +35,68 @@ function emptyView(title, text, button = 'Find my first course') {
 }
 
 export function pathView(state) {
-  if (!state.active) return emptyView('A little curiosity goes a long way', 'Tell Mino what you want to learn. We’ll start with one small step.');
-  const id = state.active, c = COURSES[id], p = state.progress[id];
-  return `<div class="learning-path"><button class="back-button" data-view="courses">${icon('back', 18)} My courses</button>
-    <section class="path-intro">${character(guide(id), p === 4 ? 'celebrate' : 'welcome', 'path-character')}<div><span class="tag">${categories[id]} · with ${id === 'design' ? 'Mia' : 'Sam'}</span><h1>${courseNames[id]}</h1><p>${outcomes[id]}</p></div></section>
-    ${state.goals[id] ? `<p class="personal-goal"><span>Your goal</span> ${esc(uiText(state.goals[id]))}</p>` : ''}
-    <div class="path-progress"><span>${p} of 4 steps complete</span><strong>${p * 25}%</strong><div class="progress-bar" role="progressbar" aria-label="Course progress" aria-valuenow="${p * 25}" aria-valuemin="0" aria-valuemax="100"><i style="width:${p * 25}%"></i></div></div>
-    <section class="trail-map" aria-label="Your four learning steps">${c.steps.map((s, i) => `<article class="trail-stop ${i < p ? 'is-done' : i === p ? 'is-current' : 'is-locked'}"><button class="trail-button" data-step="${i}" ${i > p ? 'disabled' : ''} aria-label="${i > p ? 'Locked: ' : ''}${esc(lessonNames[id][i])}">${icon(i < p ? 'check' : i > p ? 'lock' : ['layers', 'spark', 'edit', 'trophy'][i], 28)}</button><div class="trail-copy"><span>${stepTypes[i]} · ${i < 2 ? '3 min' : 'At your pace'}</span><h2>${lessonNames[id][i]}</h2><p>${esc(uiText(s.description))}</p>${i === p ? '<span class="current-pill">You are here</span>' : ''}</div></article>`).join('')}</section>
-    <div class="path-actionbar"><button class="primary" data-step="${Math.min(p, 3)}">${p === 4 ? 'Practise again' : p ? 'Continue learning' : 'Let’s start'} ${icon('arrow', 19)}</button><p class="small-note">${state.minutes} minutes is enough. Your progress is saved.</p></div>
-    <details class="learning-sources"><summary>Want to explore a little more?</summary><p>These sources support your lessons.</p>${c.sources.map(s => `<a class="source-link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(uiText(s.title))} ↗</a>`).join('')}</details>
-    ${p >= 2 ? `<button class="text-link path-extra" data-action="mix">${icon('shuffle', 17)} Try a fresh challenge</button>` : ''}</div>`;
+  const id = state.active, c = COURSES[id];
+  if (!c) return emptyView('A little curiosity goes a long way', 'Tell Mino what you want to learn. We’ll start with one small step.');
+  const p = Math.max(0, Math.min(4, Math.trunc(Number(state.progress[id]) || 0)));
+  return `<div class="learning-path course-path"><button type="button" class="back-button" data-view="courses">${icon('back', 18)} My courses</button>
+    <header class="course-path-header"><div><span class="course-path-category">${categories[id]} <span>· with ${id === 'design' ? 'Mia' : 'Sam'}</span></span><h1>${courseNames[id]}</h1><p>${outcomes[id]}</p></div>${character(guide(id), p === 4 ? 'celebrate' : 'welcome', 'course-path-mentor')}</header>
+    <div class="course-path-progress"><span>${p === 4 ? 'All steps complete' : `${p} of 4 steps complete`}</span><strong>${p * 25}%</strong><div role="progressbar" aria-label="Course progress" aria-valuenow="${p * 25}" aria-valuemin="0" aria-valuemax="100" aria-valuetext="${p} of 4 steps complete"><i style="width:${p * 25}%"></i></div></div>
+    <ol class="course-path-route" aria-label="Your learning path">${c.steps.map((s, i) => {
+      const done = i < p, current = i === p, locked = i > p, right = i % 2 === 1;
+      const title = lessonNames[id][i], status = done ? 'Completed' : current ? 'Up next' : 'Locked';
+      return `<li class="course-path-stop ${right ? 'on-right' : 'on-left'} ${done ? 'is-done' : current ? 'is-current' : 'is-locked'}">
+        ${i < 3 ? `<svg class="course-path-connector ${i < p ? 'is-complete' : ''}" viewBox="0 0 100 148" preserveAspectRatio="none" aria-hidden="true"><path d="${right ? 'M80 0 C80 74 20 74 20 148' : 'M20 0 C20 74 80 74 80 148'}"/></svg>` : ''}
+        <div class="course-path-node-wrap"><button type="button" class="course-path-node" data-step="${i}" ${locked ? 'disabled' : ''} ${current ? 'aria-current="step"' : ''} aria-label="${esc(`${done ? 'Revisit' : locked ? 'Locked' : 'Continue'}: ${title}`)}" aria-describedby="course-path-label-${i}">${icon(done ? 'check' : locked ? 'lock' : ['book', 'spark', 'edit', 'trophy'][i], 30)}</button>${current ? '<span class="course-path-here" aria-hidden="true">You are here</span>' : ''}</div>
+        <div class="course-path-label" id="course-path-label-${i}"><span>${i + 1} · ${stepTypes[i]}</span><h2>${esc(title)}</h2><p>${status}</p></div></li>`;
+    }).join('')}</ol>
+    <section class="course-path-certificate ${p === 4 ? 'is-ready' : ''}" aria-labelledby="course-path-certificate-title"><span class="course-path-certificate-icon" aria-hidden="true">${icon('cap', 34)}<span>${icon(p === 4 ? 'check' : 'lock', 14)}</span></span><div><h2 id="course-path-certificate-title">Your course certificate</h2><p>${p === 4 ? 'You earned it. Make it yours.' : 'Complete all 4 steps to unlock it.'}</p>${p === 4 ? `<button type="button" class="course-path-certificate-action" data-action="certificate" data-id="${id}">View certificate ${icon('arrow', 17)}</button>` : ''}</div></section>
+    <details class="learning-sources course-path-sources"><summary>About this course & sources</summary>${state.goals[id] ? `<p><strong>Your goal:</strong> ${esc(uiText(state.goals[id]))}</p>` : ''}<p>${outcomes[id]} Take it one short step at a time.</p>${c.sources.map(s => `<a class="source-link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(uiText(s.title))} ↗</a>`).join('')}${p >= 2 ? `<button type="button" class="text-link path-extra" data-action="mix">${icon('shuffle', 17)} Try a fresh challenge</button>` : ''}</details>
+    <div class="course-path-actions"><button type="button" class="primary" data-action="resume-course" data-id="${id}">${p === 4 ? 'Revisit course' : 'Continue learning'} ${icon('arrow', 19)}</button></div></div>`;
 }
 
 export function lesson(state, { step, question, quizIndex, quizChoice, quizFeedback, draft, checks }) {
   const id = state.active, c = COURSES[id];
   if (!c) return emptyView('Let’s find your first course', 'Start with something you would love to make.');
   const progress = Math.round((step + (step === 1 ? quizIndex / 3 : 0)) / 4 * 100);
-  return `<div class="lesson-flow"><header class="lesson-progress-head"><button class="lesson-exit" data-view="path" aria-label="Save and return to my course">${icon('back', 23)}</button><div class="progress-bar" role="progressbar" aria-label="Lesson progress" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${progress}%"></i></div><span>${step + 1} / 4</span></header>
-    <div class="lesson-titleblock"><span class="eyebrow">${stepTypes[step]} · ${categories[id]}</span><h1>${lessonNames[id][step]}</h1>${step !== 1 ? `<p>${esc(uiText(c.steps[step].description))}</p>` : ''}</div>
+  return `<div class="lesson-flow lesson-step-${step}"><header class="lesson-progress-head"><button class="lesson-exit" data-view="path" aria-label="Save and return to my course">${icon('back', 23)}</button><div class="progress-bar" role="progressbar" aria-label="Course progress" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${progress}%"></i></div><span>${stepTypes[step]}</span></header>
+    ${step >= 2 ? `<div class="lesson-titleblock"><span class="eyebrow">${categories[id]} · with ${id === 'design' ? 'Mia' : 'Sam'}</span><h1>${lessonNames[id][step]}</h1></div>` : ''}
     ${step === 0 ? learnContent(id) : step === 1 ? quizContent(id, question, quizIndex, quizChoice, quizFeedback) : practiceContent(id, draft, step === 3, checks)}</div>`;
 }
 
 function learnContent(id) {
   const design = id === 'design';
   const principles = design ? [
-    ['One big idea', 'Make the headline larger than everything else. It tells people where to look first.'],
-    ['Easy on the eyes', 'Dark words on a light background are a good place to start.'],
-    ['One next step', 'Tell people what to do, where to go, or when to visit.']
+    ['One big idea.', 'Make your headline the biggest thing on the poster. It tells people where to look first.'],
+    ['Make it easy to read.', 'Dark words on a light background stand out. That’s called contrast.'],
+    ['Give people a next step.', 'A clear invitation tells people what to do, where to go, or when to visit.']
   ] : [
-    ['Every cell has an address', 'A letter tells you the column. A number tells you the row. B2 means column B, row 2.'],
-    ['A range is a group of cells', 'B2:B4 means B2, B3 and B4. The colon means “through”.'],
-    ['SUM does the adding', 'Type =SUM(B2:B4) to add those three cells. Change a number and the total changes too.']
+    ['Every cell has an address.', 'The letter is the column. The number is the row. B2 means column B, row 2.'],
+    ['A range is a group of cells.', 'B2:B4 means B2, B3 and B4. The colon means “through”.'],
+    ['Let SUM do the adding.', 'Type =SUM(B2:B4) to add those three cells. Change a number and the total changes too.']
   ];
-  return `${buddy(id, design ? 'A clear poster only needs three little things. Let me show you.' : 'Think of a spreadsheet as a notebook that can do the maths for you.')}
-    <section class="learning-panel"><div class="lesson-copy"><h2>${design ? 'Small changes. A clearer poster.' : 'Three cells. One simple formula.'}</h2><ol class="principle-list">${principles.map(([title, text], i) => `<li><span class="principle-number">${i + 1}</span><div><h3>${title}</h3><p>${text}</p></div></li>`).join('')}</ol></div>
-    <div class="lesson-example">${design ? `<div class="sample-poster"><span class="poster-label">YOUR NEIGHBOURHOOD CAFÉ</span><div class="sample-sun" aria-hidden="true">☀</div><h3>A little coffee.<br>A lovely day.</h3><p>Fresh coffee. Good company.</p><span class="sample-cta">Visit Saturday · 10 am–4 pm</span></div><p class="example-caption">Big headline. Clear details. A next step.</p>` : `<div class="sheet-example">${sheetTable([48, 125, 24], false, '197')}</div><div class="formula-example"><code>=SUM(B2:B4)</code><span>48 + 125 + 24 = <strong>197</strong></span></div>`}</div></section>
-    <div class="lesson-actionbar"><button class="primary" data-action="finish-learn">Got it! ${icon('arrow', 19)}</button><p class="small-note">Next up: three quick questions.</p></div>`;
+  const tips = design ? ['Start with one message. Make it the biggest text.', 'Choose colours that make the words easy to see.', 'Tell people exactly what to do next.'] : ['Find the column first, then the row.', 'A range includes both the first and last cell.', 'Every formula starts with an equals sign.'];
+  const mentors = design ? ['mia', 'artist', 'copywriter'] : ['sam', 'sam', 'sam'];
+  return `<div class="learn-deck" data-learn-deck="${id}"><div class="idea-count"><span data-learn-count>Idea 1 of 3</span><span class="idea-dots" aria-hidden="true">${principles.map((_, i) => `<i data-learn-dot class="${i === 0 ? 'on' : ''}"></i>`).join('')}</span></div>
+    ${principles.map(([title, text], i) => `<section class="learn-page" data-learn-page ${i ? 'hidden' : ''}><h1 tabindex="-1">${title}</h1><p class="idea-description">${text}</p><div class="lesson-scene ${design ? 'scene-design' : 'scene-sheet'}"><div class="scene-mentor">${character(mentors[i], i === 2 ? 'celebrate' : 'explaining', 'teaching-character')}</div><div class="scene-example">${design ? posterExample(i) : spreadsheetExample(i)}</div></div><aside class="key-idea">${icon('spark', 23)}<div><strong>Remember this</strong><p>${tips[i]}</p></div></aside></section>`).join('')}
+    <div class="lesson-actionbar learn-actions"><button class="lesson-prev" data-learn-prev hidden aria-label="Previous idea">${icon('back', 20)}</button><button class="primary" data-learn-next>Continue ${icon('arrow', 19)}</button><button class="primary" data-action="finish-learn" hidden>Let’s try it ${icon('arrow', 19)}</button></div></div>`;
+}
+
+function posterExample(index) {
+  if (index === 1) return `<figure class="contrast-example"><div class="contrast-sample gentle"><span>A little coffee.</span><small>Harder to read</small></div><div class="contrast-sample clear"><span>A little coffee.</span><small>${icon('check', 16)} Easy to read</small></div><figcaption>Same words. A clearer colour.</figcaption></figure>`;
+  return `<figure class="poster-example"><div class="mini-poster"><span class="poster-label">YOUR NEIGHBOURHOOD CAFÉ</span><span class="coffee-doodle" aria-hidden="true">${icon('spark', 36)}</span><h2 class="${index === 0 ? 'idea-highlight' : ''}">A little coffee.<br>A lovely day.</h2><p>Fresh coffee. Good company.</p><span class="sample-cta ${index === 2 ? 'idea-highlight' : ''}">Visit Saturday · 10 am–4 pm</span></div><figcaption>${index === 0 ? 'Your headline is the first thing people notice.' : 'A day, a time, and a reason to visit.'}</figcaption></figure>`;
+}
+
+function spreadsheetExample(index) {
+  return `<figure class="cell-example cell-example-${index}"><div class="cell-demo"><table><caption class="sr-only">${index === 0 ? 'B2 is the highlighted cell.' : 'Cells B2 through B4 are highlighted.'}</caption><thead><tr><th></th><th scope="col">A</th><th scope="col" class="column-b">B</th></tr></thead><tbody><tr><th scope="row">1</th><td>Expense</td><td>Amount</td></tr>${[48, 125, 24].map((n, i) => `<tr><th scope="row" class="${i === 0 ? 'row-two' : ''}">${i + 2}</th><td>${['Transport', 'Groceries', 'Subscriptions'][i]}</td><td class="${i === 0 || index > 0 ? 'selected-cell' : ''}"><strong>${n}</strong>${index === 0 && i === 0 ? '<span class="cell-address">B2</span>' : ''}</td></tr>`).join('')}</tbody></table>${index === 2 ? '<div class="sum-result"><code>=SUM(B2:B4)</code><strong>197</strong></div>' : ''}</div><figcaption>${index === 0 ? 'Column B · Row 2 → B2' : index === 1 ? '<code>B2:B4</code> means B2, B3 and B4' : '48 + 125 + 24 = 197. Done!'}</figcaption></figure>`;
 }
 
 function quizContent(id, original, quizIndex, quizChoice, quizFeedback) {
   const q = quizCopy(original), correct = quizChoice === original.correctIndex;
   const answered = quizFeedback && correct;
-  return `${buddy(id, quizFeedback ? correct ? 'That’s it! You’re getting the hang of this.' : 'You’re learning. Let’s look at this together.' : 'Your turn. Take your time — you can always try again.', quizFeedback ? correct ? 'celebrate' : 'explaining' : 'thinking')}
-    <section class="mini-quiz"><div class="quiz-count"><span>Question ${quizIndex + 1} of 3</span><div class="quiz-dots" aria-hidden="true">${[0, 1, 2].map(i => `<i class="${i <= quizIndex ? 'on' : ''}"></i>`).join('')}</div></div><h2>${esc(q.question)}</h2><div class="quiz-options">${q.choices.map((text, i) => `<button class="quiz-option ${quizChoice === i ? 'selected' : ''} ${quizFeedback && quizChoice === i ? correct ? 'correct' : 'wrong' : ''}" data-choice="${i}" aria-pressed="${quizChoice === i}" ${answered ? 'disabled' : ''}><span class="option-letter">${String.fromCharCode(65 + i)}</span><span>${esc(text)}</span>${quizFeedback && correct && quizChoice === i ? icon('check', 20) : ''}</button>`).join('')}</div>
-    ${quizFeedback ? `<div class="answer-feedback ${correct ? 'success' : 'try-again'}" role="status" aria-live="polite">${icon(correct ? 'check' : 'spark', 23)}<div><strong>${correct ? 'Nicely done!' : 'Almost. Try another answer.'}</strong><p>${esc(q.explanation)}</p></div></div>` : ''}</section>
-    <div class="lesson-actionbar"><button class="primary" data-action="${answered ? 'next-question' : 'check-quiz'}" ${quizChoice === null ? 'disabled' : ''}>${answered ? quizIndex === 2 ? 'Finish this step' : 'Continue' : 'Check answer'} ${icon('arrow', 19)}</button><p class="small-note">${answered ? 'One small step forward.' : 'No rush. Mistakes are part of learning.'}</p></div>`;
+  return `${buddy(id, quizFeedback ? correct ? 'That’s it! You’re getting the hang of this.' : 'Let’s look at this together. You can try again.' : 'Let’s try a quick question. Take your time.', quizFeedback ? correct ? 'celebrate' : 'incorrect' : 'thinking')}
+    <section class="mini-quiz"><div class="quiz-count">Question ${quizIndex + 1} of 3</div><h1>${esc(q.question)}</h1><div class="quiz-options">${q.choices.map((text, i) => `<button class="quiz-option ${quizChoice === i ? 'selected' : ''} ${quizFeedback && quizChoice === i ? correct ? 'correct' : 'wrong' : ''}" data-choice="${i}" aria-pressed="${quizChoice === i}" ${answered ? 'disabled' : ''}><span class="option-letter">${String.fromCharCode(65 + i)}</span><span>${esc(text)}</span>${quizFeedback && correct && quizChoice === i ? icon('check', 20) : ''}</button>`).join('')}</div>
+    ${quizFeedback ? `<div class="answer-feedback ${correct ? 'success' : 'try-again'}" role="status" aria-live="polite">${icon(correct ? 'check' : 'close', 23)}<div><strong>${correct ? 'That’s right!' : 'Not quite. Give it another try.'}</strong><p>${esc(q.explanation)}</p></div></div>` : ''}</section>
+    <div class="lesson-actionbar ${answered ? 'has-success' : ''}"><button class="primary" data-action="${answered ? 'next-question' : 'check-quiz'}" ${quizChoice === null ? 'disabled' : ''}>${answered ? quizIndex === 2 ? 'Finish this step' : 'Continue' : 'Check answer'} ${icon('arrow', 19)}</button></div>`;
 }
 
 export function posterHtml(p) {
@@ -101,11 +125,11 @@ function posterEditor(d) {
     <label class="field"><span>What’s your big idea?</span><input name="title" maxlength="48" value="${esc(d.title)}" placeholder="Your poster headline" required></label>
     <label class="field"><span>Add a little detail</span><textarea name="subtitle" maxlength="100" placeholder="What should people know?" required>${esc(d.subtitle)}</textarea></label>
     <label class="field"><span>What should people do?</span><input name="cta" maxlength="55" value="${esc(d.cta)}" placeholder="Join us on Saturday at 10 am" required></label>
-    <label class="field"><span class="range-label">Headline size <output id="title-size">${Number(d.titleSize) || 34}px</output></span><input type="range" name="titleSize" min="20" max="56" value="${Number(d.titleSize) || 34}"></label>
-    <label class="field"><span class="range-label">Detail text size <output id="subtitle-size">${Number(d.subtitleSize) || 16}px</output></span><input type="range" name="subtitleSize" min="10" max="24" value="${Number(d.subtitleSize) || 16}"></label>
+    <details class="style-disclosure"><summary>Adjust style ${icon('edit', 16)}</summary><div class="style-fields"><label class="field"><span class="range-label">Headline size <output id="title-size">${Number(d.titleSize) || 34}px</output></span><input type="range" name="titleSize" aria-label="Headline size" min="20" max="56" value="${Number(d.titleSize) || 34}"></label>
+    <label class="field"><span class="range-label">Detail text size <output id="subtitle-size">${Number(d.subtitleSize) || 16}px</output></span><input type="range" name="subtitleSize" aria-label="Detail text size" min="10" max="24" value="${Number(d.subtitleSize) || 16}"></label>
     <div class="field"><span>Pick a background</span><div class="palette">${[['#f7d667', 'Sunshine'], ['#e3ecf7', 'Sky'], ['#d6eadd', 'Sage'], ['#f3d9d1', 'Peach']].map(([color, name]) => `<button type="button" class="color-swatch ${d.bgColor === color ? 'selected' : ''}" data-color="${color}" aria-label="${name} background" aria-pressed="${d.bgColor === color}" style="background:${color}"></button>`).join('')}</div></div>
     <label class="field"><span>Text colour</span><select name="textColor"><option value="#263c31" ${d.textColor === '#263c31' ? 'selected' : ''}>Forest green</option><option value="#243e6a" ${d.textColor === '#243e6a' ? 'selected' : ''}>Midnight blue</option><option value="#ffffff" ${d.textColor === '#ffffff' ? 'selected' : ''}>White</option></select></label>
-    </form></section>`;
+    </div></details></form></section>`;
 }
 
 function sheetTable(values, editable, total = '—') {
@@ -124,7 +148,7 @@ export function result(state) {
   const id = state.active;
   if (!COURSES[id]) return emptyView('Your next little win is waiting', 'Choose a course and make something of your own.');
   const finished = state.progress[id] === 4;
-  return `<section class="result-screen">${character(guide(id), 'celebrate', 'result-character')}<span class="tag">${finished ? 'Course complete' : 'Practice complete'} ${icon('check', 15)}</span><h1>Look at you go!</h1><p>${finished ? 'You learned it. You tried it. You made it your own.' : 'You turned a new idea into something real.'}</p><div class="result-card"><div class="result-symbol">${icon(id === 'design' ? 'edit' : 'grid', 28)}</div><h2>${id === 'design' ? 'Your poster is ready' : 'Your expense tracker is ready'}</h2><p>${outcomes[id]}</p><div class="result-stats"><div><strong>${state.progress[id]} / 4</strong><span>Steps complete</span></div><div><strong>1</strong><span>Thing you made</span></div></div><div class="result-actions"><button class="primary" data-action="download" data-id="${id}">${icon('download', 19)} Download ${id === 'design' ? 'poster' : 'tracker'}</button><button class="secondary" data-view="work">See my work ${icon('arrow', 18)}</button></div><p class="small-note">Saved in this browser, ready when you are.</p></div><button class="text-link" data-action="mix">${icon('shuffle', 17)} Try a fresh challenge</button></section>`;
+  return `<section class="result-screen">${character(guide(id), 'celebrate', 'result-character')}<span class="tag">${finished ? 'Course complete' : 'Practice complete'} ${icon('check', 15)}</span><h1>Look at you go!</h1><p>${finished ? 'You learned it. You tried it. You made it your own.' : 'You turned a new idea into something real.'}</p><div class="result-card"><div class="result-symbol">${icon(id === 'design' ? 'edit' : 'grid', 28)}</div><h2>${id === 'design' ? 'Your poster is ready' : 'Your expense tracker is ready'}</h2><p>${outcomes[id]}</p><div class="result-stats"><div><strong>${state.progress[id]} / 4</strong><span>Steps complete</span></div><div><strong>1</strong><span>Thing you made</span></div></div><div class="result-actions">${finished ? `<button class="primary" data-action="certificate" data-id="${id}">${icon('cap',19)} Get my certificate</button>` : ''}<button class="${finished ? 'secondary' : 'primary'}" data-action="download" data-id="${id}">${icon('download', 19)} Download ${id === 'design' ? 'poster' : 'tracker'}</button><button class="secondary" data-view="work">See my work ${icon('arrow', 18)}</button></div><p class="small-note">Saved in this browser, ready when you are.</p></div><button class="text-link" data-action="mix">${icon('shuffle', 17)} Try a fresh challenge</button></section>`;
 }
 
 export function workView(state) {

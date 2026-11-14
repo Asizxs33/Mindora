@@ -1,41 +1,36 @@
-/**
- * UI-only character contract.
- * character(kind, mood, className) returns a button; never nest it in another button/link.
- * Kinds: mino, leo/programmer, mia/designer, sam/teacher.
- * Moods: welcome, thinking, explaining/encourage, celebrate.
- * Size the outer .mindora-character from the screen's CSS. The inner square keeps
- * the 2×2 atlas undistorted even when the outer box is rectangular.
- * Call mountCharacters() once after mounting the shell. Later screen renders are
- * discovered automatically. A button[data-character-motion] becomes a motion
- * switch; optional [data-character-motion-status] receives the effective setting.
- * No course data, progress, controller hooks, or core storage are changed here.
+/** Exact illustrations from the supplied team-characters pack.
+ * Single-pose PNGs retain the artist's faces, clothing and full-body proportions.
+ * Supplied SVG rigs provide a network-error fallback. Learning state stays in core.
  */
+import { rigMarkup } from './character-rigs.js';
+
 const characters = Object.freeze({
   mino: { name: 'Mino', atlas: 'mino-poses-v3.png', fallback: 'capybara.png' },
-  leo: { name: 'Leo', atlas: 'leo-poses-v3.png', fallback: 'programmer.png' },
-  mia: { name: 'Mia', atlas: 'mia-poses-v3.png', fallback: 'designer.png' },
-  sam: { name: 'Sam', atlas: 'sam-poses-v3.png', fallback: 'teacher.png' }
+  mia: { name: 'Mia', role: 'graphic_designer', image: 'graphic-designer-v3.png', order: 0 },
+  sam: { name: 'Sam', role: 'programmer', image: 'programmer-v3.png', order: 1 },
+  leo: { name: 'Sam', role: 'programmer', image: 'programmer-v3.png', order: 1 },
+  artist: { name: 'Ari', role: 'artist', image: 'artist-v3.png', order: 2 },
+  copywriter: { name: 'Nora', role: 'copywriter', image: 'copywriter-v3.png', order: 3 },
+  smm: { name: 'Zoe', role: 'smm', image: 'smm-v3.png', order: 4 },
 });
-const aliases = { programmer: 'leo', designer: 'mia', teacher: 'sam', capybara: 'mino' };
-const moods = new Set(['welcome', 'thinking', 'explaining', 'encourage', 'celebrate']);
+const aliases = { programmer: 'leo', designer: 'mia', graphic_designer: 'mia', teacher: 'sam', capybara: 'mino', art: 'artist', writing: 'copywriter', social: 'smm' };
+const moods = new Set(['welcome', 'thinking', 'explaining', 'encourage', 'celebrate', 'incorrect']);
 const MOTION_KEY = 'mindora.characters.motion.v1';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, value => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value]));
 const asset = file => new URL(`./assets/${file}`, import.meta.url).href;
-const helloTimers = new WeakMap();
-const observed = new WeakSet();
-const atlasLoads = new Map();
-let mounted = false;
-let preference = 'on';
-let reducedMotion;
-let resizeObserver;
-let statusElement;
+const helloTimers = new WeakMap(), observed = new WeakSet(), atlasLoads = new Map();
+let mounted = false, preference = 'on', reducedMotion, resizeObserver, visibilityObserver, statusElement;
 
 export function character(kind = 'mino', mood = 'welcome', className = '') {
   kind = aliases[kind] || kind;
   if (!Object.hasOwn(characters, kind)) kind = 'mino';
   mood = moods.has(mood) ? mood : 'welcome';
-  const { name, fallback } = characters[kind];
-  return `<button type="button" class="mindora-character character-${kind} ${escape(className)}" data-character-kind="${kind}" data-character-mood="${mood}" data-character-hello aria-label="Say hello to ${name}" title="Say hello to ${name}"><span class="character-frame" aria-hidden="true"><span class="character-art"><img class="character-fallback" src="${escape(asset(fallback))}" alt="" loading="lazy" decoding="async"></span></span></button>`;
+  const model = characters[kind], human = Boolean(model.role);
+  const art = human
+    ? `<img class="human-source-image" src="${escape(asset(`team/${model.image}`))}" alt="" width="1024" height="1536" decoding="async" draggable="false"><span class="human-source-fallback">${rigMarkup(model.role)}</span>`
+    : `<img class="character-fallback" src="${escape(asset(model.fallback))}" alt="" loading="lazy" decoding="async">`;
+  const position = human ? ` style="--character-idle-delay:-${model.order * 1.37}s"` : '';
+  return `<button type="button" class="mindora-character character-${kind} ${human ? 'character-human character-portrait' : 'character-atlas'} ${escape(className)}" data-character-kind="${kind}" data-character-mood="${mood}" data-character-hello${position} aria-label="Say hello to ${model.name}" title="Say hello to ${model.name}"><span class="character-frame" aria-hidden="true"><span class="character-art">${art}</span></span><span class="character-reaction" aria-hidden="true">Hi there!</span></button>`;
 }
 
 function readPreference() {
@@ -44,45 +39,50 @@ function readPreference() {
 }
 
 function updateMotion() {
-  const deviceReduced = !!reducedMotion?.matches;
-  const enabled = preference !== 'off' && !deviceReduced;
+  const deviceReduced = Boolean(reducedMotion?.matches), enabled = preference !== 'off' && !deviceReduced;
   document.documentElement.dataset.characterAnimations = enabled ? 'on' : 'off';
   document.querySelectorAll('[data-character-motion]').forEach(control => {
-    control.setAttribute('role', 'switch');
-    control.setAttribute('aria-checked', String(enabled));
+    control.setAttribute('role', 'switch'); control.setAttribute('aria-checked', String(enabled));
     if (!control.hasAttribute('aria-label')) control.setAttribute('aria-label', 'Character motion');
-    control.dataset.state = enabled ? 'on' : 'off';
-    control.disabled = deviceReduced;
+    control.dataset.state = enabled ? 'on' : 'off'; control.disabled = deviceReduced;
     control.setAttribute('aria-disabled', String(deviceReduced));
   });
   document.querySelectorAll('[data-character-motion-status]').forEach(element => {
-    element.textContent = deviceReduced ? 'Your device’s reduced-motion setting is active.' : enabled ? 'Gentle movement is on.' : 'Movement is off. Your buddies are still here.';
+    const message = deviceReduced ? 'Your device’s reduced-motion setting is active.' : enabled ? 'Gentle movement is on.' : 'Movement is off. Your buddies are still here.';
+    if (element.textContent !== message) element.textContent = message;
   });
 }
 
-function updateVisibility() {
-  document.documentElement.dataset.characterPageHidden = document.hidden ? 'true' : 'false';
-}
+function updateVisibility() { document.documentElement.dataset.characterPageHidden = document.hidden ? 'true' : 'false'; }
 
 function fitFrame(element) {
-  const size = Math.max(0, Math.min(element.clientWidth, element.clientHeight));
-  if (size) element.style.setProperty('--character-frame-size', `${size}px`);
+  const width = element.clientWidth, height = element.clientHeight;
+  if (!width || !height) return;
+  if (element.classList.contains('character-human')) {
+    // Original 1024×1536 art: contain the whole figure, including tools and shoes.
+    const portraitWidth = Math.min(width, height * 2 / 3);
+    element.style.setProperty('--character-frame-width', `${portraitWidth}px`);
+    element.style.setProperty('--character-frame-height', `${portraitWidth * 3 / 2}px`);
+  } else element.style.setProperty('--character-frame-size', `${Math.min(width, height)}px`);
 }
 
-function applyAtlas(kind) {
-  const loaded = atlasLoads.get(kind)?.status === 'ready';
-  document.querySelectorAll(`.mindora-character[data-character-kind="${kind}"]`).forEach(element => element.classList.toggle('character-ready', loaded));
+function applyAtlas(file) {
+  const ready = atlasLoads.get(file)?.status === 'ready';
+  document.querySelectorAll('.mindora-character').forEach(element => {
+    const model = characters[element.dataset.characterKind];
+    if (!model || (model.atlas || `team/${model.image}`) !== file) return;
+    element.classList.toggle('character-ready', ready);
+    element.classList.toggle('character-image-error', atlasLoads.get(file)?.status === 'failed');
+  });
 }
 
-function loadAtlas(kind) {
-  if (atlasLoads.has(kind)) { applyAtlas(kind); return; }
-  const image = new Image();
-  const entry = { status: 'loading', image };
-  atlasLoads.set(kind, entry);
-  image.onload = () => { entry.status = 'ready'; applyAtlas(kind); };
-  image.onerror = () => { entry.status = 'failed'; applyAtlas(kind); };
-  image.decoding = 'async';
-  image.src = asset(characters[kind].atlas);
+function loadAtlas(file) {
+  if (atlasLoads.has(file)) { applyAtlas(file); return; }
+  const image = new Image(), entry = { image, status: 'loading' };
+  atlasLoads.set(file, entry);
+  image.onload = () => { entry.status = 'ready'; applyAtlas(file); };
+  image.onerror = () => { entry.status = 'failed'; applyAtlas(file); };
+  image.decoding = 'async'; image.src = asset(file);
 }
 
 function discover(root = document) {
@@ -90,14 +90,12 @@ function discover(root = document) {
   if (root instanceof Element && root.matches('.mindora-character')) elements.push(root);
   if (root.querySelectorAll) elements.push(...root.querySelectorAll('.mindora-character'));
   for (const element of elements) {
-    const kind = element.dataset.characterKind;
-    if (!Object.hasOwn(characters, kind)) continue;
+    const model = characters[element.dataset.characterKind];
+    if (!model) continue;
     if (!observed.has(element)) {
-      observed.add(element);
-      fitFrame(element);
-      resizeObserver?.observe(element);
+      observed.add(element); fitFrame(element); resizeObserver?.observe(element); visibilityObserver?.observe(element);
     }
-    loadAtlas(kind);
+    loadAtlas(model.atlas || `team/${model.image}`);
   }
   updateMotion();
 }
@@ -107,15 +105,9 @@ function release(root) {
   if (root instanceof Element && root.matches('.mindora-character')) elements.push(root);
   if (root.querySelectorAll) elements.push(...root.querySelectorAll('.mindora-character'));
   for (const element of elements) {
-    resizeObserver?.unobserve(element);
-    observed.delete(element);
+    resizeObserver?.unobserve(element); visibilityObserver?.unobserve(element); observed.delete(element);
     const pending = helloTimers.get(element);
-    if (pending) {
-      clearTimeout(pending.timer);
-      element.dataset.characterMood = pending.baseMood;
-      element.classList.remove('character-hello');
-      helloTimers.delete(element);
-    }
+    if (pending) { clearTimeout(pending.timer); helloTimers.delete(element); }
   }
 }
 
@@ -123,25 +115,25 @@ function greet(element) {
   const previous = helloTimers.get(element);
   if (previous) clearTimeout(previous.timer);
   const baseMood = previous?.baseMood || element.dataset.characterMood || 'welcome';
-  const kind = element.dataset.characterKind;
-  const name = characters[kind]?.name || 'Mino';
+  const name = characters[element.dataset.characterKind]?.name || 'Mino';
   const index = (previous?.index ?? Number(element.dataset.characterGreeting || 0)) + 1;
   element.dataset.characterGreeting = String(index);
-  element.dataset.characterMood = 'welcome';
-  element.classList.remove('character-hello');
-  // Restart only this brief gesture, not the surrounding learning UI.
-  void element.offsetWidth;
-  element.classList.add('character-hello');
-  const messages = [`${name}: Hi! I’m here with you.`, `${name}: Little steps count.`, `${name}: You’ve got this!`];
-  if (statusElement) statusElement.textContent = messages[(index - 1) % messages.length];
+  element.dataset.characterMood = element.classList.contains('character-human') ? 'celebrate' : 'welcome';
+  element.classList.remove('character-hello'); void element.offsetWidth; element.classList.add('character-hello');
+  const messages = ['Hi! I’m here with you.', 'Little steps count.', 'You’ve got this!'];
+  const message = messages[(index - 1) % messages.length];
+  const reaction = element.querySelector('.character-reaction');
+  if (reaction) reaction.textContent = message;
+  if (statusElement) statusElement.textContent = `${name}: ${message}`;
+  const greetingMood = element.dataset.characterMood;
   const timer = setTimeout(() => {
     if (element.isConnected) {
       element.classList.remove('character-hello');
-      element.dataset.characterMood = baseMood;
+      if (element.dataset.characterMood === greetingMood) element.dataset.characterMood = baseMood;
       element.classList.add('character-restored');
     }
     helloTimers.delete(element);
-  }, 1000);
+  }, 1600);
   helloTimers.set(element, { baseMood, timer, index });
 }
 
@@ -150,40 +142,32 @@ export function mountCharacters() {
   if (mounted) { discover(); return; }
   mounted = true;
   if (!document.getElementById('mindora-character-styles')) {
-    const stylesheet = document.createElement('link');
-    stylesheet.id = 'mindora-character-styles';
-    stylesheet.rel = 'stylesheet';
-    stylesheet.href = new URL('./characters.css', import.meta.url).href;
-    document.head.append(stylesheet);
+    const stylesheet = document.createElement('link'); stylesheet.id = 'mindora-character-styles'; stylesheet.rel = 'stylesheet';
+    stylesheet.href = new URL('./characters.css', import.meta.url).href; document.head.append(stylesheet);
   }
-  preference = readPreference();
-  reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  preference = readPreference(); reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   reducedMotion.addEventListener?.('change', updateMotion);
   if ('ResizeObserver' in window) resizeObserver = new ResizeObserver(entries => entries.forEach(entry => fitFrame(entry.target)));
   else window.addEventListener('resize', () => document.querySelectorAll('.mindora-character').forEach(fitFrame), { passive: true });
-  statusElement = document.createElement('div');
-  statusElement.className = 'character-live-status';
-  statusElement.setAttribute('role', 'status');
-  statusElement.setAttribute('aria-live', 'polite');
-  document.body.append(statusElement);
+  if ('IntersectionObserver' in window) visibilityObserver = new IntersectionObserver(entries => {
+    for (const entry of entries) entry.target.dataset.characterVisible = String(entry.isIntersecting);
+  }, { rootMargin: '0px' });
+  statusElement = document.createElement('div'); statusElement.className = 'character-live-status'; statusElement.setAttribute('role', 'status'); statusElement.setAttribute('aria-live', 'polite'); document.body.append(statusElement);
   document.addEventListener('click', event => {
     const target = event.target instanceof Element ? event.target : event.target?.parentElement;
     const toggle = target?.closest('[data-character-motion]');
     if (toggle && !toggle.disabled) {
       preference = preference === 'off' ? 'on' : 'off';
       try { localStorage.setItem(MOTION_KEY, preference); } catch { /* Session preference still works. */ }
-      updateMotion();
-      return;
+      updateMotion(); return;
     }
     const element = target?.closest('.mindora-character[data-character-hello]');
     if (element && !element.disabled) greet(element);
   });
   document.addEventListener('visibilitychange', updateVisibility);
-  window.addEventListener('storage', event => {
-    if (event.key === MOTION_KEY) { preference = readPreference(); updateMotion(); }
-  });
+  window.addEventListener('storage', event => { if (event.key === MOTION_KEY || event.key === null) { preference = readPreference(); updateMotion(); } });
   window.addEventListener('online', () => {
-    for (const [kind, entry] of atlasLoads) if (entry.status === 'failed') atlasLoads.delete(kind);
+    for (const [file, entry] of atlasLoads) if (entry.status === 'failed') atlasLoads.delete(file);
     discover();
   });
   new MutationObserver(records => {
@@ -195,6 +179,5 @@ export function mountCharacters() {
       }
     }
   }).observe(document.body, { childList: true, subtree: true });
-  discover();
-  updateVisibility();
+  discover(); updateVisibility();
 }

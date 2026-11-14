@@ -1,134 +1,61 @@
-/* Original character atlases: welcome | think / explain | celebrate. */
-.mindora-character {
-  --character-size: 180px;
-  --character-frame-size: var(--character-size);
-  position: relative;
-  display: inline-grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: var(--character-size);
-  height: var(--character-size);
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 28%;
-  background: transparent;
-  color: inherit;
-  box-shadow: none;
-  cursor: pointer;
-  isolation: isolate;
-  vertical-align: middle;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-.mindora-character:hover,
-.mindora-character:active {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  transform: none;
-}
-.mindora-character:focus-visible {
-  outline: 3px dashed #8b6645;
-  outline-offset: -8px;
-}
-.mindora-character .character-frame {
-  position: relative;
-  display: block;
-  width: var(--character-frame-size);
-  height: var(--character-frame-size);
-  max-width: 100%;
-  max-height: 100%;
-  pointer-events: none;
-}
-.mindora-character .character-art {
-  position: absolute;
-  inset: 0;
-  display: block;
-  background-repeat: no-repeat;
-  background-size: 200% 200%;
-  background-position: 0 0;
-  transform-origin: 50% 86%;
-  pointer-events: none;
-  animation: mindora-character-arrive .45s ease-out both;
-}
-.mindora-character .character-fallback {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  object-fit: contain;
-  opacity: 1;
-  pointer-events: none;
-}
-.mindora-character.character-ready .character-art { background-image: var(--character-atlas); }
-.mindora-character.character-ready .character-fallback { opacity: 0; }
-.mindora-character.character-mino { --character-atlas: url('./assets/mino-poses-v3.png'); }
-.mindora-character.character-leo { --character-atlas: url('./assets/leo-poses-v3.png'); }
-.mindora-character.character-mia { --character-atlas: url('./assets/mia-poses-v3.png'); }
-.mindora-character.character-sam { --character-atlas: url('./assets/sam-poses-v3.png'); }
-.mindora-character[data-character-mood='thinking'] .character-art { background-position: 100% 0; }
-.mindora-character[data-character-mood='explaining'] .character-art,
-.mindora-character[data-character-mood='encourage'] .character-art { background-position: 0 100%; }
-.mindora-character[data-character-mood='celebrate'] .character-art {
-  background-position: 100% 100%;
-  animation: mindora-character-cheer .75s ease-out both;
-}
-.mindora-character[data-character-mood='welcome'] .character-art {
-  animation: mindora-character-arrive .45s ease-out both, mindora-character-breathe 8s ease-in-out .45s infinite;
-}
-.mindora-character[data-character-mood='thinking'] .character-art {
-  animation: mindora-character-think .65s ease-out both, mindora-character-breathe 9s ease-in-out .65s infinite;
-}
-.mindora-character.character-restored .character-art { animation: none; }
-.mindora-character.character-restored[data-character-mood='welcome'] .character-art,
-.mindora-character.character-restored[data-character-mood='thinking'] .character-art { animation: mindora-character-breathe 8s ease-in-out infinite; }
-.mindora-character.character-hello[data-character-mood] .character-art { animation: mindora-character-wave .8s ease-in-out both; }
-.character-live-status {
-  position: fixed;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
-[data-character-motion] { touch-action: manipulation; }
-[data-character-motion][aria-disabled='true'] { cursor: default; }
-html[data-character-page-hidden='true'] .mindora-character .character-art { animation-play-state: paused; }
-html[data-character-animations='off'] .mindora-character .character-art {
-  animation: none !important;
-  transform: none !important;
-}
-@keyframes mindora-character-arrive {
-  from { opacity: .4; transform: translateY(4px) scale(.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes mindora-character-breathe {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-1.5px); }
-}
-@keyframes mindora-character-think {
-  0% { transform: rotate(0); }
-  50% { transform: rotate(-2deg); }
-  100% { transform: rotate(0); }
-}
-@keyframes mindora-character-cheer {
-  0%, 100% { transform: translateY(0) scale(1); }
-  35% { transform: translateY(-8px) scale(1.025); }
-  65% { transform: translateY(1px) scale(.99); }
-}
-@keyframes mindora-character-wave {
-  0%, 100% { transform: rotate(0); }
-  22% { transform: rotate(-4deg) translateY(-2px); }
-  48% { transform: rotate(3deg) translateY(-2px); }
-  72% { transform: rotate(-2deg); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .mindora-character .character-art { animation: none !important; transform: none !important; }
-}
+@import url('./character-rigs.css');
+/* User-supplied full-body mentor illustrations and Mino's capybara. */
+:where(.mindora-character){--character-size:180px;--character-frame-size:var(--character-size);position:relative;display:inline-grid;place-items:center;flex:0 0 auto;width:var(--character-size);height:var(--character-height,var(--character-size));min-width:0;margin:0;padding:0;border:0;border-radius:24%;background:transparent;color:inherit;box-shadow:none;cursor:pointer;isolation:isolate;vertical-align:middle;touch-action:manipulation;-webkit-tap-highlight-color:transparent;overflow:visible}
+.mindora-character:hover,.mindora-character:active{background:transparent;border-color:transparent;box-shadow:none;transform:none}
+.mindora-character:focus-visible{outline:3px dashed var(--blue,#5b4cff);outline-offset:-5px}
+.mindora-character .character-frame{position:relative;display:block;width:var(--character-frame-size);height:var(--character-frame-size);max-width:100%;max-height:100%;pointer-events:none}
+.mindora-character .character-art{position:absolute;inset:0;display:block;pointer-events:none;transform-origin:50% 92%}
+.character-atlas .character-art{background-repeat:no-repeat;background-size:200% 200%;background-position:0 0;animation:mindora-character-arrive .45s ease-out both}
+.mindora-character .character-fallback{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;object-fit:contain;opacity:1;pointer-events:none}
+.character-atlas.character-ready .character-art{background-image:var(--character-atlas)}
+.character-atlas.character-ready .character-fallback{opacity:0}
+.character-mino{--character-atlas:url('./assets/mino-poses-v3.png')}
+.character-atlas[data-character-mood='thinking'] .character-art{background-position:100% 0;animation:mindora-character-think .65s ease-out both,mindora-character-breathe 8s ease-in-out .65s infinite}
+.character-atlas[data-character-mood='explaining'] .character-art,.character-atlas[data-character-mood='encourage'] .character-art,.character-atlas[data-character-mood='incorrect'] .character-art{background-position:0 100%}
+.character-atlas[data-character-mood='celebrate'] .character-art{background-position:100% 100%;animation:mindora-character-cheer .8s ease-out both}
+.character-atlas[data-character-mood='welcome'] .character-art{animation:mindora-character-arrive .45s ease-out both,mindora-character-breathe 8s ease-in-out .45s infinite}
+.character-atlas.character-restored .character-art{animation:none}
+.character-atlas.character-restored[data-character-mood='welcome'] .character-art,.character-atlas.character-restored[data-character-mood='thinking'] .character-art{animation:mindora-character-breathe 8s ease-in-out infinite}
+.character-atlas.character-hello[data-character-mood] .character-art{animation:mindora-character-wave .85s ease-in-out both}
+
+/* No sprite crop or redraw: all five original 2:3 PNGs remain intact. */
+.character-human{--character-idle-delay:0s}
+.character-human .character-frame{width:var(--character-frame-width,66.666%);height:var(--character-frame-height,100%);aspect-ratio:2/3;align-self:center;overflow:visible;transform-origin:50% 96%;animation:mindora-human-idle 7.6s ease-in-out var(--character-idle-delay) infinite}
+.character-human .character-art{background:none;inset:0;animation:none}
+.character-human .human-source-image{display:block;width:100%;height:100%;max-width:100%;object-fit:contain;margin:0;padding:0;pointer-events:none;user-select:none;-webkit-user-drag:none}
+.human-source-fallback{display:none;position:absolute;inset:0}
+.human-source-fallback .mindora-svg-rig{display:block;width:100%;height:100%}
+.character-human.character-image-error .human-source-image{visibility:hidden}
+.character-human.character-image-error .human-source-fallback{display:block}
+.character-human[data-character-mood='thinking'] .character-frame{animation-name:mindora-human-thought;animation-duration:9s}
+.character-human[data-character-mood='incorrect'] .character-frame{animation-duration:9.5s}
+.character-human[data-character-mood='celebrate'] .character-frame{animation:mindora-human-cheer .85s ease-out both,mindora-human-idle 7.6s ease-in-out .85s infinite}
+.character-human.character-hello .character-frame{animation:mindora-human-hello .9s ease-out both,mindora-human-idle 7.6s ease-in-out .9s infinite}
+.mentor-team{margin-top:28px;padding-top:24px;border-top:1px solid var(--line,#e5e5eb)}
+.mentor-team h3{margin:0 0 6px;font-size:20px}.mentor-team>p{margin:0 0 18px;font-size:15px}
+.mentor-team-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 12px}
+.mentor-team-grid figure{margin:0;text-align:center;min-width:0}
+.mentor-team-grid .mindora-character{width:100%;height:180px}
+.mentor-team-grid figcaption{display:grid;gap:3px;font-size:13px;color:var(--muted,#6b6b75)}
+.mentor-team-grid strong{font-size:15px;color:var(--ink,#202124)}
+.mentor-team-grid .character-reaction{max-width:135px}
+@media(max-width:420px){.mentor-team-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mentor-team-grid .mindora-character{height:195px}}
+.character-reaction{position:absolute;left:50%;top:0;z-index:3;max-width:190px;width:max-content;padding:9px 13px;border:1px solid #ddd8ff;border-radius:14px 14px 14px 4px;background:#fff;color:var(--ink,#202124);box-shadow:0 3px 0 var(--pale,#f0edff);font-size:12px;font-weight:800;line-height:1.35;text-align:center;pointer-events:none;opacity:0;transform:translate(-50%,-8px) scale(.94);transition:opacity .15s,transform .2s}
+.mindora-character.character-hello{z-index:4}
+.character-hello .character-reaction{opacity:1;transform:translate(-50%,-14px) scale(1)}
+.character-live-status{position:fixed;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+[data-character-motion]{touch-action:manipulation}
+[data-character-motion][aria-disabled='true']{cursor:default}
+html[data-character-page-hidden='true'] .mindora-character .character-art,html[data-character-page-hidden='true'] .character-human .character-frame,.mindora-character[data-character-visible='false'] .character-art,.character-human[data-character-visible='false'] .character-frame{animation-play-state:paused}
+html[data-character-animations='off'] .mindora-character .character-art,html[data-character-animations='off'] .character-human .character-frame{animation:none!important;transform:none!important}
+html[data-character-animations='off'] .character-reaction{transition:none}
+@keyframes mindora-human-idle{0%,100%{transform:translateY(0) rotate(-.18deg) scaleY(1)}45%{transform:translateY(-1px) rotate(.22deg) scaleY(1.006)}75%{transform:translateY(-.3px) rotate(0deg) scaleY(1.002)}}
+@keyframes mindora-human-thought{0%,100%{transform:translateY(0) rotate(-.35deg)}50%{transform:translateY(-.7px) rotate(.25deg)}}
+@keyframes mindora-human-cheer{0%,100%{transform:translateY(0) scale(1)}32%{transform:translateY(-4px) scale(1.012)}67%{transform:translateY(.5px) scale(.998)}}
+@keyframes mindora-human-hello{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-3px) rotate(-.8deg)}60%{transform:translateY(-1px) rotate(.65deg)}}
+@keyframes mindora-character-arrive{from{opacity:.4;transform:translateY(4px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes mindora-character-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
+@keyframes mindora-character-think{0%,100%{transform:rotate(0)}50%{transform:rotate(-2deg)}}
+@keyframes mindora-character-cheer{0%,100%{transform:translateY(0) scale(1)}35%{transform:translateY(-6px) scale(1.02)}65%{transform:translateY(1px) scale(.99)}}
+@keyframes mindora-character-wave{0%,100%{transform:rotate(0)}22%{transform:rotate(-3deg) translateY(-1px)}48%{transform:rotate(2deg) translateY(-1px)}72%{transform:rotate(-1deg)}}
+@media(prefers-reduced-motion:reduce){.mindora-character .character-art,.character-human .character-frame{animation:none!important;transform:none!important}.character-reaction{transition:none!important}}
