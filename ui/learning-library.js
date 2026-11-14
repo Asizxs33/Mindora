@@ -27,8 +27,8 @@ export function loginRequiredView({ available = true } = {}) {
   </section>`;
 }
 
-export function learningLibraryView({ user, available = true, loading = false, error = '', courses = [], roadmaps = [], hasLocalLesson = false, hasLocalBuiltin = false } = {}, { primaryHeading = false, showEmpty = true } = {}) {
-  if (!user) return loginRequiredView({ available });
+export function learningLibraryView({ user, available = true, loading = false, error = '', courses = [], roadmaps = [], hasLocalLesson = false, hasLocalBuiltin = false } = {}, { primaryHeading = false, showEmpty = true, guest = false } = {}) {
+  if (!user) return guest ? '' : loginRequiredView({ available });
 
   const heading = primaryHeading ? 'h1' : 'h2';
   return `<section class="learning-library${primaryHeading ? ' learning-library-primary' : ''}" aria-labelledby="learning-library-title" aria-busy="${Boolean(loading)}">

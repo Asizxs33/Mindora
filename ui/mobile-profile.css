@@ -78,57 +78,14 @@
     font-size: 14px;
   }
   .mobile-preference-row .motion-switch { margin-right: 3px; }
-  .profile-more {
-    margin-top: 14px;
-    border: 1px solid #e7dfd7;
-    border-radius: 16px;
-    background: #fff;
-  }
-  .profile-more > summary {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 54px;
-    padding: 12px 14px;
-    color: #65513f;
-    font-size: 14px;
-    font-weight: 650;
-    list-style: none;
-    cursor: pointer;
-  }
-  .profile-more > summary::-webkit-details-marker { display: none; }
-  .profile-more > summary > span { flex: 1; min-width: 0; }
-  .profile-more[open] > summary > svg:last-child { transform: rotate(180deg); }
-  .mobile-profile-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 20px;
-    padding: 12px 14px;
-    border-top: 1px solid #eee7df;
-    color: #7d6e61;
-    font-size: 12px;
-    line-height: 1.5;
-  }
-  .mobile-profile-stats strong { color: #493728; }
-  .mobile-profile-tools { padding-inline: 14px; }
-  .mobile-profile-tools > button {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    min-height: 50px;
-    padding: 11px 0;
-    border: 0;
-    border-top: 1px solid #eee7df;
-    border-radius: 0;
-    background: transparent;
-    color: #6d5742;
-    text-align: left;
-    font: inherit;
-    font-size: 14px;
-  }
-  .mobile-profile-tools > button > span { flex: 1; color: #493728; }
-  .mobile-profile-tools > button > svg:last-child { color: #ac9d90; }
+  .mobile-profile-stats { display:flex; flex-wrap:wrap; gap:8px 18px; margin:0 0 14px; color:#786758; font-size:12px; line-height:1.5; }
+  .mobile-profile-stats strong { color:#493728; }
+  .mobile-profile-tools { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+  .mobile-profile-tools > button { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:8px; min-width:0; min-height:78px; padding:12px 14px; border:1px solid #e7ded5; border-radius:14px; background:#fffaf5; color:#a34b15; font:inherit; text-align:left; }
+  .mobile-profile-tools > button > span { color:#493728; font-size:14px; line-height:1.3; font-weight:700; overflow-wrap:anywhere; }
+  .mobile-profile-tools > button:hover { border-color:#c88248; background:#fff2e4; }
+  .profile-settings-heading { margin:23px 0 12px; font-size:18px; }
+  .mobile-profile-about { display:flex; gap:8px; align-items:center; min-height:44px; margin-top:12px; font-size:13px; }
   body:has(.mobile-profile) .top-actions .header-account { display: none; }
   .course-library .learning-library-heading > h2 { display: none; }
   .course-library .learning-library-heading { justify-content: flex-end; margin-bottom: 10px; }
