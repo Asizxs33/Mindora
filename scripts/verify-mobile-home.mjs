@@ -147,8 +147,13 @@ try {
   await empty.page.setViewportSize(sizes[0]);
   await firstScreen(empty.page, 'New signed-in learner 320');
   assert.equal(await empty.page.locator('.course-home-current').count(), 0, 'A new learner must not see invented progress');
+  assert.equal(await empty.page.locator('.mindora-character:visible').count(), 1);
+  await empty.page.locator('#goal-input').focus();
+  assert.equal(await empty.page.locator('.course-home-mino').getAttribute('data-character-mood'), 'listening');
   await empty.page.locator('#goal-input').fill('Мен алғашқы видеомды жасағым келеді');
+  assert.equal(await empty.page.locator('.course-home-mino').getAttribute('data-character-mood'), 'idea');
   await empty.page.locator('#time-select').selectOption('5');
+  assert.equal(await empty.page.locator('.course-home-mino').getAttribute('data-character-mood'), 'map');
   await empty.page.locator('#goal-form button[type="submit"]').click();
   await empty.page.waitForSelector('#roadmap-form');
   // The goal can be confirmed on the first wizard step, or retained behind the

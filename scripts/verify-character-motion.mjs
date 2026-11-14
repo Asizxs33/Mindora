@@ -44,6 +44,16 @@ try {
     checks++;
   }
 
+  await page.evaluate(() => window.renderMotionFixture('mia'));
+  await playing();
+  await page.waitForFunction(() => document.querySelector('.mindora-character')?.dataset.characterPlaying === 'false');
+  const restingSince = Date.now();
+  await playing();
+  const pause = Date.now() - restingSince;
+  assert.ok(pause > 2600 && pause < 3800, `Human mentor rest lasted ${pause} ms`);
+  assert.ok(new Set(await frameHashes()).size >= 3, 'A human mentor repeats the gesture after resting');
+  checks += 2;
+
   for (const scene of minoScenes) {
     await page.evaluate(mood => window.renderMotionFixture('mino', false, mood), scene.mood);
     await playing();

@@ -36,7 +36,7 @@ export function courseHomeView(state, { current = null, libraryHtml = '', readyH
   const completed = Math.min(total, Math.max(0, Number(current?.completed) || 0));
   const percent = Math.round(completed / total * 100);
   return `<section class="course-home" data-language="${currentLanguage()}" aria-labelledby="course-home-title">
-    <header class="course-home-heading" data-mentor-scene><div><h1 id="course-home-title">${t('What will you learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</h1><p class="course-home-greeting" data-mentor-message>${t('One small step. I’m with you.', 'Начнём с малого. Я рядом.', 'Шағын қадамнан бастайық. Мен жаныңдамын.')}</p></div>${character('mino', 'listening', 'course-home-mino')}</header>
+    <header class="course-home-heading" data-mentor-scene><div><h1 id="course-home-title">${t('What will you learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</h1><p class="course-home-greeting" data-mentor-message>${completed === total ? t('You did it!', 'У тебя получилось!', 'Жарайсың!') : t('Tell me your goal.', 'Расскажи о своей цели.', 'Мақсатыңды айтшы.')}</p></div>${character('mino', completed === total ? 'trophy' : 'welcome', 'course-home-mino')}</header>
     <form id="goal-form" class="course-home-composer">
       <label class="visually-hidden" for="goal-input">${t('What do you want to learn?', 'Чему хочешь научиться?', 'Не үйренгің келеді?')}</label>
       <input id="goal-input" name="goal" value="${escapeHtml(state.homeGoal || '')}" placeholder="${t('For example, make my first video', 'Например, сделать первое видео', 'Мысалы, алғашқы видеомды жасау')}" minlength="3" maxlength="180" required autocomplete="off" enterkeyhint="go">

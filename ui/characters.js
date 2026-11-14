@@ -11,11 +11,12 @@ import { interactWithMentor } from './mentor-interactions.js';
 // Keep a short, quiet beat between gestures; offscreen/reduced-motion mentors
 // still use the PNG and never run this loop.
 const pose = (stem, width = 294, height = 512, duration = 1280, pause = 1000) => ({ image: stem + '.gif', still: stem + '.png', width, height, duration, pause });
+const humanPose = (stem, width, height, duration) => pose(stem, width, height, duration, 3000);
 const humanPoses = (name, action, width, height, duration) => ({
-  welcome: pose(name + '-welcome'), thinking: pose(name + '-thinking', 294, 512, 8400, 1200),
-  celebrate: pose(name + '-celebrate', 294, 512, 1400),
-  explaining: pose(name + '-' + action, width, height, duration),
-  encourage: pose(name + '-welcome'), incorrect: pose(name + '-thinking', 294, 512, 8400, 1200),
+  welcome: humanPose(name + '-welcome'), thinking: humanPose(name + '-thinking', 294, 512, 8400),
+  celebrate: humanPose(name + '-celebrate', 294, 512, 1400),
+  explaining: humanPose(name + '-' + action, width, height, duration),
+  encourage: humanPose(name + '-welcome'), incorrect: humanPose(name + '-thinking', 294, 512, 8400),
 });
 const minoScene = (stem, duration, pause = 1000) => ({ ...pose(stem, 288, 288, duration, pause), directory: 'characters/mino-scenes' });
 const characters = Object.freeze({
@@ -231,6 +232,24 @@ export function mountCharacters() {
     }
   });
   statusElement = document.createElement('div'); statusElement.className = 'character-live-status'; statusElement.setAttribute('role', 'status'); statusElement.setAttribute('aria-live', 'polite'); document.body.append(statusElement);
+  function respondOnHome(field) {
+    const home = field.closest('.course-home');
+    if (!home || !['goal-input', 'time-select'].includes(field.id)) return;
+    const mino = home.querySelector('.course-home-mino');
+    const speech = home.querySelector('.course-home-greeting');
+    const choosingTime = field.id === 'time-select';
+    const hasGoal = !choosingTime && field.value.trim().length >= 3;
+    const mood = choosingTime ? 'map' : hasGoal ? 'idea' : 'listening';
+    const message = choosingTime
+      ? t(`Let’s try ${field.value} minutes.`, `Начнём с ${field.value} минут.`, `${field.value} минуттан бастайық.`)
+      : hasGoal ? t('Let’s make a plan!', 'Составим план!', 'Жоспар құрайық!')
+        : t('I’m listening.', 'Я слушаю.', 'Тыңдап тұрмын.');
+    if (mino.dataset.characterMood !== mood) mino.dataset.characterMood = mood;
+    if (speech.textContent !== message) speech.textContent = message;
+  }
+  for (const event of ['focusin', 'input', 'change']) {
+    document.addEventListener(event, e => { if (e.target instanceof Element) respondOnHome(e.target); });
+  }
   document.addEventListener('click', event => {
     const target = event.target instanceof Element ? event.target : event.target?.parentElement;
     const toggle = target?.closest('[data-character-motion]');
