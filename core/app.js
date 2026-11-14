@@ -360,14 +360,14 @@ function render() {
   const stats = learningStats(state);
   let html;
   switch (view) {
-    case 'discover': html = startingNew || (!state.active && !state.learningPlan)
+    case 'discover': html = !accountOwner || startingNew || (!state.active && !state.learningPlan)
       ? guidedStartView({ ...introduction, signedIn: Boolean(accountOwner) }) : quietHomeView(state); break;
     case 'courses': {
       const collection = library.screen();
       const represented = collection.courses.some(course => course.id === state.learningCourse?.id);
       html = learningLibraryView({ ...collection, available: getAccountState().available,
         hasLocalLesson: Boolean(legacyLesson) && !state.importedLegacyLesson, hasLocalBuiltin: canImportBuiltin() }, { primaryHeading: true, showEmpty: false })
-        + coursesPage(state, { showHeading: false, showCurrentLesson: !represented, showReadyCourses: true, readyCourses: starterCourses(state.language) });
+        + coursesPage(state, { showHeading: false, showCurrentLesson: !represented, showReadyCourses: true, readyCourses: starterCourses(state.language, state.minutes) });
       break;
     }
     case 'learning-plan': html = accountOwner ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({ ...plans.screen(), accountSaved: Boolean(state.learningCourse) }) : loginRequiredView(); break;
@@ -562,17 +562,22 @@ function beginIntroductionCourse() {
   if (ensureLearning(start)) start();
 }
 
-async function startReadyCourse(id) {
-  if (!ensureLearning(() => { void startReadyCourse(id); }) || openingStarter) return;
-  const saved = getStarterCourse(id, state.language);
+async function startReadyCourse(id, minutes = state.minutes) {
+  const duration = normalizeMinutes(minutes);
+  if (!ensureLearning(() => { void startReadyCourse(id, duration); }) || openingStarter) return;
+  const saved = getStarterCourse(id, state.language, duration);
   if (!saved) return;
   openingStarter = true;
   const owner = accountOwner;
   try {
-    const existing = library.screen().courses.find(course => course.goal === saved.plan.goal && course.title === saved.plan.title && course.language === saved.plan.language);
-    const accepted = existing ? await library.load(existing.id) : await library.importLocal(saved);
+    const existing = library.screen().courses.find(course => course.goal === saved.plan.goal && course.title === saved.plan.title && course.language === saved.plan.language && course.minutes === duration);
+    // Importing switches the active copy. Save the old answer before replacing it;
+    // load() already performs this check for an existing account course.
+    const mayImport = existing || await library.flush();
+    if (owner !== accountOwner) return;
+    const accepted = existing ? await library.load(existing.id) : mayImport && await library.importLocal(saved);
     if (accepted && owner === accountOwner) {
-      state.lastLearningType = 'ai'; saveLocal(); go('discover');
+      state.lastLearningType = 'ai'; changeMinutes(duration); saveLocal(); go('discover');
     } else if (owner === accountOwner) go('courses');
   } finally { openingStarter = false; }
 }
@@ -654,6 +659,7 @@ document.addEventListener('click', event => {
   }
   if (button.dataset.introTopic) { introduction.topic = button.dataset.introTopic; render(); document.querySelector(`[data-intro-topic="${introduction.topic}"]`)?.focus({ preventScroll: true }); return; }
   if (button.dataset.introMinutes) { introduction.minutes = normalizeMinutes(button.dataset.introMinutes); render(); document.querySelector(`[data-intro-minutes="${introduction.minutes}"]`)?.focus({ preventScroll: true }); return; }
+  if (button.dataset.courseMinutes) { changeMinutes(button.dataset.courseMinutes); render(); document.querySelector(`[data-course-minutes="${state.minutes}"]`)?.focus({ preventScroll: true }); return; }
   if (button.dataset.starterCourse) { void startReadyCourse(button.dataset.starterCourse); return; }
   const { view: destination, course, step: requestedStep, choice, color, action, id } = button.dataset;
   if (button.dataset.learningOpen) {
@@ -696,12 +702,16 @@ document.addEventListener('click', event => {
     return go('discover');
   }
   if (destination || course) {
-    if (course && !ensureLearning(() => { selectCourse(course); if (button.hasAttribute('data-start')) resumeCourse(course); })) return;
+    const openCourse = () => {
+      selectCourse(course);
+      if (button.hasAttribute('data-course-path')) { state.lastLearningType = 'builtin'; saveLocal(); go('discover'); }
+      else if (button.hasAttribute('data-start')) resumeCourse(course);
+    };
+    if (course && !ensureLearning(openCourse)) return;
     rememberPosition();
     if ($('#modal').open) $('#modal').close();
     if (destination) return go(destination);
-    selectCourse(course);
-    if (button.hasAttribute('data-start')) resumeCourse();
+    openCourse();
     return;
   }
   if (requestedStep !== undefined) return openStep(Number(requestedStep));
@@ -805,6 +815,7 @@ window.addEventListener('mindora:account-changed', event => {
   const account = getAccountState();
   const owner = account.user?.id || null;
   const reason = event.detail?.reason;
+  if (reason === 'signout') pendingLearning = null;
   const signupComplete = reason === 'signup-complete';
   if (owner === accountOwner && accountReady && !signupComplete) { void cloud.init(); return; }
   const version = ++accountEpoch;

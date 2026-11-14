@@ -19,7 +19,7 @@ export function guidedStartView({ step = 0, name = '', topic = '', goal = '', mi
   const greeting = step === 0;
   const valid = greeting || step === 1 ? greeting || Boolean(name.trim()) : step === 2 ? Boolean(topic && (topic !== 'custom' || goal.trim().length >= 3)) : true;
   return `<section class="guided-start ${greeting ? 'guided-greeting' : ''}" data-guided-step="${step}">
-    <header class="guided-header"><a class="guided-brand" href="#discover" data-home aria-label="Mindora">mindora<span>.</span></a>${languagePicker()}</header>
+    <header class="guided-header"><a class="guided-brand" href="#discover" data-home aria-label="Mindora">mindora<span>.</span></a><div class="guided-header-actions">${languagePicker()}${signedIn ? `<button type="button" class="guided-account" data-account-open="profile" aria-label="${t('My account','Мой аккаунт','Аккаунтым')}">${icon('user',21)}</button>` : ''}</div></header>
     ${greeting ? '' : `<div class="guided-progress"><button type="button" class="guided-back" data-intro-action="back" aria-label="${t('Back','Назад','Артқа')}">${icon('back',22)}</button><progress max="3" value="${step}" aria-label="${t('Getting started','Знакомство','Танысу')}"></progress><span>${step}/3</span></div>`}
     <div class="guided-content">
       <div class="guided-dialogue"><p id="guided-prompt" tabindex="-1">${esc(prompts[step])}</p></div>
@@ -38,14 +38,18 @@ export function quietHomeView(state) {
   const steps = saved ? saved.plan.steps.map(step => step.title) : lessonNames[id];
   const completed = saved ? saved.completed : state.progress[id] || 0;
   const done = completed === steps.length;
+  const minutes = saved ? saved.plan.minutes : state.minutes;
+  const percent = Math.round(completed / steps.length * 100);
   const title = saved ? saved.plan.title : id === 'design' ? t('Your first poster','Твой первый постер','Алғашқы постерің') : t('Everyday spreadsheets','Таблицы на каждый день','Күнделікті кестелер');
   const resumeAction = saved ? 'data-view="learning-plan"' : `data-action="${done ? 'certificate' : 'resume-course'}" data-id="${id}"`;
   return `<section class="quiet-home learning-hub" aria-labelledby="learning-hub-title">
-    <header class="learning-hub-heading"><div><span>${t('Your learning path','Твой путь обучения','Сенің оқу жолың')} · ${completed}/${steps.length}</span><h1 id="learning-hub-title">${esc(title)}</h1></div><button type="button" class="icon-button" data-view="courses" aria-label="${t('Choose a course','Выбрать курс','Курс таңдау')}">${icon('book',23)}</button></header>
+    <header class="learning-hub-heading"><div><span>${t('Your learning path','Твой путь обучения','Сенің оқу жолың')} · ${minutes} ${t('min','мин','мин')}</span><h1 id="learning-hub-title">${esc(title)}</h1></div><button type="button" class="icon-button" data-view="courses" aria-label="${t('Choose a course','Выбрать курс','Курс таңдау')}">${icon('book',23)}</button></header>
+    <div class="learning-hub-progress"><span>${completed}/${steps.length} ${t('steps','шагов','қадам')}</span><progress value="${completed}" max="${steps.length}" aria-label="${t('Course progress','Прогресс курса','Курс барысы')}"></progress><strong>${percent}%</strong></div>
     <div class="learning-hub-journey"><ol class="learning-hub-path" aria-label="${t('Course steps','Шаги курса','Курс қадамдары')}">${steps.map((label,index) => {
       const passed = index < completed, current = index === completed;
-      return `<li class="${passed ? 'is-done' : current ? 'is-current' : 'is-locked'}"><button type="button" class="learning-hub-node" ${current ? resumeAction : passed && !saved ? `data-step="${index}"` : 'disabled'} ${current ? 'aria-current="step"' : ''} aria-label="${esc(label)}${passed ? ` — ${t('completed','пройдено','аяқталды')}` : current ? '' : ` — ${t('next','дальше','келесі')}`}">${icon(passed ? 'check' : current ? 'play' : 'lock',25)}</button><span>${esc(label)}</span></li>`;
+      const final = index === steps.length - 1;
+      return `<li class="${passed ? 'is-done' : current ? 'is-current' : 'is-locked'}">${final ? '' : '<span class="learning-hub-connector" aria-hidden="true"></span>'}<div class="learning-hub-stop"><button type="button" class="learning-hub-node" ${current ? resumeAction : passed && !saved ? `data-step="${index}"` : 'disabled'} ${current ? 'aria-current="step"' : ''} aria-label="${esc(label)}${passed ? ` — ${t('completed','пройдено','аяқталды')}` : current ? '' : ` — ${t('next','дальше','келесі')}`}">${icon(passed ? 'check' : current ? 'play' : final ? 'trophy' : 'book',25)}</button><span>${esc(label)}</span></div></li>`;
     }).join('')}</ol><aside class="learning-hub-guide"><div class="guided-dialogue"><p>${done ? t('You made it!', 'У тебя получилось!', 'Жарайсың, орындап шықтың!') : t('One small step. I’m with you.', 'Один маленький шаг. Я рядом.', 'Бір шағын қадам. Мен жаныңдамын.')}</p></div>${character('mino',done ? 'celebrate' : 'welcome','quiet-mentor')}</aside></div>
-    <div class="learning-hub-actions"><button type="button" class="primary" ${resumeAction}>${done ? t('See my result','Мой результат','Нәтижем') : completed ? t('Continue learning','Продолжить','Жалғастыру') : t('Start lesson','Начать урок','Сабақты бастау')}${icon('arrow',20)}</button><button type="button" class="text-link" data-view="courses">${t('Ready mini-courses','Готовые мини-курсы','Дайын мини-курстар')}</button></div>
+    <div class="learning-hub-actions"><button type="button" class="primary" ${resumeAction}>${done ? t('See my result','Мой результат','Нәтижем') : completed || (saved ? saved.study?.[0]?.page > 0 : state.sessions?.[id]) ? t('Continue learning','Продолжить','Жалғастыру') : t('Start lesson','Начать урок','Сабақты бастау')}${icon('arrow',20)}</button><button type="button" class="text-link" data-view="courses">${t('Ready mini-courses','Готовые мини-курсы','Дайын мини-курстар')}</button></div>
   </section>`;
 }

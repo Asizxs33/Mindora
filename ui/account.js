@@ -314,8 +314,9 @@ async function signOut() {
     await api('POST', { action: 'signout' });
     session = { available: true, user: null, profile: null };
     pendingProfile = null;
-    emitSession();
-    view = { mode: 'signin', step: 0, pending: false, error: '', notice: 'You’re signed out.', showPassword: false, showConfirm: false, draft: emptyDraft() };
+    view = { mode: 'signin', step: 0, pending: false, error: '', notice: '', showPassword: false, showConfirm: false, draft: emptyDraft() };
+    closeAccount();
+    emitSession('signout');
   } catch (error) { view.error = error.message; }
   finally { view.pending = false; if (dialog.open) render(); }
 }
@@ -415,9 +416,13 @@ export function mountAccount() {
     }
   });
   document.addEventListener('click', event => {
-    const control = event.target.closest('[data-account-open]');
+    const control = event.target.closest('[data-account-open],[data-account-signout]');
     if (!control) return;
     event.preventDefault();
+    if (control.hasAttribute('data-account-signout')) {
+      if (session.user && !view.pending) { openAccount('profile'); signOut(); }
+      return;
+    }
     openAccount(control.dataset.accountOpen);
   });
   sessionPromise = loadSession();

@@ -78,7 +78,7 @@ function node() {
   };
 }
 
-function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profile: null }, storage: priorStorage, realPlans = false, failStorageWrites = false, reconcile = Promise.resolve(), libraryCourses = [], starterCopy = Promise.resolve(true) } = {}) {
+function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profile: null }, storage: priorStorage, realPlans = false, failStorageWrites = false, reconcile = Promise.resolve(), libraryCourses = [], starterCopy = Promise.resolve(true), starterFlush = Promise.resolve(true) } = {}) {
   let time = now, current, deck = null, uuidCount = 0, reloads = 0, conflictNotice = false, accountOpens = 0;
   const storage = priorStorage || new Map([[KEY, JSON.stringify(initial)]]);
   const presentation = new Map();
@@ -114,7 +114,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
     createPlanController: () => ({ screen: () => ({}), reset() {}, async generate(goal, minutes) { generations.push({ goal, minutes }); } }),
     createLearningLibrary: hooks => ({
       screen: () => ({ user: account.user, courses: libraryCourses }),
-      async setUser() { await reconcile; return true; }, changed() {}, async flush() { return true; },
+      async setUser() { await reconcile; return true; }, changed() {}, async flush() { return starterFlush; },
       async importLocal(saved) {
         const owner = account.user?.id;
         copiedCourses.push(clone(saved));
@@ -255,8 +255,9 @@ test('a ready mini-course creates one account copy and opens its path without AI
   const run = app(seed({ active: null, language: 'kk' }), { realPlans: true, starterCopy });
   run.click({ starterCourse: 'python-basics' });
   run.click({ starterCourse: 'python-basics' });
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.copiedCourses.length, 1, 'double clicks cannot create parallel copies');
-  assert.deepEqual(run.copiedCourses[0], getStarterCourse('python-basics', 'kk'));
+  assert.deepEqual(run.copiedCourses[0], getStarterCourse('python-basics', 'kk', 10));
   finishCopy(true);
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(run.generations, []);
@@ -269,13 +270,24 @@ test('a ready mini-course creates one account copy and opens its path without AI
   assert.equal(run.current.view, 'learning-plan');
 });
 
+test('catalog built-in cards open the same roadmap and retain the selected pace', () => {
+  const run = app(seed({ minutes: 20, learningPlan: savedAiCourse() }));
+  run.click({ course: 'budget' }, { attributes: ['data-course-path'] });
+  assert.equal(run.current.view, 'discover');
+  assert.equal(run.current.html.kind, 'quiet-home');
+  assert.equal(run.current.state.active, 'budget');
+  assert.equal(run.current.state.lastLearningType, 'builtin');
+  assert.equal(run.current.state.minutes, 20);
+  assert.ok(run.current.state.learningPlan, 'the previous AI course remains saved');
+});
+
 test('choosing an existing ready mini-course loads the saved copy without clearing progress or draft', async () => {
   const saved = getStarterCourse('clear-writing', 'en');
   saved.completed = 1;
   saved.answers = ['My completed first exercise.', 'My unfinished independent draft.'];
   const course = { id: 'my-writing-course', revision: 3, updatedAt: new Date(NOW).toISOString(), saved,
-    title: saved.plan.title, goal: saved.plan.goal, language: saved.plan.language };
-  const run = app(seed({ active: null }), { realPlans: true, libraryCourses: [course] });
+    title: saved.plan.title, goal: saved.plan.goal, language: saved.plan.language, minutes: saved.plan.minutes };
+  const run = app(seed({ active: null, minutes: 5 }), { realPlans: true, libraryCourses: [course] });
   run.click({ starterCourse: 'clear-writing' });
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(run.copiedCourses, []);
@@ -283,6 +295,70 @@ test('choosing an existing ready mini-course loads the saved copy without cleari
   assert.equal(run.current.view, 'discover');
   assert.equal(run.current.state.learningPlan.completed, 1);
   assert.equal(run.current.state.learningPlan.answers[1], saved.answers[1]);
+});
+
+test('duration selection creates distinct mini-courses and resumes the matching saved duration', async () => {
+  for (const minutes of [5, 10, 20]) {
+    const saved = getStarterCourse('python-basics', 'en', minutes);
+    saved.completed = 1;
+    saved.answers[0] = 'print("My completed exercise")';
+    saved.answers[1] = 'My unfinished task';
+    saved.study[1].page = minutes === 5 ? 0 : 1;
+    const shorter = getStarterCourse('python-basics', 'en', minutes === 5 ? 10 : 5);
+    const summary = (id, saved) => ({ id, saved, title: saved.plan.title, goal: saved.plan.goal,
+      language: saved.plan.language, minutes: saved.plan.minutes, revision: 1 });
+    const run = app(seed({ active: null, minutes: 10 }), { realPlans: true,
+      libraryCourses: [summary('other-duration', shorter), summary('matching-duration', saved)] });
+    run.click({ courseMinutes: String(minutes) });
+    run.click({ starterCourse: 'python-basics' });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(run.loadedCourses, ['matching-duration']);
+    assert.deepEqual(run.copiedCourses, []);
+    assert.equal(run.current.state.learningPlan.plan.minutes, minutes);
+    assert.equal(run.current.state.learningPlan.completed, 1);
+    assert.equal(run.current.state.learningPlan.answers[1], 'My unfinished task');
+    assert.equal(run.current.state.learningPlan.study[1].page, saved.study[1].page);
+    const resumed = app(null, { storage: run.storage, realPlans: true });
+    resumed.click({ view: 'learning-plan' });
+    assert.equal(resumed.current.state.learningPlan.plan.minutes, minutes);
+    assert.equal(resumed.current.state.learningPlan.completed, 1);
+    assert.equal(resumed.current.state.learningPlan.study[1].page, saved.study[1].page);
+  }
+});
+
+test('a new duration keeps the old saved course and survives account restoration', async () => {
+  const saved = getStarterCourse('ai-prompts', 'en', 5);
+  const course = { id: 'five-minutes', saved, title: saved.plan.title, goal: saved.plan.goal,
+    language: saved.plan.language, minutes: 5, revision: 1 };
+  const run = app(seed({ active: null, minutes: 5, learningPlan: saved }), { realPlans: true, libraryCourses: [course] });
+  run.click({ courseMinutes: '20' });
+  assert.equal(run.current.state.learningPlan.plan.minutes, 5, 'changing preference never rewrites an existing lesson');
+  run.click({ starterCourse: 'ai-prompts' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.copiedCourses[0].plan.minutes, 20);
+  assert.deepEqual(run.loadedCourses, []);
+  assert.equal(course.saved.plan.minutes, 5);
+
+  const guest = app(seed({ minutes: 5 }), { account: { user: null }, realPlans: true });
+  guest.click({ courseMinutes: '20' });
+  guest.click({ starterCourse: 'ai-prompts' });
+  guest.signIn({ id: 'test-user' }, 'signup-complete');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(guest.copiedCourses[0].plan.minutes, 20, 'selected duration crosses the auth boundary');
+});
+
+test('signout opens the greeting and signing back in retains the exact lesson', async () => {
+  const saved = savedAiCourse();
+  const run = app(seed({ learningPlan: saved }), { realPlans: true });
+  run.signIn(null);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.html.kind, 'guided-start');
+  assert.equal(run.current.html.args[0].step, 0);
+  assert.equal(run.current.state.learningPlan, null);
+  run.signIn({ id: 'test-user' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.html.kind, 'quiet-home');
+  assert.deepEqual(run.current.state.learningPlan, saved);
 });
 
 test('ready mini-course requires an account and an unsuccessful save keeps prior work', async () => {
@@ -299,11 +375,32 @@ test('ready mini-course requires an account and an unsuccessful save keeps prior
   assert.deepEqual(run.generations, []);
 });
 
+test('a new starter cannot replace progress after a failed save or a changed account during saving', async () => {
+  const saved = savedAiCourse();
+  const run = app(seed({ learningPlan: saved }), { realPlans: true, starterFlush: Promise.resolve(false) });
+  run.click({ starterCourse: 'python-basics' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(run.copiedCourses, []);
+  assert.deepEqual(run.current.state.learningPlan, saved);
+  assert.equal(run.current.view, 'courses');
+  let finishSaving;
+  const pending = app(seed({ learningPlan: saved }), { realPlans: true,
+    starterFlush: new Promise(resolve => { finishSaving = resolve; }) });
+  pending.click({ starterCourse: 'python-basics' });
+  pending.signIn({ id: 'another-user' });
+  await new Promise(resolve => setImmediate(resolve));
+  finishSaving(true);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(pending.copiedCourses, []);
+  assert.equal(pending.current.state.learningPlan, null);
+});
+
 test('a starter copy finishing after account switch cannot replace the next account workspace', async () => {
   let finishCopy;
   const starterCopy = new Promise(resolve => { finishCopy = resolve; });
   const run = app(seed({ active: null }), { realPlans: true, starterCopy });
   run.click({ starterCourse: 'ai-prompts' });
+  await new Promise(resolve => setImmediate(resolve));
   run.signIn({ id: 'second-user' });
   await new Promise(resolve => setImmediate(resolve));
   finishCopy(true);
