@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="130 40 400 850" class="team-rig-svg" aria-hidden="true" focusable="false" preserveAspectRatio="xMidYMax meet">
+          <title>Programming agent</title><g id="character-programmer" stroke-linecap="round" stroke-linejoin="round" data-rig-part="body">
+      <g id="left-leg" data-pivot="265,610" transform="translate(265 610) rotate(-5)" data-rig-part="left-leg">
+      <path d="M-36-2 L34-2 L31 122 L-32 122Z" fill="#6330ae" />
+      <path d="M9 0 L34-2 L31 122 L8 122Z" fill="#ffffff" opacity=".09" />
+      <g id="left-lower-leg" data-pivot="0,110" transform="translate(0 110) rotate(4)" data-rig-part="left-lower-leg">
+        <path d="M-31-7 L31-7 L33 126 L-31 126Z" fill="#6330ae" />
+        <path d="M7 4 L31-7 L33 126 L7 126Z" fill="#ffffff" opacity=".08" />
+        <circle cx="0" cy="0" r="29" fill="#6330ae" opacity=".92" />
+        <path d="M-34 115 Q-8 99 24 115 L51 129 Q64 135 59 148 Q56 158 37 159 L-35 159 Q-48 155-46 139Z" fill="#6edac5" />
+        <path d="M-44 145 Q0 151 59 145 L58 155 Q5 164-39 157Z" fill="#fffaf1" />
+        <path d="M-9 122 L13 126 M-12 132 L9 136" stroke="#fffaf1" stroke-width="5" stroke-linecap="round" />
+      </g>
+    </g><g id="right-leg" data-pivot="337,610" transform="translate(337 610) rotate(7)" data-rig-part="right-leg">
+      <path d="M-36-2 L34-2 L31 122 L-32 122Z" fill="#6330ae" />
+      <path d="M9 0 L34-2 L31 122 L8 122Z" fill="#ffffff" opacity=".09" />
+      <g id="right-lower-leg" data-pivot="0,110" transform="translate(0 110) rotate(-3)" data-rig-part="right-lower-leg">
+        <path d="M-31-7 L31-7 L33 126 L-31 126Z" fill="#6330ae" />
+        <path d="M7 4 L31-7 L33 126 L7 126Z" fill="#ffffff" opacity=".08" />
+        <circle cx="0" cy="0" r="29" fill="#6330ae" opacity=".92" />
+        <path d="M-34 115 Q-8 99 24 115 L51 129 Q64 135 59 148 Q56 158 37 159 L-35 159 Q-48 155-46 139Z" fill="#6edac5" />
+        <path d="M-44 145 Q0 151 59 145 L58 155 Q5 164-39 157Z" fill="#fffaf1" />
+        <path d="M-9 122 L13 126 M-12 132 L9 136" stroke="#fffaf1" stroke-width="5" stroke-linecap="round" />
+      </g>
+    </g><g id="left-arm" data-pivot="218,385" transform="translate(218 385) rotate(-58)" data-rig-part="left-arm">
+      <path d="M-31-3 Q0-18 31-3 L29 124 L-29 124Z" fill="#5bd4b4" />
+      <path d="M7-6 Q20-9 31-3 L29 124 L8 124Z" fill="#ffffff" opacity=".11" />
+      <g id="left-forearm" data-pivot="0,105" transform="translate(0 105) rotate(17)" data-rig-part="left-forearm">
+        <path d="M-27-7 L27-7 L26 101 Q0 113-26 101Z" fill="#5bd4b4" />
+        <path d="M6 3 L27-7 L26 101 L6 105Z" fill="#ffffff" opacity=".11" />
+        <circle cx="0" cy="0" r="29" fill="#5bd4b4" />
+        <circle cx="0" cy="0" r="22" fill="#743fc0" opacity=".32" />
+        <ellipse cx="0" cy="111" rx="29" ry="31" fill="#a95f48" />
+      <g id="prop-laptop" data-pivot="385,545" transform="matrix(0.83867057 0.54463904 -0.54463904 0.83867057 -35.69186831 -536.85809671)" data-rig-part="prop-laptop">
+          <rect x="337" y="444" width="140" height="103" rx="9" fill="#d9e5e9" stroke="none" stroke-width="6" />
+          <rect x="350" y="457" width="114" height="77" rx="4" fill="#27334c" />
+          <path d="M375 485 L360 498 L375 510 M440 485 L455 498 L440 510 M417 478 L396 518" fill="none" stroke="#743fc0" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M325 547 L479 547 L495 566 Q497 575 485 578 L320 578 Q308 574 314 565Z" fill="#e4e8e8" stroke="none" stroke-width="6" />
+        </g></g>
+    </g><g id="torso" data-pivot="300,470" data-rig-part="torso">
+      <path d="M225 356 Q299 330 375 356 L396 599 Q300 628 204 599Z" fill="#5bd4b4" />
+      <path d="M274 350 L300 378 L326 350 L320 604 Q301 609 280 604Z" fill="#fffaf1" />
+      <path d="M274 350 L300 381 L275 399 L251 363Z M326 350 L300 381 L325 399 L349 363Z" fill="#5bd4b4" />
+      <path d="M219 375 L242 357 L263 565 L220 581Z M381 375 L358 357 L337 565 L380 581Z" fill="#ffffff" opacity=".13" />
+      <circle cx="295" cy="424" r="6" fill="#fffaf1" /><circle cx="295" cy="467" r="6" fill="#fffaf1" /><circle cx="295" cy="510" r="6" fill="#fffaf1" />
+      <path d="M214 599 Q300 622 386 599 L381 627 Q301 646 219 627Z" fill="#6330ae" />
+      <circle cx="302" cy="615" r="7" fill="#fffaf1" />
+    </g><g id="right-arm" data-pivot="382,385" transform="translate(382 385) rotate(42)" data-rig-part="right-arm">
+      <path d="M-31-3 Q0-18 31-3 L29 124 L-29 124Z" fill="#5bd4b4" />
+      <path d="M7-6 Q20-9 31-3 L29 124 L8 124Z" fill="#ffffff" opacity=".11" />
+      <g id="right-forearm" data-pivot="0,105" transform="translate(0 105) rotate(-20)" data-rig-part="right-forearm">
+        <path d="M-27-7 L27-7 L26 101 Q0 113-26 101Z" fill="#5bd4b4" />
+        <path d="M6 3 L27-7 L26 101 L6 105Z" fill="#ffffff" opacity=".11" />
+        <circle cx="0" cy="0" r="29" fill="#5bd4b4" />
+        <circle cx="0" cy="0" r="22" fill="#743fc0" opacity=".32" />
+        <ellipse cx="0" cy="111" rx="29" ry="31" fill="#a95f48" />
+      </g>
+    </g><g id="head" data-pivot="300,322" transform="translate(300 322) rotate(-3)" data-rig-part="head">
+      <rect x="-20" y="-34" width="40" height="52" rx="14" fill="#a95f48" stroke="none" />
+      <path d="M-96-157 Q-94-220-19-230 Q39-247 87-205 Q112-178 98-126 Q111-77 77-58 Q24-42-54-49 Q-105-76-96-157Z" fill="#ae4e3a" />
+        <path d="M-76-171 Q-39-219 22-218 Q68-211 91-176" fill="none" stroke="#cc654b" stroke-width="18" stroke-linecap="round" />
+      <path d="M-76-165 Q-66-205 0-207 Q68-205 77-164 L73-83 Q67-35 0-24 Q-67-34-73-84Z" fill="#a95f48" stroke="none" />
+      <ellipse cx="-78" cy="-113" rx="12" ry="20" fill="#a95f48" stroke="#20110f" stroke-width="5" />
+      <ellipse cx="78" cy="-113" rx="12" ry="20" fill="#a95f48" stroke="#20110f" stroke-width="5" />
+      <path d="M-81-172 Q-54-223 13-215 Q51-210 81-181 Q45-193 26-158 Q-4-181-31-145 Q-56-153-81-139Z" fill="#ae4e3a" />
+      <path d="M-45-143 Q-31-149-18-142 M18-142 Q32-149 45-143" fill="none" stroke="#20110f" stroke-width="5" stroke-linecap="round" data-rig-face="brows" />
+      <ellipse cx="-31" cy="-116" rx="5.5" ry="8" fill="#20110f" data-rig-face="left-eye" /><ellipse cx="31" cy="-116" rx="5.5" ry="8" fill="#20110f" data-rig-face="right-eye" />
+
+      <path d="M0-112 Q-4-95 5-96" fill="none" stroke="#20110f" stroke-width="4" stroke-linecap="round" />
+      <path d="M-19-71 Q1-53 22-73" fill="none" stroke="#20110f" stroke-width="5" stroke-linecap="round" data-rig-face="mouth" />
+      <circle cx="-49" cy="-92" r="8" fill="#ee8b83" opacity=".4" /><circle cx="49" cy="-92" r="8" fill="#ee8b83" opacity=".4" />
+      <circle cx="-83" cy="-87" r="9" fill="#743fc0" /><circle cx="83" cy="-87" r="9" fill="#743fc0" />
+    <path data-rig-face="left-smile" d="M-39 -114 Q-31 -124 -23 -114" fill="none" stroke="#20110f" stroke-width="4" stroke-linecap="round" opacity="0" /><path data-rig-face="right-smile" d="M23 -114 Q31 -124 39 -114" fill="none" stroke="#20110f" stroke-width="4" stroke-linecap="round" opacity="0" /></g>
+    </g>
+        </svg>

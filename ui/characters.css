@@ -1,134 +1,48 @@
-/* Original character atlases: welcome | think / explain | celebrate. */
-.mindora-character {
-  --character-size: 180px;
-  --character-frame-size: var(--character-size);
-  position: relative;
-  display: inline-grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: var(--character-size);
-  height: var(--character-size);
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 28%;
-  background: transparent;
-  color: inherit;
-  box-shadow: none;
-  cursor: pointer;
-  isolation: isolate;
-  vertical-align: middle;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
+/* Mino's capybara atlas and full-body, articulated human SVG portraits. */
+:where(.mindora-character) {
+  --character-size:180px;--character-frame-size:var(--character-size);
+  position:relative;display:inline-grid;place-items:center;flex:0 0 auto;
+  width:var(--character-size);height:var(--character-height,var(--character-size));min-width:0;
+  margin:0;padding:0;border:0;border-radius:24%;background:transparent;color:inherit;
+  box-shadow:none;cursor:pointer;isolation:isolate;vertical-align:middle;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;overflow:visible;
 }
-.mindora-character:hover,
-.mindora-character:active {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  transform: none;
-}
-.mindora-character:focus-visible {
-  outline: 3px dashed #8b6645;
-  outline-offset: -8px;
-}
-.mindora-character .character-frame {
-  position: relative;
-  display: block;
-  width: var(--character-frame-size);
-  height: var(--character-frame-size);
-  max-width: 100%;
-  max-height: 100%;
-  pointer-events: none;
-}
-.mindora-character .character-art {
-  position: absolute;
-  inset: 0;
-  display: block;
-  background-repeat: no-repeat;
-  background-size: 200% 200%;
-  background-position: 0 0;
-  transform-origin: 50% 86%;
-  pointer-events: none;
-  animation: mindora-character-arrive .45s ease-out both;
-}
-.mindora-character .character-fallback {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  object-fit: contain;
-  opacity: 1;
-  pointer-events: none;
-}
-.mindora-character.character-ready .character-art { background-image: var(--character-atlas); }
-.mindora-character.character-ready .character-fallback { opacity: 0; }
-.mindora-character.character-mino { --character-atlas: url('./assets/mino-poses-v3.png'); }
-.mindora-character.character-leo { --character-atlas: url('./assets/leo-poses-v3.png'); }
-.mindora-character.character-mia { --character-atlas: url('./assets/mia-poses-v3.png'); }
-.mindora-character.character-sam { --character-atlas: url('./assets/sam-poses-v3.png'); }
-.mindora-character[data-character-mood='thinking'] .character-art { background-position: 100% 0; }
-.mindora-character[data-character-mood='explaining'] .character-art,
-.mindora-character[data-character-mood='encourage'] .character-art { background-position: 0 100%; }
-.mindora-character[data-character-mood='celebrate'] .character-art {
-  background-position: 100% 100%;
-  animation: mindora-character-cheer .75s ease-out both;
-}
-.mindora-character[data-character-mood='welcome'] .character-art {
-  animation: mindora-character-arrive .45s ease-out both, mindora-character-breathe 8s ease-in-out .45s infinite;
-}
-.mindora-character[data-character-mood='thinking'] .character-art {
-  animation: mindora-character-think .65s ease-out both, mindora-character-breathe 9s ease-in-out .65s infinite;
-}
-.mindora-character.character-restored .character-art { animation: none; }
-.mindora-character.character-restored[data-character-mood='welcome'] .character-art,
-.mindora-character.character-restored[data-character-mood='thinking'] .character-art { animation: mindora-character-breathe 8s ease-in-out infinite; }
-.mindora-character.character-hello[data-character-mood] .character-art { animation: mindora-character-wave .8s ease-in-out both; }
-.character-live-status {
-  position: fixed;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
-[data-character-motion] { touch-action: manipulation; }
-[data-character-motion][aria-disabled='true'] { cursor: default; }
-html[data-character-page-hidden='true'] .mindora-character .character-art { animation-play-state: paused; }
-html[data-character-animations='off'] .mindora-character .character-art {
-  animation: none !important;
-  transform: none !important;
-}
-@keyframes mindora-character-arrive {
-  from { opacity: .4; transform: translateY(4px) scale(.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes mindora-character-breathe {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-1.5px); }
-}
-@keyframes mindora-character-think {
-  0% { transform: rotate(0); }
-  50% { transform: rotate(-2deg); }
-  100% { transform: rotate(0); }
-}
-@keyframes mindora-character-cheer {
-  0%, 100% { transform: translateY(0) scale(1); }
-  35% { transform: translateY(-8px) scale(1.025); }
-  65% { transform: translateY(1px) scale(.99); }
-}
-@keyframes mindora-character-wave {
-  0%, 100% { transform: rotate(0); }
-  22% { transform: rotate(-4deg) translateY(-2px); }
-  48% { transform: rotate(3deg) translateY(-2px); }
-  72% { transform: rotate(-2deg); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .mindora-character .character-art { animation: none !important; transform: none !important; }
-}
+.mindora-character:hover,.mindora-character:active{background:transparent;border-color:transparent;box-shadow:none;transform:none}
+.mindora-character:focus-visible{outline:3px dashed var(--blue,#5b4cff);outline-offset:-5px}
+.mindora-character .character-frame{position:relative;display:block;width:var(--character-frame-size);height:var(--character-frame-size);max-width:100%;max-height:100%;pointer-events:none}
+.mindora-character .character-art{position:absolute;inset:0;display:block;pointer-events:none;transform-origin:50% 86%}
+.character-atlas .character-art{background-repeat:no-repeat;background-size:200% 200%;background-position:0 0;animation:mindora-character-arrive .45s ease-out both}
+.mindora-character .character-fallback{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;object-fit:contain;opacity:1;pointer-events:none}
+.character-atlas.character-ready .character-art{background-image:var(--character-atlas)}
+.character-atlas.character-ready .character-fallback{opacity:0}
+.character-mino{--character-atlas:url('./assets/mino-poses-v3.png')}
+.character-atlas[data-character-mood='thinking'] .character-art{background-position:100% 0;animation:mindora-character-think .65s ease-out both,mindora-character-breathe 9s ease-in-out .65s infinite}
+.character-atlas[data-character-mood='explaining'] .character-art,.character-atlas[data-character-mood='encourage'] .character-art,.character-atlas[data-character-mood='incorrect'] .character-art{background-position:0 100%}
+.character-atlas[data-character-mood='celebrate'] .character-art{background-position:100% 100%;animation:mindora-character-cheer .75s ease-out both}
+.character-atlas[data-character-mood='welcome'] .character-art{animation:mindora-character-arrive .45s ease-out both,mindora-character-breathe 8s ease-in-out .45s infinite}
+.character-atlas.character-restored .character-art{animation:none}
+.character-atlas.character-restored[data-character-mood='welcome'] .character-art,.character-atlas.character-restored[data-character-mood='thinking'] .character-art{animation:mindora-character-breathe 8s ease-in-out infinite}
+.character-atlas.character-hello[data-character-mood] .character-art{animation:mindora-character-wave .85s ease-in-out both}
+
+/* Human figures use a tight per-role portrait, including shoes, hair and tools.
+   Host screens may keep square slots or give the portrait a taller box. */
+.character-rig .character-frame{width:var(--character-frame-width,47%);height:var(--character-frame-height,100%);aspect-ratio:var(--character-portrait-ratio,400/850);align-self:end}
+.character-rig .character-art{background:none;animation:none;transform:none}
+.character-rig .team-rig-svg{display:block;width:100%;height:100%;max-width:none;overflow:visible;pointer-events:none}
+.character-rig [data-rig-part],.character-rig [data-rig-face]{pointer-events:none}
+.character-rig .team-rig-svg:focus{outline:none}
+.character-reaction{position:absolute;left:50%;top:0;z-index:3;max-width:190px;width:max-content;padding:9px 13px;border:1px solid #ddd8ff;border-radius:14px 14px 14px 4px;background:#fff;color:var(--ink,#202124);box-shadow:0 3px 0 var(--pale,#f0edff);font-size:12px;font-weight:800;line-height:1.35;text-align:center;pointer-events:none;opacity:0;transform:translate(-50%,-8px) scale(.94);transition:opacity .15s,transform .2s}
+.mindora-character.character-hello{z-index:4}
+.character-hello .character-reaction{opacity:1;transform:translate(-50%,-14px) scale(1)}
+.character-live-status{position:fixed;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+[data-character-motion]{touch-action:manipulation}
+[data-character-motion][aria-disabled='true']{cursor:default}
+html[data-character-page-hidden='true'] .character-atlas .character-art,.character-atlas[data-character-visible='false'] .character-art{animation-play-state:paused}
+html[data-character-animations='off'] .character-atlas .character-art{animation:none!important;transform:none!important}
+html[data-character-animations='off'] .character-reaction{transition:none}
+@keyframes mindora-character-arrive{from{opacity:.4;transform:translateY(4px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes mindora-character-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
+@keyframes mindora-character-think{0%,100%{transform:rotate(0)}50%{transform:rotate(-2deg)}}
+@keyframes mindora-character-cheer{0%,100%{transform:translateY(0) scale(1)}35%{transform:translateY(-8px) scale(1.025)}65%{transform:translateY(1px) scale(.99)}}
+@keyframes mindora-character-wave{0%,100%{transform:rotate(0)}22%{transform:rotate(-4deg) translateY(-2px)}48%{transform:rotate(3deg) translateY(-2px)}72%{transform:rotate(-2deg)}}
+@media(prefers-reduced-motion:reduce){.character-atlas .character-art{animation:none!important;transform:none!important}.character-reaction{transition:none!important}}

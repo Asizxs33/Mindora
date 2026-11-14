@@ -7,6 +7,12 @@ function showPage(deck, index, moveFocus = false) {
   const current = Math.max(0, Math.min(Number.isFinite(index) ? Math.trunc(index) : 0, pages.length - 1));
   pages.forEach((page, i) => { page.hidden = i !== current; });
   deck.dataset.index = String(current);
+  const progress = deck.closest('.lesson-flow')?.querySelector('.lesson-progress-head [role="progressbar"]');
+  if (progress) {
+    const percent = Math.round((current / pages.length) * 25);
+    progress.setAttribute('aria-valuenow', String(percent));
+    progress.querySelector('i').style.width = `${percent}%`;
+  }
   deck.querySelector('[data-learn-count]').textContent = `Idea ${current + 1} of ${pages.length}`;
   deck.querySelectorAll('[data-learn-dot]').forEach((dot, i) => {
     dot.classList.toggle('on', i <= current);
