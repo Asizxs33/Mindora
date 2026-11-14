@@ -14,6 +14,12 @@ function roadmapStageInput(raw) {
     if (!value || /[\u0000\u000b\u000c\u007f]/u.test(value)) return null;
     stage[field] = value;
   }
+  if (raw.originalGoal !== undefined) {
+    if (typeof raw.originalGoal !== 'string' || raw.originalGoal.length > ROADMAP_LIMITS.goal) return null;
+    const originalGoal = raw.originalGoal.trim();
+    if (!originalGoal || /[\u0000\u000b\u000c\u007f]/u.test(originalGoal)) return null;
+    stage.originalGoal = originalGoal;
+  }
   if (raw.previousStages !== undefined) {
     if (!Array.isArray(raw.previousStages) || raw.previousStages.length > 3) return null;
     const previousStages = raw.previousStages.map(previous => {
@@ -61,7 +67,7 @@ export async function planApi(request, {
     return json({ plan: course.saved.plan, course }, 200, cookies);
   } catch (error) {
     console.warn('Mindora plan generation failed', error.name, Number(error.providerStatus) || '');
-    if (error.providerStatus === 429) return json({ error: 'DeepSeek занят. Попробуй немного позже.' }, 429, cookies);
+    if (error.providerStatus === 429) return json({ error: 'ИИ занят. Попробуй немного позже.' }, 429, cookies);
     return json({ error: 'Не удалось получить и сохранить путь с материалами. Попробуй ещё раз или уточни цель.' }, 502, cookies);
   }
 }

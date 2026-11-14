@@ -208,12 +208,12 @@ test('the generation endpoint validates input before calling DeepSeek', async ()
 
 test('roadmap stages use the saved objective and level to research and compose one focused lesson', async () => {
   const roadmapStage = {
-    goal: 'Automate Python reports', title: 'Work with indexes',
+    goal: 'Summarize report rows', originalGoal: 'Python', title: 'Work with indexes',
     objective: 'Add row numbers using enumerate.',
     level: 'intermediate', levelReason: 'Already comfortable with lists and simple for loops.',
     previousStages: [{ title: 'Read report rows', objective: 'Store report rows in a list.' }],
   };
-  const goal = 'Automate Python reports / Work with indexes';
+  const goal = 'Summarize report rows / Work with indexes';
   const create = stage => new Request('https://mindora.test/api/learning-plan', {
     method: 'POST', headers: { origin: 'https://mindora.test', 'content-type': 'application/json', 'X-Mindora-Account': 'account-a' },
     body: JSON.stringify({ goal, minutes: 5, language: 'en', roadmapStage: stage }),
@@ -262,7 +262,7 @@ test('generation and review surface a 429 from DeepSeek', async () => {
     });
     const response = await api(request, configured);
     assert.equal(response.status, 429);
-    assert.deepEqual(await response.json(), { error: 'DeepSeek занят. Попробуй немного позже.' });
+    assert.deepEqual(await response.json(), { error: 'ИИ занят. Попробуй немного позже.' });
   }
 });
 

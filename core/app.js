@@ -889,11 +889,11 @@ function startRoadmapStage(index) {
       if (!await library.load(selected.courseId)) throw new Error(roadmapErrorText('stage'));
     } else {
       const { title, objective } = roadmap.stages[index];
-      const { goal, level, levelReason } = roadmap;
+      const { goal, originalGoal, level, levelReason } = roadmap;
       const stageGoal = `${title} — ${goal}`.slice(0, 180);
       const previousStages = roadmap.stages.slice(0, index).map(({ title, objective }) => ({ title, objective }));
       const generated = await plans.generate(stageGoal, roadmap.minutes, {
-        language: roadmap.language, roadmapStage: { goal, title, objective, level, levelReason, previousStages },
+        language: roadmap.language, roadmapStage: { goal, ...(originalGoal ? { originalGoal } : {}), title, objective, level, levelReason, previousStages },
       });
       if (!isCurrent()) return;
       if (!generated || !state.learningCourse?.id) {

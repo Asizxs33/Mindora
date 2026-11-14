@@ -520,12 +520,14 @@ test('an explicitly requested roadmap builds a personalized path and starts only
   assert.equal(run.roadmapRequests[0].diagnosticAnswer, '5, because SUM adds the two cells.');
   assert.match(run.roadmapRequests[0].diagnosticQuestion, /SUM/);
   assert.equal(run.current.html.args[0].roadmap.level, 'intermediate');
+  assert.equal(run.current.html.args[0].roadmap.originalGoal, 'I want to learn spreadsheet formulas');
   assert.deepEqual(run.current.html.args[0].active.map(stage => stage.status), ['ready', 'locked', 'locked', 'locked']);
   run.click({ roadmapAction: 'start', roadmapStage: '1' });
   assert.deepEqual(run.generations, []);
   run.click({ roadmapAction: 'start', roadmapStage: '0' });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.generations[0].context.roadmapStage.level, 'intermediate');
+  assert.equal(run.generations[0].context.roadmapStage.originalGoal, 'I want to learn spreadsheet formulas');
   assert.equal(run.generations[0].context.roadmapStage.objective, roadmapResponse.stages[0].objective);
   assert.deepEqual(run.generations[0].context.roadmapStage.previousStages, []);
   assert.equal(run.current.view, 'learning-plan');
@@ -687,6 +689,8 @@ test('an existing roadmap stage resumes the saved lesson and draft without anoth
 
 test('the next generated stage receives only prior completed stage objectives', async () => {
   const roadmap = savedRoadmap('12345678-1234-4000-8000-123456789011');
+  roadmap.originalGoal = 'Python';
+  roadmap.goal = 'Write a small calculator';
   roadmap.progress[0].completed = true;
   const run = app(seed({ learningRoadmap: roadmap }));
   await new Promise(resolve => setImmediate(resolve));
@@ -695,6 +699,8 @@ test('the next generated stage receives only prior completed stage objectives', 
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(run.generations[0].context.roadmapStage.previousStages, [roadmap.stages[0]]);
   assert.equal(run.generations[0].context.roadmapStage.title, roadmap.stages[1].title);
+  assert.equal(run.generations[0].context.roadmapStage.originalGoal, 'Python');
+  assert.equal(run.saved().learningRoadmap.originalGoal, 'Python');
 });
 
 test('opening an archived roadmap preserves the other path and reloads the selected path', () => {
