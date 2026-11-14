@@ -72,9 +72,6 @@ export function mountShell() {
   </header>
   <aside class="sidebar" aria-label="Main menu">
     <nav id="navigation" aria-label="Main navigation"></nav>
-    <div class="side-companion">
-      <strong></strong><p></p><button type="button" class="text-link" data-action="about"></button>
-    </div>
   </aside>
   <div class="app-shell"><main id="main" tabindex="-1"></main></div>
   <nav class="mobile-navigation" id="mobile-navigation" aria-label="Main navigation"></nav>
@@ -183,9 +180,6 @@ export function renderShell(view, state, stats, html, rewards) {
   $('#top-actions').innerHTML = guided ? '' : `${rewardMetrics(headerRewards, true)}${languagePicker()}<button class="header-pace" data-view="profile" aria-label="${t('Daily learning time','Время на обучение','Оқу уақыты')}">${icon('clock', 17)}<span>${t(`${state.minutes} min a day`, `${state.minutes} мин в день`, `Күніне ${state.minutes} мин`)}</span></button><button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
   $('.skip-link').textContent = t('Skip to learning','К содержимому','Мазмұнға өту');
   $('.modal-close').setAttribute('aria-label', t('Close window','Закрыть окно','Терезені жабу'));
-  $('.side-companion strong').textContent = t('Learn one step at a time.','Учись шаг за шагом.','Біртіндеп үйрен.');
-  $('.side-companion p').textContent = t('Go at your own pace.','Продолжай в своём темпе.','Өз қарқыныңмен жалғастыр.');
-  $('.side-companion .text-link').innerHTML = `${t('About Mindora','О Mindora','Mindora туралы')} ${icon('arrow', 15)}`;
   main.classList.toggle('dashboard-main', view === 'discover');
   main.classList.toggle('inside-main', view !== 'discover');
   main.dataset.page = view;
