@@ -1,0 +1,28 @@
+Mindora visual identity — 14 November 2026
+
+Recognition: Mino's oversized glasses, small rounded ears and two front teeth.
+Use the capybara mark as the main visual signature, not the old letter-M tile.
+
+brand-mark.svg: standalone scalable mark, transparent canvas.
+brand-logo.svg: horizontal mark and outlined Nunito Black wordmark.
+favicon.svg: same capybara silhouette, suited to browser tabs.
+
+Palette
+Deep cocoa #422C24 — outlines, headings, wordmark.
+Warm caramel #F5B66B — primary actions and Mino's face.
+Soft cream #FFFAF0 — main background.
+Paper #FFFEF9 — surfaces and controls.
+Sage #4E7951 — positive feedback.
+Lavender #D9C9F0 — Plus demo accents.
+
+Typography: Nunito, with 900 weight for the wordmark and main headings.
+The exported wordmark uses vector outlines and needs no font installation.
+Leave at least one ear's width of clear space around the standalone mark.
+Keep original proportions. Avoid gradients, extra shadows, or different glasses.
+Small icons use the standalone mark; wider placements use the full wordmark.
+
+Character system: Mino, Leo, Mia, Sam. Each atlas is a 1254 x 1254 transparent PNG
+with four equal 627 x 627 cells: welcome, thinking, explain/support, celebrate.
+Use brief reactions at meaningful moments; never make mistakes feel punishing.
+Respect the learner's motion setting and the operating system's reduced motion preference.
+Full character-generation prompts are in CHARACTER-PROMPTS-V3.txt.
