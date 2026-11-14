@@ -60,9 +60,26 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch) {
   }
   const data = await response.json();
   const choice = data.choices?.[0];
-  if (choice?.finish_reason !== 'stop' || typeof choice.message?.content !== 'string') throw new Error('Incomplete DeepSeek response');
+  if (choice?.finish_reason !== 'stop' || typeof choice.message?.content !== 'string') {
+    throw Object.assign(new Error('Incomplete DeepSeek response'), {
+      name: choice?.finish_reason === 'length' ? 'LessonOutputLimit' : 'IncompleteLessonOutput',
+    });
+  }
   const raw = choice.message.content.trim().replace(/^\x60\x60\x60(?:json)?\s*|\s*\x60\x60\x60$/gi, '');
-  const plan = normalizePlan(JSON.parse(raw), input, openedSources(choice.message));
-  if (!plan?.steps.slice(0, -1).some(step => step.resource)) throw new Error('Invalid plan or missing opened lesson sources');
+  const sources = openedSources(choice.message);
+  const plan = normalizePlan(JSON.parse(raw), input, sources);
+  if (!plan?.steps.slice(0, -1).some(step => step.resource)) {
+    const calls = (choice.message.server_tool_calls ?? []).flatMap(group => group.calls ?? []);
+    console.warn('Mindora lesson source validation', {
+      searches: calls.filter(call => call.action?.type === 'search').length,
+      opened: calls.filter(call => call.action?.type === 'open_page' && call.status === 'completed').length,
+      pages: calls.filter(call => call.page?.url).length,
+      usable: sources.size,
+      normalized: Boolean(plan),
+    });
+    throw Object.assign(new Error('Invalid plan or missing opened lesson sources'), {
+      name: sources.size ? 'LessonContentInvalid' : 'NoOpenedLessonSources',
+    });
+  }
   return plan;
 }
