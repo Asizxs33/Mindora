@@ -3,7 +3,7 @@
 .guided-header-actions{display:flex;align-items:center;gap:8px;flex:none}.guided-account{display:grid;place-items:center;min-width:44px;min-height:44px;border:1px solid #ead6c5;border-radius:12px;background:#fff7ef;color:#a34408;cursor:pointer}
 @media(max-width:360px){.guided-header{gap:8px}.guided-header .guided-brand{font-size:25px}.guided-header-actions select{max-width:85px}}
 @keyframes guided-arrive{from{opacity:.55;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-@media(prefers-reduced-motion:no-preference){html:not([data-character-animations=off]) .guided-dialogue,html:not([data-character-animations=off]) .learning-hub-path{animation:guided-arrive .3s ease-out both}}
+@media(prefers-reduced-motion:no-preference){html:not([data-character-animations=off]) .guided-dialogue{animation:guided-arrive .3s ease-out both}}
 body.is-guided{background:#fff}body.is-guided .topbar,body.is-guided .sidebar,body.is-guided .mobile-navigation{display:none}body.is-guided .app-shell{margin:0;padding:0}body.is-guided #main{max-width:none;padding:0;min-height:100svh}
 .guided-start{min-height:100svh;max-width:680px;margin:auto;display:flex;flex-direction:column;padding:20px 28px 24px;box-sizing:border-box;color:#302723}
 .guided-header{display:flex;justify-content:space-between;align-items:center;gap:16px}.guided-brand{text-decoration:none;font-size:29px;font-weight:900;letter-spacing:-1px;color:#33271e}.guided-brand span{color:#c24b00}.guided-header .language-picker{margin:0}.guided-header select{max-width:100px;min-height:40px}

@@ -566,7 +566,7 @@ function render() {
   switch (view) {
     case 'discover':
       if (!canStudy() || startingNew) html = guidedStartView({ ...introduction, signedIn: Boolean(accountOwner) });
-      else html = phoneLayout?.matches ? phonePath(roadmapProps) : homeScreen();
+      else html = phoneLayout?.matches || selectedHomeKind() ? phonePath(roadmapProps) : homeScreen();
       break;
     case 'new-course': html = courseHomeView(state, { composerOnly: true }); break;
     case 'courses':

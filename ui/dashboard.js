@@ -63,7 +63,7 @@ export function phoneCourseNav(selected) {
 }
 
 export function phoneCourseLibrary(libraryHtml, readyHtml) {
-  return `<section class="phone-library course-library"><h1>${t('My courses', 'Мои курсы', 'Курстарым')}</h1>
+  return `<section class="phone-library course-library"><header class="course-library-heading"><h1>${t('My courses', 'Мои курсы', 'Курстарым')}</h1><button type="button" class="secondary course-library-create" data-view="new-course">${icon('plus', 18)} ${t('Create a course', 'Создать курс', 'Курс жасау')}</button></header>
     <div data-course-library>${libraryHtml}</div>
     <details class="phone-catalog"><summary>${icon('book', 20)}${t('Explore mini-courses', 'Открыть мини-курсы', 'Мини-курстарды көру')}${icon('chevron', 18)}</summary>${readyHtml}</details>
   </section>`;

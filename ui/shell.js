@@ -6,6 +6,7 @@ import { languagePicker, t } from './language.js';
 import { mountLessonFlow, syncLessonFlow } from './lesson-flow.js';
 import { mountAccount, getAccountState } from './account.js';
 import { rewardBalance } from './roadmap.js';
+import { desktopStudyView } from './desktop-study.js';
 
 const $ = selector => document.querySelector(selector);
 let desktopLayout;
@@ -68,6 +69,8 @@ export function mountShell() {
   mobileStyles.href = new URL('./mobile-profile.css', import.meta.url).href; document.head.append(mobileStyles);
   const rewardStyles = document.createElement('link'); rewardStyles.rel = 'stylesheet';
   rewardStyles.href = new URL('./rewards.css', import.meta.url).href; document.head.append(rewardStyles);
+  const studyStyles = document.createElement('link'); studyStyles.rel = 'stylesheet';
+  studyStyles.href = new URL('./desktop-study.css', import.meta.url).href; document.head.append(studyStyles);
   document.querySelector('#app').innerHTML = `<a class="skip-link" href="#main">Skip to learning</a>
   <header class="topbar">
     <a class="brand" data-home href="#discover" aria-label="Mindora home"><img class="brand-mark" src="ui/assets/brand-mark.svg" alt="" width="40" height="40"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
@@ -169,6 +172,7 @@ export function renderShell(view, state, stats, html, rewards) {
   const id = state.active;
   const main = $('#main');
   const sameView = main.dataset.page === view;
+  const wasStudyLayout = main.classList.contains('has-desktop-study');
   const quizFocus = rememberQuizFocus(main, view);
   const disclosureSelectors = view === 'lesson' ? ['.style-disclosure', '.practice-hint']
     : view === 'courses' ? ['.phone-catalog']
@@ -182,6 +186,9 @@ export function renderShell(view, state, stats, html, rewards) {
   resizeGreeting = guestGreeting ? () => renderShell(view, state, stats, originalHtml, rewards) : null;
   if (guestGreeting && desktopLayout.matches) html = courseHomeView(state, { guest: true });
   const guided = html.includes('data-guided-step=');
+  const studyLayout = Boolean(desktopLayout.matches && rewards && /class="(?:quiet-home|learning-path course-path|roadmap-layout)/.test(html));
+  main.classList.toggle('has-desktop-study', studyLayout);
+  if (studyLayout) html = desktopStudyView(html, { rewards, minutes: state.minutes, signedIn });
   $('#navigation').innerHTML = brandNav(icon, view, 'side', signedIn);
   $('#top-navigation').innerHTML = brandNav(icon, view, 'top', signedIn);
   $('#mobile-navigation').classList.remove('has-roadmap');
@@ -203,6 +210,13 @@ export function renderShell(view, state, stats, html, rewards) {
   }
   main.dataset.courseHomeOwner = owner;
   updateAccountLinks();
+  if (studyLayout && (!sameView || !wasStudyLayout)) requestAnimationFrame(() => {
+    if (!main.classList.contains('has-desktop-study')) return;
+    const currentStep = main.querySelector('.learning-hub-node[aria-current="step"], .roadmap-stage.is-active .roadmap-stage-node, .roadmap-stage.is-ready .roadmap-stage-node, .course-path-node[aria-current="step"]');
+    if (currentStep && currentStep.getBoundingClientRect().bottom > innerHeight - 24) {
+      currentStep.scrollIntoView({ block: 'center', behavior: 'instant' });
+    }
+  });
   expandedPanels.forEach(selector => { const panel = main.querySelector(selector); if (panel) panel.open = true; });
   syncLessonFlow(main);
   restoreQuizFocus(main, quizFocus);
