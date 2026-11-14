@@ -5,6 +5,8 @@ import { createPlanController } from './plan-controller.js';
 import { createLearningLibrary } from './learning-library.js';
 import { createBuiltinSync } from './builtin-sync.js';
 import { restorePlan } from './learning-plan.js';
+import { normalizeRoadmap, restoreRoadmap, roadmapInput, roadmapStageStatuses, updateRoadmapStage } from './roadmap-model.js';
+import { buyRewardItem, claimDailyQuest, recordCheckReward, recordLessonReward, rewardScreen } from './roadmap-rewards.js';
 import { createWorkspaceStorage } from './workspace-storage.js';
 import { dayKey, dailyCourse, learningStats } from './progress.js';
 import { posterLayout, posterSvg } from './poster.js';
@@ -14,7 +16,7 @@ import { pathView, lesson, result, workView } from '../ui/views.js';
 import { dialogContent, resetWorkCheck, refreshPosterPreview, clearBudgetTotal } from '../ui/feedback.js';
 import { learningPlanView } from '../ui/learning-plan.js';
 import { languageCode } from './language.js';
-import { setLanguage } from '../ui/language.js';
+import { setLanguage, t } from '../ui/language.js';
 import { message } from '../ui/messages.js';
 import { resumeCursor, needsRecap, certificateEligible } from './resume.js';
 import { recapView, recapQuestion } from '../ui/recap.js';
@@ -23,6 +25,7 @@ import { downloadCertificate } from './certificate.js';
 import { getAccountState, openAccount, closeAccount, expireAccountSession } from '../ui/account.js';
 import { learningLibraryView, learningSyncView, loginRequiredView } from '../ui/learning-library.js';
 import { showWorkspaceConflict } from '../ui/workspace-conflict.js';
+import { roadmapView, rewardsView } from '../ui/roadmap.js';
 
 const $=s=>document.querySelector(s);
 const LEGACY_KEY='mindora.workspace.v1';
@@ -61,7 +64,11 @@ let challengeSeed = 0;
 let pendingLearning = null;
 let library;
 let builtins;
-const builtinFields = ['minutes', 'active', 'goals', 'progress', 'drafts', 'works', 'notes', 'sessions', 'certificates', 'practiceCount', 'studyDays', 'budgetQuiz', 'budgetActivity'];
+let roadmapWizard = null;
+let roadmapOperation = null;
+let roadmapError = '';
+let pendingRoadmapPrefill = null;
+const builtinFields = ['minutes', 'active', 'goals', 'progress', 'drafts', 'works', 'notes', 'sessions', 'certificates', 'practiceCount', 'studyDays', 'budgetQuiz', 'budgetActivity', 'learningRoadmap', 'learningRewards'];
 const builtinData = source => Object.fromEntries(builtinFields.filter(key => source[key] !== undefined).map(key => [key, source[key]]));
 let builtinSnapshot = JSON.stringify(builtinData(state));
 const plans = createPlanController({ state, save: saveLearning, render, isOpen: () => view === 'learning-plan' && Boolean(accountOwner),
@@ -79,6 +86,7 @@ library = createLearningLibrary({
     state.learningPlan = saved;
     state.learningCourse = { id: course.id, revision: course.revision, ownerId, dirty: false };
     plans.reset();
+    if (accountReady && saved.completed === saved.plan.steps.length) reconcileRoadmapCompletion(course.id);
     saveLocal();
     if (view === 'learning-plan') render();
   },
@@ -108,7 +116,7 @@ builtins = createBuiltinSync({
   updateMeta(patch) { state.builtinSync = { revision: null, ...state.builtinSync, ...patch }; saveLocal(); },
   onChange() {
     const panel = document.querySelector('[data-builtin-sync-panel]');
-    if (panel) panel.innerHTML = builtinSyncView();
+      if (panel) panel.innerHTML = builtinSyncView();
   },
   onUnauthorized: expiredSession,
 });
@@ -142,9 +150,29 @@ function canImportBuiltin() {
     && !Object.values(state.progress).some(Boolean) && !Object.keys(state.drafts).length;
 }
 
-function saveLearning() {
+function saveLearning(event) {
+  if (event) applyLessonReward(event, state.learningCourse?.id);
   saveLocal();
   if (!workspaceStorage.conflicted) library?.changed();
+}
+
+function applyLessonReward(event, courseId) {
+  if (!accountReady || !courseId) return;
+  if (event.type === 'check') {
+    state.learningRewards = recordCheckReward(state.learningRewards, courseId, event.index, event.correct);
+  } else {
+    state.learningRewards = recordLessonReward(state.learningRewards, courseId);
+    reconcileRoadmapCompletion(courseId);
+  }
+  save();
+}
+
+function reconcileRoadmapCompletion(courseId) {
+  const roadmap = restoreRoadmap(state.learningRoadmap);
+  const index = roadmap?.progress.findIndex(stage => stage.courseId === courseId && !stage.completed) ?? -1;
+  if (index < 0) return;
+  state.learningRoadmap = updateRoadmapStage(roadmap, index, courseId, true);
+  save();
 }
 
 const cloud = createCloudDrafts({
@@ -272,7 +300,7 @@ function modal(type, data) {
   if (!$("#modal").open) $("#modal").showModal();
 }
 function go(next, cursor = null) {
-  if (['path', 'lesson', 'learning-plan', 'recap', 'result', 'work', 'certificate'].includes(next)
+  if (['path', 'lesson', 'learning-plan', 'recap', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop'].includes(next)
     && !ensureLearning(() => go(next, cursor))) return;
   view = next;
   const learningPlanOpen = next === 'learning-plan';
@@ -306,12 +334,20 @@ function finishStep(){const id=state.active;const days = new Set(Array.isArray(s
 
 function render() {
   const stats = learningStats(state);
+  const rewards = accountOwner ? rewardScreen(state.learningRewards) : null;
+  const roadmap = accountOwner ? restoreRoadmap(state.learningRoadmap) : null;
+  const roadmapProps = { roadmap, wizard: roadmapWizard, active: roadmap ? roadmapStageStatuses(roadmap) : [],
+    busy: roadmapOperation?.kind, error: roadmapError, rewards, quests: rewards?.quests ?? [], items: rewards?.items ?? [] };
   let html;
   switch (view) {
     case 'discover': html = dashboard(state); break;
     case 'courses': html = learningLibraryView({ ...library.screen(), available: getAccountState().available,
       hasLocalLesson: Boolean(legacyLesson) && !state.importedLegacyLesson, hasLocalBuiltin: canImportBuiltin() }) + coursesPage(state); break;
-    case 'learning-plan': html = accountOwner ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({ ...plans.screen(), accountSaved: Boolean(state.learningCourse) }) : loginRequiredView(); break;
+    case 'learning-plan': html = accountOwner ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({ ...plans.screen(), accountSaved: Boolean(state.learningCourse), onRoadmap: roadmap?.progress.some(stage => !!stage.courseId && stage.courseId === state.learningCourse?.id) }) : loginRequiredView(); break;
+    case 'roadmap': html = roadmapView(roadmapProps); break;
+    case 'quests':
+    case 'shop': html = rewardsView(view, roadmapProps); break;
+    case 'profile': html = sidePage(view, state, rewards ? rewardsView('profile', roadmapProps) : ''); break;
     case 'path': html = pathView(state); break;
     case 'recap': html = recapView(state.active, recap); break;
     case 'certificate': html = certificateView(certificateData(state.active)); break;
@@ -333,8 +369,8 @@ function render() {
     case 'work': html = workView(state); break;
     default: html = sidePage(view, state);
   }
-  renderShell(view, state, stats, html);
-  if (accountOwner && ['courses', 'path', 'lesson', 'recap', 'result', 'work', 'certificate'].includes(view)) {
+  renderShell(view, state, stats, html, rewards);
+  if (accountOwner && ['courses', 'path', 'lesson', 'recap', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop', 'profile'].includes(view)) {
     const main = $('#main');
     if (main.insertAdjacentHTML) main.insertAdjacentHTML(view === 'lesson' ? 'beforeend' : 'afterbegin', `<div data-builtin-sync-panel>${builtinSyncView()}</div>`);
   }
@@ -462,13 +498,141 @@ function changeMinutes(value) {
   }
 }
 
+function beginRoadmap(goal = '', minutes = state.minutes) {
+  if (roadmapOperation) return;
+  roadmapWizard = { step: goal ? 1 : 0, goal, minutes, experience: '', evidence: '', motivation: '' };
+  roadmapError = '';
+  go('roadmap');
+}
+
+function roadmapErrorText(kind) {
+  return kind === 'stage'
+    ? t('We couldn’t open the lesson. Try again.', 'Не удалось открыть занятие. Попробуй ещё раз.', 'Сабақты ашу мүмкін болмады. Қайта байқап көр.')
+    : t('We couldn’t build your path. Your answers are still here. Try again.', 'Не удалось построить путь. Твои ответы сохранились в форме. Попробуй ещё раз.', 'Оқу жолы құрылмады. Жауаптарың сақталды. Қайта байқап көр.');
+}
+
+function runRoadmapOperation(kind, work) {
+  if (roadmapOperation || !ensureLearning()) return;
+  const operation = { kind, owner: accountOwner };
+  const isCurrent = () => roadmapOperation === operation && accountOwner === operation.owner;
+  roadmapOperation = operation;
+  roadmapError = '';
+  render();
+  void (async () => {
+    try { await work(isCurrent, operation.owner); }
+    catch (error) {
+      if (isCurrent()) roadmapError = error.message || roadmapErrorText(kind);
+    } finally {
+      if (isCurrent()) {
+        roadmapOperation = null;
+        if (view === 'roadmap') render();
+      }
+    }
+  })();
+}
+
+function captureRoadmapAnswers(form) {
+  if (!form || !roadmapWizard || roadmapOperation) return;
+  const fields = new FormData(form);
+  const wizard = roadmapWizard;
+  if (wizard.step === 0) wizard.goal = String(fields.get('goal') || '').trim();
+  if (wizard.step === 1) {
+    wizard.experience = String(fields.get('experience') || '');
+    wizard.evidence = String(fields.get('evidence') || '').trim();
+  }
+  if (wizard.step === 2) wizard.motivation = String(fields.get('motivation') || '');
+  if (wizard.step === 3) wizard.minutes = Number(fields.get('minutes'));
+}
+
+function submitRoadmap(form) {
+  if (!roadmapWizard || roadmapOperation) return;
+  captureRoadmapAnswers(form);
+  const wizard = roadmapWizard;
+  const valid = [
+    wizard.goal.length >= 3 && wizard.goal.length <= 180,
+    ['new', 'some', 'comfortable'].includes(wizard.experience),
+    ['work', 'personal', 'career', 'curiosity'].includes(wizard.motivation),
+    [5, 10, 20].includes(wizard.minutes),
+  ];
+  if (!valid[wizard.step]) {
+    roadmapError = t('Answer this question to continue.', 'Ответь на вопрос, чтобы продолжить.', 'Жалғастыру үшін сұраққа жауап бер.');
+    render();
+    return;
+  }
+  roadmapError = '';
+  if (wizard.step < 3) {
+    wizard.step++;
+    go('roadmap');
+    return;
+  }
+  const input = roadmapInput({ ...wizard, language: state.language });
+  if (!input) {
+    roadmapError = t('Check your answers and try again.', 'Проверь ответы и попробуй снова.', 'Жауаптарыңды тексеріп, қайта байқап көр.');
+    render();
+    return;
+  }
+  runRoadmapOperation('roadmap', async (isCurrent, owner) => {
+    let response;
+    try {
+      response = await fetch('/api/learning-roadmap', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Mindora-Account': owner },
+        body: JSON.stringify(input), signal: AbortSignal.timeout(38000),
+      });
+    } catch {
+      throw new Error(roadmapErrorText('roadmap'));
+    }
+    if (!isCurrent()) return;
+    if (response.status === 401) { expiredSession(); return; }
+    if (!response.ok) throw new Error(roadmapErrorText('roadmap'));
+    const data = await response.json().catch(() => null);
+    if (!isCurrent()) return;
+    const roadmap = normalizeRoadmap(data?.roadmap, input);
+    if (!roadmap) throw new Error(roadmapErrorText('roadmap'));
+    state.learningRoadmap = restoreRoadmap(roadmap);
+    state.minutes = input.minutes;
+    roadmapWizard = null;
+    save();
+    if (view === 'roadmap') go('roadmap');
+  });
+}
+
+function startRoadmapStage(index) {
+  if (roadmapWizard) return;
+  const roadmap = restoreRoadmap(state.learningRoadmap);
+  const selected = roadmap && roadmapStageStatuses(roadmap)[index];
+  if (!selected || selected.status === 'locked') return;
+  runRoadmapOperation('stage', async isCurrent => {
+    if (selected.courseId) {
+      if (!await library.load(selected.courseId)) throw new Error(roadmapErrorText('stage'));
+    } else {
+      const { title, objective } = roadmap.stages[index];
+      const { goal, level, levelReason } = roadmap;
+      const stageGoal = `${title} — ${goal}`.slice(0, 180);
+      const generated = await plans.generate(stageGoal, roadmap.minutes, { language: roadmap.language, roadmapStage: { goal, title, objective, level, levelReason } });
+      if (!isCurrent()) return;
+      if (!generated || !state.learningCourse?.id) {
+        throw new Error(roadmapErrorText('stage'));
+      }
+      state.learningRoadmap = updateRoadmapStage(roadmap, index, state.learningCourse.id);
+      save();
+    }
+    if (isCurrent() && view === 'roadmap') go('learning-plan');
+  });
+}
+
 document.addEventListener('submit', event => {
+  if (event.target.id === 'roadmap-form') {
+    event.preventDefault();
+    submitRoadmap(event.target);
+    return;
+  }
   if (event.target.id !== 'goal-form') return;
   event.preventDefault();
   const goal = $('#goal-input').value.trim();
   if (!goal) return;
   const minutes = normalizeMinutes($('#time-select')?.value ?? state.minutes);
-  const start = () => { changeMinutes(minutes); go('learning-plan'); void plans.generate(goal, minutes); };
+  if (!accountOwner) pendingRoadmapPrefill = { goal, minutes };
+  const start = () => { pendingRoadmapPrefill = null; beginRoadmap(goal, minutes); };
   if (ensureLearning(start)) start();
 });
 
@@ -508,6 +672,7 @@ document.addEventListener('input', event => {
 
 document.addEventListener('change', event => {
   if (event.target.id === 'interface-language') {
+    captureRoadmapAnswers($('#roadmap-form'));
     const goal = $('#goal-input')?.value;
     const planForm = $('#learning-plan-form');
     const inputs = planForm ? [planForm.elements.goal.value, planForm.elements.minutes.value] : null;
@@ -531,6 +696,29 @@ document.addEventListener('change', event => {
 document.addEventListener('click', event => {
   const button = event.target.closest('button,[data-home]');
   if (!button || button.disabled) return;
+  const { roadmapAction, roadmapStage, roadmapBuy, roadmapClaim } = button.dataset;
+  if (roadmapAction || roadmapBuy || roadmapClaim) {
+    if (!ensureLearning() || roadmapOperation) return;
+    if (roadmapAction === 'setup') beginRoadmap();
+    else if (roadmapAction === 'skip' && roadmapWizard) {
+      roadmapWizard = null;
+      roadmapError = '';
+      go(state.learningRoadmap ? 'roadmap' : 'discover');
+    } else if (roadmapAction === 'back' && roadmapWizard?.step > 0) {
+      captureRoadmapAnswers($('#roadmap-form'));
+      roadmapWizard.step--;
+      roadmapError = '';
+      go('roadmap');
+    } else if (roadmapAction === 'start' && /^[0-3]$/.test(roadmapStage)) {
+      startRoadmapStage(Number(roadmapStage));
+    } else if (roadmapBuy || roadmapClaim) {
+      state.learningRewards = roadmapBuy ? buyRewardItem(state.learningRewards, roadmapBuy)
+        : claimDailyQuest(state.learningRewards, roadmapClaim);
+      save();
+      render();
+    }
+    return;
+  }
   const { view: destination, course, step: requestedStep, choice, color, action, id } = button.dataset;
   if (button.dataset.learningOpen) {
     if (ensureLearning()) void library.load(button.dataset.learningOpen).then(ok => { if (ok) go('learning-plan'); });
@@ -567,10 +755,12 @@ document.addEventListener('click', event => {
   }
   if (button.matches('[data-home]')) {
     event.preventDefault();
+    captureRoadmapAnswers($('#roadmap-form'));
     rememberPosition();
     return go('discover');
   }
   if (destination || course) {
+    captureRoadmapAnswers($('#roadmap-form'));
     if (course && !ensureLearning(() => { selectCourse(course); if (button.hasAttribute('data-start')) resumeCourse(course); })) return;
     rememberPosition();
     if ($('#modal').open) $('#modal').close();
@@ -684,6 +874,9 @@ window.addEventListener('mindora:account-changed', event => {
   if (owner !== accountOwner) {
     const language = state.language;
     accountOwner = owner;
+    roadmapWizard = null;
+    roadmapOperation = null;
+    roadmapError = '';
     KEY = owner ? `${LEGACY_KEY}.${encodeURIComponent(owner)}` : `${LEGACY_KEY}.guest`;
     workspaceStorage = makeWorkspaceStorage();
     const restored = readState();
@@ -702,17 +895,27 @@ window.addEventListener('mindora:account-changed', event => {
   void Promise.all([library.setUser(account.user), builtins.setUser(account.user)]).then(() => {
     if (version !== accountEpoch || owner !== accountOwner) return;
     accountReady = Boolean(owner);
+    if (owner && state.learningPlan?.completed === state.learningPlan?.plan.steps.length && state.learningCourse?.id) {
+      reconcileRoadmapCompletion(state.learningCourse.id);
+    }
     if (reason === 'signup-profile-pending') return;
-    if (owner && pendingLearning) {
+    if (owner && signupComplete) {
+      const prefill = pendingRoadmapPrefill;
+      pendingRoadmapPrefill = null;
+      pendingLearning = null;
+      if (restoreRoadmap(state.learningRoadmap) && !prefill) go('roadmap');
+      else beginRoadmap(prefill?.goal, prefill?.minutes);
+    } else if (owner && pendingLearning) {
       const next = pendingLearning;
       pendingLearning = null;
-      if (!signupComplete) closeAccount();
+      closeAccount();
       next();
-    } else if (owner && !signupComplete && view === 'courses') {
+    } else if (owner && view === 'courses') {
       if (state.learningPlanOpen && state.learningPlan && state.learningCourse?.ownerId === owner) go('learning-plan');
       else {
         const resume = readBudgetResume(state);
         if (resume?.view === 'lesson' && !builtins.screen().conflict) resumeCourse(state.active, resume.step);
+        else if (restoreRoadmap(state.learningRoadmap)) go('roadmap');
         else render();
       }
     }

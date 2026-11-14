@@ -68,17 +68,17 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
       ? reviewError : '';
   }
 
-  async function generate(nextGoal, nextMinutes) {
-    if (busy || !canLearn()) return;
+  async function generate(nextGoal, nextMinutes, { roadmapStage, language = state.language } = {}) {
+    if (busy || !canLearn()) return false;
     goal = nextGoal;
     minutes = nextMinutes;
-    const input = planInput(goal, minutes, state.language);
+    const input = planInput(goal, minutes, language);
     if (!input) {
       error = 'Напиши цель от 3 до 180 символов и выбери время.';
       refresh();
       return;
     }
-    if (state.learningPlan?.plan.goal === input.goal && state.learningPlan.plan.minutes === input.minutes
+    if (!roadmapStage && state.learningPlan?.plan.goal === input.goal && state.learningPlan.plan.minutes === input.minutes
       && state.learningPlan.plan.language === input.language) {
       error = '';
       refresh();
@@ -104,7 +104,7 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
       const response = await fetch('/api/learning-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(accountId() ? { 'X-Mindora-Account': accountId() } : {}) },
-        body: JSON.stringify(input),
+        body: JSON.stringify(roadmapStage ? { ...input, roadmapStage } : input),
         signal: AbortSignal.timeout(57000),
       });
       const result = await response.json();
@@ -119,11 +119,13 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
       reviewError = '';
       reviewErrorFor = null;
       if (!onGenerated) save();
+      return true;
     } catch (failure) {
       if (version !== epoch || state.learningPlan !== previous) return;
       error = failure.name === 'TimeoutError' ? 'Поиск занял слишком много времени. Попробуй ещё раз.'
         : failure instanceof TypeError || failure instanceof SyntaxError ? 'Не удалось связаться с сервисом. Попробуй ещё раз.'
         : failure.message;
+      return false;
     } finally {
       if (version === epoch) { busy = null; refresh(); }
     }
@@ -259,9 +261,11 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
     }
     if (learningPage) {
       const assessment = lesson.step.teaching?.assessment;
+      let rewardEvent;
       if (learningPage === 'check' && page === 'check'
-        && (assessment ? isAssessmentReady(assessment, study.response) : study.choice !== null)) {
+        && !study.checked && (assessment ? isAssessmentReady(assessment, study.response) : study.choice !== null)) {
         study.checked = true;
+        rewardEvent = { type: 'check', index, correct: passedCheckpoint(lesson) };
       } else if (learningPage === 'back' && study.page > 0) {
         study.page -= 1;
       } else if (learningPage === 'next' && study.page < pages.length - 1
@@ -270,7 +274,7 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
       } else {
         return;
       }
-      save();
+      save(rewardEvent);
       refresh();
       if (assessment && learningPage === 'check') {
         document.getElementById('learning-check-feedback')?.focus();
@@ -288,7 +292,7 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
     }
     reviewError = '';
     reviewErrorFor = null;
-    save();
+    save(saved.completed === saved.plan.steps.length ? { type: 'complete' } : undefined);
     refresh();
     if (isOpen()) {
       if (learningStep === 'edit') document.querySelector('#learning-step-form textarea')?.focus();

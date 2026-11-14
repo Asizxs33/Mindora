@@ -1,8 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import { planInput, restorePlan } from '../core/learning-plan.js';
+import { ROADMAP_LEVELS, ROADMAP_LIMITS } from '../core/roadmap-model.js';
 import { accountSession, allowedOrigin, cloudSettings, json, matchesLearningAccount, readBody } from './cloud-api.js';
 import { generateDeepSeekPlan } from './deepseek-plan.js';
 import { learningCourseStore } from './learning-course-store.js';
+
+function roadmapStageInput(raw) {
+  if (!raw || !ROADMAP_LEVELS.includes(raw.level)) return null;
+  const stage = { level: raw.level };
+  for (const [field, bound] of [['goal', 'goal'], ['title', 'stageTitle'], ['objective', 'objective'], ['levelReason', 'levelReason']]) {
+    if (typeof raw[field] !== 'string' || raw[field].length > ROADMAP_LIMITS[bound]) return null;
+    const value = raw[field].trim();
+    if (!value || /[\u0000\u000b\u000c\u007f]/u.test(value)) return null;
+    stage[field] = value;
+  }
+  return stage;
+}
 
 export async function planApi(request, {
   apiKey = process.env.DEEPSEEK_API_KEY,
@@ -24,6 +37,11 @@ export async function planApi(request, {
     const body = await readBody(request);
     const input = planInput(body?.goal, body?.minutes, body?.language);
     if (!input) return json({ error: 'Напиши цель от 3 до 180 символов и выбери 5, 10 или 20 минут.' }, 400, cookies);
+    if (body.roadmapStage !== undefined) {
+      const stage = roadmapStageInput(body.roadmapStage);
+      if (!stage) return json({ error: 'Не удалось открыть этот этап пути.', code: 'INVALID_ROADMAP_STAGE' }, 400, cookies);
+      input.roadmapStage = stage;
+    }
     if (!apiKey) return json({ error: 'Генерация пути пока недоступна.' }, 503, cookies);
     const plan = await generate(input, apiKey);
     const saved = restorePlan({ plan });

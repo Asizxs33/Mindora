@@ -1,4 +1,6 @@
 import { budgetDraftKey, SESSION_MINUTES } from '../core/budget-session.js';
+import { restoreRoadmap } from '../core/roadmap-model.js';
+import { normalizeRewards } from '../core/roadmap-rewards.js';
 
 export const WORKSPACE_MAX_BYTES = 98_304;
 const courses = ['design', 'budget'];
@@ -101,6 +103,10 @@ export function validateBuiltinWorkspace(input) {
     if (!plain(value) || !['path', 'lesson', 'result'].includes(value.view) || !integer(value.step, 3)) return null;
     budgetActivity = { view: value.view, step: value.step };
   }
+  const learningRoadmap = input.learningRoadmap == null ? null : restoreRoadmap(input.learningRoadmap);
+  const learningRewards = input.learningRewards == null ? null : normalizeRewards(input.learningRewards);
+  if ((input.learningRoadmap != null && !learningRoadmap) || (input.learningRewards != null && !learningRewards)) return null;
   return { minutes, active, goals, progress: { design: 0, budget: 0, ...progress }, drafts, works, notes, sessions,
-    certificates, practiceCount, studyDays: [...new Set(studyDays)], budgetQuiz, ...(budgetActivity ? { budgetActivity } : {}) };
+    certificates, practiceCount, studyDays: [...new Set(studyDays)], budgetQuiz, ...(budgetActivity ? { budgetActivity } : {}),
+    ...(learningRoadmap ? { learningRoadmap } : {}), ...(learningRewards ? { learningRewards } : {}) };
 }
