@@ -10,9 +10,10 @@ This repository contains a working **interactive product prototype**, not a univ
 
 [Open Mindora on Vercel](https://mindora-livid-eta.vercel.app/).
 
-No registration, API keys, build step, or external JavaScript dependencies are needed.
+Guest lessons run without an account. Install the locked backend dependencies before starting locally.
 
 ```sh
+npm ci
 npm start
 ```
 
@@ -33,7 +34,7 @@ Open the printed local URL, normally `http://127.0.0.1:4173`.
 
 ## Product vision and limits
 
-The larger vision is goal-based learning across many fields: source-backed routes, adaptive practice, personal feedback, and useful independent work. Live AI, automatic research, real-time community features, accounts, cloud sync, and payments are **not implemented** in this prototype. The time selector records a preference; it does not yet adapt the sample curriculum length. Static official resource links are supplied rather than claiming to search the web.
+The prototype includes two curated courses, signed-in budget draft sync, and a DeepSeek learning-plan integration that needs a server API key. The budget course and generated lessons adapt to 5, 10 or 20 minutes. Community discussions, payments, and cloud sync for generated plans are outside this slice.
 
 Browser storage is local to a device and origin. Clearing site data removes progress. Export creations to keep separate copies. A completed path records practice, not an accredited qualification or an expert assessment.
 
@@ -41,6 +42,7 @@ Browser storage is local to a device and origin. Clearing site data removes prog
 
 - `ui/`: page templates, responsive styles, [Lucide](https://lucide.dev/icons/) icons and capybara illustrations. The icon license is in `ui/assets/LUCIDE-LICENSE.txt`.
 - `core/`: navigation and event handling, courses, validation, progress, persistence and export.
+- `api/` and `backend/`: Neon Auth sessions and server-side storage for signed-in budget drafts.
 - `tests/`: validation tests that run without a browser or network.
 - `server.mjs`: local static preview server.
 
@@ -57,6 +59,16 @@ Checks cover unsupported goals, contrast, incomplete and malformed work, strict 
 
 ## Deploy
 
-Import this repository into Vercel with Framework Preset **Other**, no build or install command, and the project root as the output directory. The production branch is `main`.
+Use the **Other** preset. `vercel.json` installs the locked dependencies and builds the browser files into `dist`. Vercel handles the API routes separately. The production branch is `main`.
+
+The draft sync preview uses a Neon Postgres database with Neon Auth. Connect the database to the intended Vercel environment and set a sensitive `NEON_AUTH_COOKIE_SECRET` (at least 32 random characters). The integration sets `DATABASE_URL` and `NEON_AUTH_BASE_URL`. Preview and Production can use separate Neon databases. The first authenticated draft request creates the table. Draft reads and writes are scoped to the verified session ID, and version checks prevent an unnoticed overwrite.
+
+On the site, open **Профиль** to create an account or sign in. In the budget editor click **Сохранить в аккаунте**. On another device, sign in at the same site and click **Открыть из аккаунта** in the profile. This transfers budget drafts and the open stage. Finished projects, poster work and notes remain local.
+
+For AI learning plans, add `DEEPSEEK_API_KEY` as a **Sensitive** server environment variable on the intended Vercel environment, then redeploy the branch. For this integrated preview, use the `feat/learning-experience` branch filter if supported. `DATABASE_URL` is required for the shared quota (10 requests per IP and 100 total per UTC day for that database). The first request creates the quota table. Never add the secret to a frontend file. Without a key, the page shows the unavailable state and offers ready-made courses.
+
+From the home page, enter a goal and choose 5, 10, or 20 minutes. The route calls [DeepSeek Flash with web search](https://api-docs.deepseek.com/guides/web_tools/) and links to returned search results. Each step asks the learner to record a result. DeepSeek [uses thinking mode](https://api-docs.deepseek.com/guides/thinking_mode/) to review each submission and suggest a follow-up action. The final step uses an independent task and the result screen shows the submitted work and its feedback or self-check criterion. Plan generation and reviews share the same quota.
+
+The header language selector offers English, Russian, and Kazakh. New lessons and reviews use the language selected when the lesson starts. Saved lessons and answers stay in their original language. Browser storage keeps the selected language, current route, and feedback.
 
 Google Fonts supplies Nunito when available; a system-font fallback is provided. No analytics or tracking scripts are included.

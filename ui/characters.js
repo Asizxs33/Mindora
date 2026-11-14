@@ -10,6 +10,8 @@
  * switch; optional [data-character-motion-status] receives the effective setting.
  * No course data, progress, controller hooks, or core storage are changed here.
  */
+import { t } from './language.js';
+
 const characters = Object.freeze({
   mino: { name: 'Mino', atlas: 'mino-poses-v3.png', fallback: 'capybara.png' },
   leo: { name: 'Leo', atlas: 'leo-poses-v3.png', fallback: 'programmer.png' },
@@ -56,7 +58,10 @@ function updateMotion() {
     control.setAttribute('aria-disabled', String(deviceReduced));
   });
   document.querySelectorAll('[data-character-motion-status]').forEach(element => {
-    element.textContent = deviceReduced ? 'Your device’s reduced-motion setting is active.' : enabled ? 'Gentle movement is on.' : 'Movement is off. Your buddies are still here.';
+    element.textContent = deviceReduced
+      ? t('Your device reduces motion.','На устройстве включено уменьшение движения.','Құрылғыда қозғалыс азайтылған.')
+      : enabled ? t('Motion is on.','Анимация включена.','Анимация қосулы.')
+        : t('Motion is off.','Анимация выключена.','Анимация өшірулі.');
   });
 }
 
@@ -132,7 +137,11 @@ function greet(element) {
   // Restart only this brief gesture, not the surrounding learning UI.
   void element.offsetWidth;
   element.classList.add('character-hello');
-  const messages = [`${name}: Hi! I’m here with you.`, `${name}: Little steps count.`, `${name}: You’ve got this!`];
+  const messages = [
+    t(`${name}: Hi! I’m here with you.`, `${name}: Привет! Я рядом.`, `${name}: Сәлем! Қасыңдамын.`),
+    t(`${name}: Keep going.`, `${name}: Продолжай.`, `${name}: Жалғастыра бер.`),
+    t(`${name}: You’ve got this!`, `${name}: У тебя получится!`, `${name}: Қолыңнан келеді!`),
+  ];
   if (statusElement) statusElement.textContent = messages[(index - 1) % messages.length];
   const timer = setTimeout(() => {
     if (element.isConnected) {

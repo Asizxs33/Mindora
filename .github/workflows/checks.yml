@@ -34,5 +34,6 @@ jobs:
             esac
           done < "$RUNNER_TEMP/mindora-changed-files"
           exit "$invalid"
+      - run: npm ci
       - run: npm run check
       - run: npm test

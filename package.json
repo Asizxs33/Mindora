@@ -6,8 +6,14 @@
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
-    "test": "node --test tests/engine.test.js",
-    "check": "node --check core/app.js && node --check core/engine.js && node --check core/progress.js && node --check core/poster.js && node --check ui/dashboard.js && node --check ui/views.js && node --check ui/shell.js && node --check ui/feedback.js && node --check ui/icons.js"
+    "test": "node --test",
+    "check": "node --check core/app.js && node --check core/engine.js && node --check core/budget-session.js && node --check core/progress.js && node --check core/poster.js && node --check ui/dashboard.js && node --check ui/views.js && node --check ui/budget-session.js && node --check ui/shell.js && node --check ui/feedback.js && node --check ui/icons.js && node --check api/account.js && node --check api/budget-draft.js && node --check backend/cloud-api.js && node --check backend/budget-workspace.js && node --check backend/draft-store.js && node --check core/cloud-drafts.js && node --check ui/cloud-drafts.js && node --check server.mjs && node --check scripts/build.mjs"
   },
-  "engines": {"node": ">=20"}
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@neondatabase/auth": "0.7.0-beta",
+    "@neondatabase/serverless": "1.2.1"
+  }
 }

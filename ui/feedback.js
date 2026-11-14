@@ -2,6 +2,7 @@ import { escapeHtml } from '../core/engine.js';
 import { icon } from './icons.js';
 import { posterHtml } from './views.js';
 import { character } from './characters.js';
+import { t } from './language.js';
 
 export function dialogContent(type, data) {
   const content = {
@@ -20,11 +21,11 @@ export function resetWorkCheck() {
   const panel = document.querySelector('#checks-container');
   if (panel) panel.replaceChildren();
   const button = document.querySelector('[data-action="check-work"]');
-  if (button) button.innerHTML = `Check my work ${icon('arrow', 16)}`;
+  if (button) button.innerHTML = `${t('Check my work','Проверить работу','Жұмысты тексеру')} ${icon('arrow', 16)}`;
   const buddy = document.querySelector('.lesson-buddy [data-character-mood]');
   if (buddy) buddy.dataset.characterMood = 'explaining';
   const message = document.querySelector('.lesson-buddy .buddy-bubble p');
-  if (message) message.textContent = 'Keep making it yours. Check your work again when you’re ready.';
+  if (message) message.textContent = t('Check your work again when you’re ready.','Проверь работу снова, когда будешь готов.','Дайын болғанда жұмысыңды қайта тексер.');
 }
 
 export function refreshPosterPreview(draft) {

@@ -2,6 +2,7 @@ import { brandNav, courseNames } from './dashboard.js';
 import { icon } from './icons.js';
 import { character, mountCharacters } from './characters.js';
 import { mountPresentation } from './presentation.js';
+import { languagePicker, t } from './language.js';
 
 const $ = selector => document.querySelector(selector);
 
@@ -64,12 +65,17 @@ export function renderShell(view, state, stats, html) {
   $('#navigation').innerHTML = brandNav(icon, view, 'side');
   $('#top-navigation').innerHTML = brandNav(icon, view, 'top');
   $('#mobile-navigation').innerHTML = brandNav(icon, view, 'bottom');
-  $('#top-actions').innerHTML = `<button class="header-pace" data-view="profile" aria-label="My daily pace: ${state.minutes} minutes">${icon('clock', 17)}<span>${state.minutes} min a day</span></button><button class="header-profile" data-view="profile" aria-label="Open my profile">${icon('user', 20)}</button>`;
+  $('#top-actions').innerHTML = `${languagePicker()}<button class="header-pace" data-view="profile" aria-label="${t('Daily learning time','Время на обучение','Оқу уақыты')}">${icon('clock', 17)}<span>${t(`${state.minutes} min a day`, `${state.minutes} мин в день`, `Күніне ${state.minutes} мин`)}</span></button><button class="header-profile" data-view="profile" aria-label="${t('Open my profile','Открыть профиль','Профильді ашу')}">${icon('user', 20)}</button>`;
+  $('.skip-link').textContent = t('Skip to learning','К содержимому','Мазмұнға өту');
+  $('.modal-close').setAttribute('aria-label', t('Close window','Закрыть окно','Терезені жабу'));
+  $('.side-companion strong').textContent = t('Learn one step at a time.','Учись шаг за шагом.','Біртіндеп үйрен.');
+  $('.side-companion p').textContent = t('Go at your own pace.','Продолжай в своём темпе.','Өз қарқыныңмен жалғастыр.');
+  $('.side-companion .text-link').innerHTML = `${t('About Mindora','О Mindora','Mindora туралы')} ${icon('arrow', 15)}`;
   main.classList.toggle('dashboard-main', view === 'discover');
   main.classList.toggle('inside-main', view !== 'discover');
   main.dataset.page = view;
   main.innerHTML = html;
   restoreQuizFocus(main, quizFocus);
-  const titles = { discover: 'Learn', courses: 'My courses', practice: 'Practice', path: 'My learning path', lesson: courseNames[id], result: 'You did it', work: 'My work', achievements: 'Milestones', community: 'Community', profile: 'Profile' };
+  const titles = { discover: t('Learn','Обучение','Оқу'), courses: t('My courses','Мои курсы','Курстарым'), practice: t('Practice','Практика','Жаттығу'), path: t('My learning path','Мой маршрут','Оқу жолым'), lesson: courseNames[id], 'learning-plan': t('My lesson','Моё занятие','Сабағым'), result: t('You did it','Готово','Дайын'), work: t('My work','Мои работы','Жұмыстарым'), achievements: t('Milestones','Достижения','Жетістіктер'), community: t('Community','Сообщество','Қауымдастық'), profile: t('Profile','Профиль','Профиль') };
   document.title = `${titles[view] || 'Learn'} · Mindora`;
 }
