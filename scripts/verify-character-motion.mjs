@@ -1,4 +1,4 @@
-// Check real rendered GIF frames, not just an animation-enabled flag.
+// Check real rendered animation frames, not just an animation-enabled flag.
 // Start npm start first; PLAYWRIGHT_MODULE may point to an installed Playwright.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -46,18 +46,18 @@ try {
 
   await page.evaluate(() => window.renderMotionFixture('mia'));
   await playing();
-  await page.waitForFunction(() => document.querySelector('.mindora-character')?.dataset.characterPlaying === 'false');
-  const restingSince = Date.now();
-  await playing();
-  const pause = Date.now() - restingSince;
-  assert.ok(pause > 2600 && pause < 3800, `Human mentor rest lasted ${pause} ms`);
-  assert.ok(new Set(await frameHashes()).size >= 3, 'A human mentor repeats the gesture after resting');
-  checks += 2;
+  const uri = await image.getAttribute('src');
+  await page.waitForTimeout(1950);
+  assert.equal(new Set(await frameHashes()).size, 1, 'Human mentor holds the resting pose');
+  await page.waitForTimeout(1850);
+  assert.ok(new Set(await frameHashes(10)).size >= 3, 'Human gesture repeats after its three-second hold');
+  assert.equal(await image.getAttribute('src'), uri, 'No swapping between still and animation');
+  checks += 3;
 
   for (const scene of minoScenes) {
     await page.evaluate(mood => window.renderMotionFixture('mino', false, mood), scene.mood);
     await playing();
-    assert.ok((await image.getAttribute('src')).endsWith(scene.image), `${scene.mood} must select its own supplied animation`);
+    assert.ok((await image.getAttribute('src')).endsWith(scene.image.replace('.gif', '.webp')), `${scene.mood} must select its own supplied animation`);
     // Some authored scenes hold their opening pose for 480 ms before a gesture.
     assert.ok(new Set(await frameHashes(9)).size >= 3, `${scene.mood} must visibly move before any tap`);
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -73,11 +73,8 @@ try {
   const input = page.locator('#motion-input');
   await input.fill('Learn Python');
   const before = await input.boundingBox();
-  await page.waitForFunction(() => document.querySelector('.mindora-character')?.dataset.characterPlaying === 'false');
-  // A learner glancing at their mentor should see the next gesture quickly.
-  // The old seven-second pause fails this assertion.
-  await page.waitForFunction(() => document.querySelector('.mindora-character')?.dataset.characterPlaying === 'true', null, { timeout: 2400 });
-  assert.ok(new Set(await frameHashes()).size >= 3, 'A cached GIF must visibly replay');
+  await page.waitForTimeout(3900);
+  assert.ok(new Set(await frameHashes(14)).size >= 3, 'The native animation replays without a tap');
   assert.deepEqual(await input.boundingBox(), before, 'Motion must not move the input');
   assert.equal(await input.inputValue(), 'Learn Python');
   assert.equal(await input.evaluate(element => element === document.activeElement), true);
@@ -108,21 +105,31 @@ try {
   assert.ok(new Set(await frameHashes()).size >= 3, 'Scrolling back to a mentor resumes real movement');
   checks += 3;
 
+  // A new document drops decoded image references before exercising failures.
+  await page.reload();
+  await page.evaluate(async () => {
+    const { character, mountCharacters } = await import('/ui/characters.js');
+    document.body.innerHTML = '<main id="motion-fixture"></main>';
+    window.renderMotionFixture = (kind, offscreen, mood) => {
+      document.querySelector('#motion-fixture').innerHTML = character(kind, mood);
+      mountCharacters();
+    };
+  });
   let attempts = 0;
-  await page.route('**/design-pack/mino-explain.gif', route => ++attempts === 1 ? route.abort('failed') : route.continue());
+  await page.route('**/characters/mino-scenes/02-bright-idea.webp', route => ++attempts === 1 ? route.abort('failed') : route.continue());
   await page.evaluate(() => { scrollTo(0, 0); window.renderMotionFixture('mino', false, 'explaining'); });
   await page.waitForFunction(() => document.querySelector('.mindora-character')?.dataset.characterPlaying === 'true', null, { timeout: 6000 });
-  assert.equal(attempts, 2, 'One transient GIF failure recovers without a click or full reload');
+  assert.equal(attempts, 2, 'One transient animation failure recovers without a click or full reload');
   assert.ok(new Set(await frameHashes()).size >= 3);
   checks += 2;
 
   let failures = 0;
-  await page.route('**/design-pack/mino-celebrate.gif', route => { failures++; return route.abort('failed'); });
+  await page.route('**/characters/mino-scenes/07-applause.webp', route => { failures++; return route.abort('failed'); });
   await page.evaluate(() => window.renderMotionFixture('mino', false, 'celebrate'));
   await page.waitForTimeout(8800);
-  assert.equal(failures, 3, 'A broken GIF stops after the initial request and two retries');
+  assert.equal(failures, 3, 'A broken animation stops after the initial request and two retries');
   assert.match(await image.getAttribute('src'), /\.png$/);
-  assert.equal(new Set(await frameHashes(3)).size, 1, 'A failed GIF keeps a usable still illustration');
+  assert.equal(new Set(await frameHashes(3)).size, 1, 'A failed animation keeps a usable still illustration');
   checks += 3;
   assert.deepEqual(errors, []);
   console.log(`Passed ${checks} visible-motion checks at a 390 px mobile viewport.`);

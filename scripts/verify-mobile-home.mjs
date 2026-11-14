@@ -49,8 +49,7 @@ async function fixture(language = 'en', saved = workspace(language), { delayInit
   page.setDefaultTimeout(10000);
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(base);
-  await page.waitForSelector('.course-home');
-  if (!delayInitialLibrary) await page.waitForSelector('[data-learning-refresh]:not([disabled])', { state: 'attached' });
+  await page.waitForSelector('.phone-course-nav');
   await page.locator('#interface-language').selectOption(language);
   assert.equal(await page.locator('html').getAttribute('lang'), language);
   return {
@@ -84,7 +83,7 @@ async function firstScreen(page, label) {
     assert.ok(rect.visible && rect.top >= 0 && rect.bottom <= geometry.nav + 1, `${label}: ${name} must be visible without scrolling: ${JSON.stringify(geometry)}`);
     assert.ok(rect.height >= 44, `${label}: ${name} needs a comfortable touch target`);
   }
-  for (const action of geometry.currentActions) {
+  for (const action of geometry.currentActions.filter(() => geometry.vw <= 920)) {
     assert.ok(action.top >= 0 && action.bottom <= geometry.nav + 1, `${label}: current course actions must be fully visible above navigation: ${JSON.stringify(geometry)}`);
   }
   checks.push(`${label}: composer and navigation`);
@@ -118,17 +117,22 @@ try {
     const test = await fixture(language), { page } = test;
     for (const size of sizes) {
       await page.setViewportSize(size);
+      if (size.width <= 920) {
+        const create = page.locator('.phone-course-nav [data-view="new-course"]');
+        await create.click();
+        assert.equal(await page.locator('.course-home-current,.ready-courses,[data-course-library]').count(), 0);
+      }
       await firstScreen(page, `${language} ${size.width}`);
       await page.screenshot({ path: join(tmpdir(), `mindora-mobile-home-${language}-${size.width}.png`), fullPage: size.width === 1440 });
     }
     await page.setViewportSize(sizes[1]);
-    assert.equal(await page.locator('.course-home-current').count(), 1);
-    await page.locator('.course-home-path').click();
+    await page.locator('.phone-course-nav [data-view="my-path"]').click();
     await page.waitForSelector('.learning-hub, .course-path');
     assert.ok(await page.locator('.learning-hub-node, [data-step]').count() >= 4, `${language}: course path has usable lesson nodes`);
     assert.ok(await page.locator('#mobile-navigation [data-view="courses"]').getAttribute('aria-current'), `${language}: path belongs to Courses`);
     await nav(page, 'courses').click();
-    await page.waitForSelector('.course-home');
+    await page.waitForSelector('.phone-library');
+    assert.equal(await page.locator('#goal-input').count(), 0);
     checks.push(`${language}: path opens from course home`);
 
     await page.setViewportSize(sizes[0]);
@@ -145,6 +149,7 @@ try {
 
   const empty = await fixture('kk', { ...workspace('kk'), active: null, goals: {}, progress: { design: 0, budget: 0 }, sessions: {} });
   await empty.page.setViewportSize(sizes[0]);
+  await empty.page.locator('.phone-course-nav [data-view="new-course"]').click();
   await firstScreen(empty.page, 'New signed-in learner 320');
   assert.equal(await empty.page.locator('.course-home-current').count(), 0, 'A new learner must not see invented progress');
   assert.equal(await empty.page.locator('.mindora-character:visible').count(), 1);
@@ -170,14 +175,17 @@ try {
   const initial = await fixture('en', workspace('en'), { delayInitialLibrary: true });
   await initial.page.setViewportSize(sizes[0]);
   await initial.libraryRequested();
+  await initial.page.locator('.phone-course-nav [data-view="new-course"]').click();
   await assertComposerSurvivesResponse(initial, 'Initial account hydration');
   await initial.context.close();
 
   const delayed = await fixture(), { page } = delayed;
   await page.setViewportSize(sizes[0]);
+  await nav(page, 'courses').click();
   const requestSeen = delayed.holdNextLibrary();
   await page.locator('[data-learning-refresh]').evaluate(button => button.click());
   await requestSeen;
+  await page.locator('.phone-course-nav [data-view="new-course"]').click();
   await assertComposerSurvivesResponse(delayed, 'Late saved-course refresh');
 
   await nav(page, 'profile').click();

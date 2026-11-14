@@ -186,3 +186,17 @@ body.is-learning .ai-lesson-page-navigation { bottom:0; }
   .instructional-palette-swatches > div { flex-direction: column; align-items: flex-start; }
   .instructional-palette-swatch { width: 100%; }
 }
+@media (max-width: 760px) {
+  .ai-lesson.has-course .ai-lesson-heading h1 { font-size:16px; line-height:1.35; margin:0; overflow-wrap:anywhere; }
+  .ai-lesson.has-course .ai-lesson-heading-meta, .ai-lesson.has-course .ai-lesson-heading > .text-link { display:none; }
+  .ai-lesson.has-course .ai-lesson-overall { min-height:24px; }
+  .ai-lesson-reader .ai-lesson-task-meta { padding-top:8px; }
+  .ai-lesson-reader .ai-lesson-stages { padding-block:7px; border-bottom:1px solid #eee3d9; }
+  .ai-lesson-reader .ai-lesson-page-heading h2 { font-size:clamp(23px,6vw,30px); line-height:1.22; overflow-wrap:anywhere; }
+  .ai-lesson-reader .template-theory .mentor-scene { grid-template-columns:minmax(0,1fr); gap:10px; }
+  .ai-lesson-reader .template-theory .mentor-figure { width:clamp(120px,35vw,170px); justify-self:center; }
+  .ai-lesson-reader .template-theory .mentor-figure .mindora-character { --character-size:140px; --character-height:180px; }
+  .ai-lesson-reader .template-theory .mentor-dialogue::before { left:calc(50% - 7px); top:-8px; transform:rotate(135deg); }
+  .ai-lesson-reader .ai-lesson-page-navigation { position:sticky; bottom:0; z-index:3; background:#fff; border-top:1px solid #e9ddd3; }
+  .ai-lesson-reader :is(input,textarea,button) { scroll-margin-bottom:84px; }
+}

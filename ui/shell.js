@@ -1,6 +1,6 @@
 import { brandNav, courseHomeView, courseNames } from './dashboard.js';
 import { icon } from './icons.js';
-import { character, mountCharacters } from './characters.js';
+import { mountCharacters } from './characters.js';
 import { mountPresentation } from './presentation.js';
 import { languagePicker, t } from './language.js';
 import { mountLessonFlow, syncLessonFlow } from './lesson-flow.js';
@@ -73,7 +73,6 @@ export function mountShell() {
   <aside class="sidebar" aria-label="Main menu">
     <nav id="navigation" aria-label="Main navigation"></nav>
     <div class="side-companion">
-      ${character('mino', 'welcome', 'sidebar-character')}
       <strong></strong><p></p><button type="button" class="text-link" data-action="about"></button>
     </div>
   </aside>
@@ -105,7 +104,11 @@ function updateCourseHome(main, html, sameView) {
   template.innerHTML = html;
   const next = template.content.querySelector('.course-home');
   if (!next) return false;
+  const currentNav = main.querySelector('.phone-course-nav');
+  const nextNav = template.content.querySelector('.phone-course-nav');
+  if (Boolean(currentNav) !== Boolean(nextNav)) return false;
   const sameLanguage = current.dataset.language === next.dataset.language;
+  if (currentNav && !sameLanguage) currentNav.replaceWith(nextNav);
   const goalValue = current.querySelector('#goal-input')?.value;
   const retained = new Set();
   const ordered = [];
@@ -135,7 +138,7 @@ function updateCourseHome(main, html, sameView) {
   current.dataset.language = next.dataset.language;
   if (!sameLanguage && goalValue !== undefined) current.querySelector('#goal-input').value = goalValue;
   // The controller reattaches its current sync notice after rendering.
-  [...main.children].filter(child => child !== current).forEach(child => child.remove());
+  main.querySelector(':scope > [data-builtin-sync-panel]')?.remove();
   return true;
 }
 

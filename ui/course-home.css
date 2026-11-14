@@ -159,3 +159,32 @@ body.quiet-shell.has-course-home:not(.is-guided) #main { max-width: 800px; paddi
   .course-home-heading { padding: 18px 24px; border-radius: 22px; background: linear-gradient(110deg, #fff5e9, #fffaf5); grid-template-columns: minmax(0, 1fr) 150px; }
   .course-home-heading .course-home-mino { --character-size: 150px; --character-height: 150px; width: 150px; height: 150px; }
 }
+
+.phone-course-nav { display:none; }
+@media (max-width:920px) {
+  .phone-course-nav { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:3px; padding:4px; margin:0 0 18px; border-radius:15px; background:#f5f1ec; }
+  .phone-course-nav button { display:flex; align-items:center; justify-content:center; gap:5px; min-width:0; min-height:44px; padding:5px; color:#6c5e54; border:0; border-radius:11px; background:transparent; box-shadow:none; font:inherit; font-size:clamp(12px,3.35vw,15px); font-weight:650; }
+  .phone-course-nav button[aria-current] { color:#923a07; background:white; box-shadow:0 1px 4px #57321623; }
+  .phone-course-nav svg { flex-shrink:0; }
+  .phone-library h1 { margin:0 0 18px; font-size:28px; }
+  .phone-library .learning-library { margin-top:0; }
+  .phone-library .course-grid { grid-template-columns:minmax(0,1fr); }
+  .phone-library .new-course-button { display:none; }
+  .phone-catalog { margin-top:20px; border-top:1px solid #e9ded4; }
+  .phone-catalog summary { display:flex; align-items:center; gap:10px; min-height:54px; font-weight:700; color:#844119; cursor:pointer; list-style:none; }
+  .phone-catalog summary svg:last-child { margin-left:auto; }
+  .phone-catalog[open] summary svg:last-child { transform:rotate(180deg); }
+  .phone-catalog .ready-courses { margin-top:0; }
+  .phone-catalog .ready-courses h2 { display:none; }
+  #main:has(.phone-course-nav) { padding-bottom:calc(94px + env(safe-area-inset-bottom)); }
+  #main:has(.phone-course-nav) > [data-builtin-sync-panel] .learning-sync:not(.needs-attention):not([aria-busy="true"]) { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+  .phone-course-nav ~ .roadmap-layout .roadmap-aside, .phone-course-nav ~ .roadmap-layout .roadmap-new-goal { display:none; }
+  .phone-course-nav ~ .roadmap-layout .roadmap-stages { --roadmap-node:72px; margin-top:8px; padding-top:37px; }
+  .phone-course-nav ~ .roadmap-layout .roadmap-stage { min-height:155px; padding-bottom:24px; }
+  .phone-course-nav ~ .roadmap-layout .roadmap-tutor { margin:0; }
+  .phone-course-nav ~ .roadmap-layout .roadmap-about { margin-block:0; }
+  .phone-course-nav ~ .roadmap-layout .roadmap-heading h1 { line-height:1.22; overflow-wrap:anywhere; }
+  .course-home-heading .course-home-mino { width:clamp(94px,24vw,140px); height:clamp(94px,24vw,140px); }
+  .course-home-heading { grid-template-columns:minmax(0,1fr) auto; }
+  .phone-course-nav ~ .roadmap-empty .roadmap-guide { --character-size:clamp(120px,30vw,170px); }
+}

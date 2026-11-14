@@ -11,7 +11,7 @@ import { createWorkspaceStorage } from './workspace-storage.js';
 import { dayKey, dailyCourse, learningStats } from './progress.js';
 import { posterLayout, posterSvg } from './poster.js';
 import { mountShell, renderShell } from '../ui/shell.js';
-import { courseHomeView, readyCoursesView, coursesPage, sidePage, courseNames, lessonNames } from '../ui/dashboard.js';
+import { phoneCourseNav, phoneCourseLibrary, courseHomeView, readyCoursesView, coursesPage, sidePage, courseNames, lessonNames } from '../ui/dashboard.js';
 import { pathView, lesson, result, workView } from '../ui/views.js';
 import { dialogContent, resetWorkCheck, refreshPosterPreview, clearBudgetTotal } from '../ui/feedback.js';
 import { learningPlanView } from '../ui/learning-plan.js';
@@ -57,6 +57,7 @@ const state = readState();
 state.language = languageCode(state.language);
 setLanguage(state.language);
 const resume = readBudgetResume(state);
+const phoneLayout = window.matchMedia?.('(max-width: 920px)');
 let view = 'discover';
 let startingNew = false;
 let introduction = { step: 0, name: '', topic: '', goal: '', minutes: state.minutes };
@@ -401,7 +402,8 @@ function modal(type, data) {
   if (!$("#modal").open) $("#modal").showModal();
 }
 function go(next, cursor = null, newCourse = false) {
-  if (next === 'my-path') return openMyPath();
+  if (next === 'my-path') { roadmapWizard = null; return openMyPath(); }
+  if (next === 'new-course') roadmapWizard = null;
   if (['path', 'builtin-path', 'course-path', 'lesson', 'learning-plan', 'return-review', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop'].includes(next)
     && !ensureLearning(() => go(next, cursor, newCourse))) return;
   if (next === 'course-path' && !state.learningPlan) return go('courses');
@@ -508,9 +510,25 @@ function courseLibraryHtml() {
     + coursesPage(state, { showHeading: false, showCurrentLesson: !represented, showReadyCourses: false });
 }
 
+function followingStage() {
+  const path = pathForLesson(state.learningCourse?.id);
+  if (!path || path.id !== state.learningRoadmap?.id) return null;
+  const index = path.progress.findIndex(stage => stage.courseId === state.learningCourse?.id);
+  if (index < 0 || !path.progress[index].completed || index + 1 >= path.stages.length) return null;
+  return index + 1;
+}
+
 function homeScreen() {
   return courseHomeView(state, { current: currentHomeCourse(), libraryHtml: courseLibraryHtml(),
     readyHtml: readyCoursesView(starterCourses(state.language, state.minutes), state.minutes) });
+}
+
+function phonePath(roadmapProps) {
+  const kind = selectedHomeKind();
+  if (kind === 'builtin' || kind === 'lesson') {
+    return quietHomeView({ ...state, lastLearningType: kind === 'builtin' ? 'builtin' : 'ai' });
+  }
+  return roadmapView({ ...roadmapProps, wizard: null, rewards: null });
 }
 
 function render() {
@@ -521,13 +539,17 @@ function render() {
     busy: roadmapOperation?.kind, error: roadmapError, rewards, quests: rewards?.quests ?? [], items: rewards?.items ?? [] };
   let html;
   switch (view) {
-    case 'discover': html = !accountOwner || startingNew
-      ? guidedStartView({ ...introduction, signedIn: Boolean(accountOwner) }) : homeScreen(); break;
-    case 'courses': {
-      html = homeScreen();
+    case 'discover':
+      if (!accountOwner || startingNew) html = guidedStartView({ ...introduction, signedIn: Boolean(accountOwner) });
+      else html = phoneLayout?.matches ? phonePath(roadmapProps) : homeScreen();
       break;
-    }
-    case 'learning-plan': html = accountOwner ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({ ...plans.screen(), accountSaved: Boolean(state.learningCourse), onRoadmap: Boolean(pathForLesson(state.learningCourse?.id)), rewards }) : loginRequiredView(); break;
+    case 'new-course': html = courseHomeView(state, { composerOnly: true }); break;
+    case 'courses':
+      html = accountOwner && phoneLayout?.matches
+        ? phoneCourseLibrary(courseLibraryHtml(), readyCoursesView(starterCourses(state.language, state.minutes), state.minutes))
+        : homeScreen();
+      break;
+    case 'learning-plan': html = accountOwner ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({ ...plans.screen(), accountSaved: Boolean(state.learningCourse), nextStage: followingStage(), onRoadmap: Boolean(pathForLesson(state.learningCourse?.id)), rewards }) : loginRequiredView(); break;
     case 'roadmap': html = roadmapView(roadmapProps); break;
     case 'quests':
     case 'shop': html = rewardsView(view, roadmapProps); break;
@@ -554,6 +576,12 @@ function render() {
     case 'result': html = result(state); break;
     case 'work': html = workView(state); break;
     default: html = sidePage(view, state);
+  }
+  if (accountOwner && phoneLayout?.matches && !startingNew) {
+    const section = view === 'roadmap' && roadmapWizard ? 'new-course'
+      : ['discover', 'path', 'builtin-path', 'course-path', 'roadmap'].includes(view) ? 'my-path'
+      : ['courses', 'new-course'].includes(view) ? view : null;
+    if (section) html = phoneCourseNav(section) + html;
   }
   renderShell(view, state, stats, html, rewards);
   if (accountOwner && ['discover', 'courses', 'path', 'builtin-path', 'course-path', 'lesson', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop', 'profile'].includes(view)) {
@@ -1072,17 +1100,19 @@ document.addEventListener('click', event => {
     if (action === 'next') advanceIntroduction();
     else if (action === 'back') { introduction.step = Math.max(0, introduction.step - 1); render(); }
     else if (action === 'start') beginIntroductionCourse();
+    else if (action === 'new' && accountOwner && phoneLayout?.matches) go('new-course');
     else if (action === 'new') { startingNew = true; introduction = { step: 2, name: getAccountState().profile?.name || '', topic: '', goal: '', minutes: state.minutes }; view = 'discover'; render(); }
     return;
   }
   if (button.dataset.introTopic) { introduction.topic = button.dataset.introTopic; render(); document.querySelector(`[data-intro-topic="${introduction.topic}"]`)?.focus({ preventScroll: true }); return; }
   if (button.dataset.introMinutes) { introduction.minutes = normalizeMinutes(button.dataset.introMinutes); render(); document.querySelector(`[data-intro-minutes="${introduction.minutes}"]`)?.focus({ preventScroll: true }); return; }
-  if (button.dataset.courseMinutes) { changeMinutes(button.dataset.courseMinutes); render(); document.querySelector(`[data-course-minutes="${state.minutes}"]`)?.focus({ preventScroll: true }); return; }
+  if (button.dataset.courseMinutes) { const catalogOpen = Boolean(button.closest('.phone-catalog[open]')); changeMinutes(button.dataset.courseMinutes); render(); if (catalogOpen && $('.phone-catalog')) $('.phone-catalog').open = true; document.querySelector(`[data-course-minutes="${state.minutes}"]`)?.focus({ preventScroll: true }); return; }
   if (button.dataset.starterCourse) { void startReadyCourse(button.dataset.starterCourse, button.dataset.starterMinutes); return; }
   const { roadmapAction, roadmapStage, roadmapBuy, roadmapClaim } = button.dataset;
   if (roadmapAction || roadmapBuy || roadmapClaim) {
     if (!ensureLearning() || roadmapOperation) return;
-    if (roadmapAction === 'setup') beginRoadmap();
+    if (roadmapAction === 'setup' && phoneLayout?.matches) go('new-course');
+    else if (roadmapAction === 'setup') beginRoadmap();
     else if (roadmapAction === 'skip' && roadmapWizard) {
       roadmapWizard = null;
       roadmapError = '';
@@ -1108,6 +1138,11 @@ document.addEventListener('click', event => {
     return;
   }
   const { view: destination, course, step: requestedStep, choice, color, action, id } = button.dataset;
+  if (action === 'next-path-lesson') {
+    const index = followingStage();
+    if (index !== null) { roadmapWizard = null; go('roadmap'); startRoadmapStage(index); }
+    return;
+  }
   if (action === 'resume-current') { resumeCurrentCourse(); return; }
   if (button.dataset.learningRoadmap) {
     openRoadmap(button.dataset.learningRoadmap);
@@ -1306,6 +1341,10 @@ window.addEventListener('mindora:account-changed', event => {
   void cloud.init();
 });
 mountShell();
+phoneLayout?.addEventListener('change', () => {
+  if (view === 'new-course' && !phoneLayout.matches) view = 'discover';
+  render();
+});
 mountReturnReview({
   getReview: () => state.returnReview,
   isActive: () => view === 'return-review' && accountReady,

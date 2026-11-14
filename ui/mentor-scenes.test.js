@@ -12,7 +12,7 @@ test('every tutor state has a real, matching still and animated asset', () => {
       const { document } = parseHTML(character(mentor, mood));
       const source = document.querySelector('img').getAttribute('src');
       assert.ok(existsSync(new URL(source)), `${mentor}/${mood} PNG`);
-      assert.ok(existsSync(new URL(source.replace(/\.png$/, '.gif'))), `${mentor}/${mood} GIF`);
+      assert.ok(existsSync(new URL(source.replace(/\.png$/, '.webp'))), `${mentor}/${mood} WebP`);
     }
   }
 });
