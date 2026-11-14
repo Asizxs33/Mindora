@@ -61,9 +61,35 @@ export function normalizeTaskReview(raw) {
   return observation && nextAction ? { observation, nextAction } : null;
 }
 
+function normalizeTeaching(raw) {
+  const why = text(raw?.why, 220);
+  const input = text(raw?.example?.input, 500);
+  const output = text(raw?.example?.output, 700);
+  const explanation = text(raw?.example?.explanation, 400);
+  const question = text(raw?.checkpoint?.question, 220);
+  const choices = Array.isArray(raw?.checkpoint?.choices) && raw.checkpoint.choices.length === 3
+    ? raw.checkpoint.choices.map(choice => text(choice, 160)) : [];
+  const correctIndex = raw?.checkpoint?.correctIndex;
+  const feedback = text(raw?.checkpoint?.explanation, 320);
+  const takeaway = text(raw?.takeaway, 220);
+  if (!why || !input || !output || !explanation || !question || choices.length !== 3
+    || choices.some(choice => !choice) || new Set(choices).size !== 3
+    || !Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 2 || !feedback || !takeaway) return null;
+  return {
+    why, example: { input, output, explanation },
+    checkpoint: { question, choices, correctIndex, explanation: feedback }, takeaway,
+  };
+}
+
+export function lessonPages(step, isFinal = false) {
+  return isFinal ? ['practice'] : step?.teaching ? ['explain', 'example', 'check', 'practice'] : ['explain', 'practice'];
+}
+
 // The server supplies the source map from provider results; free-form model URLs cannot become links.
 export function normalizePlan(raw, input, sources) {
   if (!raw || !input || !Array.isArray(raw.steps)) return null;
+  if (raw.formatVersion !== undefined && raw.formatVersion !== 2) return null;
+  const detailed = raw.formatVersion === 2;
   const durations = PLAN_DURATIONS[input.minutes];
   const title = text(raw.title, 90);
   const outcome = text(raw.outcome, 450);
@@ -75,6 +101,8 @@ export function normalizePlan(raw, input, sources) {
     const task = text(item?.task, TASK_LENGTH_LIMIT);
     const criterion = text(item?.criterion, 320);
     if (!title || !instruction || !task || !criterion) return null;
+    const teaching = detailed && id < durations.length - 1 ? normalizeTeaching(item.teaching) : null;
+    if (detailed && id < durations.length - 1 && !teaching) return null;
     const source = sources.get(sourceUrl(item.sourceUrl));
     const selected = Array.isArray(item.illustrationUrls) ? item.illustrationUrls.slice(0, 2) : [];
     const resource = source ? {
@@ -82,10 +110,10 @@ export function normalizePlan(raw, input, sources) {
       images: sourceImages(source.images).filter(image => selected.includes(image.url)),
       imageSourceUrl: sourceUrl(source.imageSourceUrl) || source.url,
     } : null;
-    steps.push({ id, title, instruction, task, criterion, minutes: durations[id], resource });
+    steps.push({ id, title, instruction, task, criterion, minutes: durations[id], resource, ...(teaching ? { teaching } : {}) });
   }
   if (!steps.some(step => step.resource)) return null;
-  return { ...input, title, outcome, steps };
+  return { ...input, ...(detailed ? { formatVersion: 2 } : {}), title, outcome, steps };
 }
 
 export function restorePlan(saved) {
@@ -113,5 +141,14 @@ export function restorePlan(saved) {
   });
   let completed = 0;
   while (completed < plan.steps.length && completed < saved.completed && answers[completed].trim()) completed++;
-  return { plan, answers, reviews, completed };
+  const study = plan.steps.map((step, index) => {
+    const entry = saved.study?.[index];
+    const pages = lessonPages(step, index === plan.steps.length - 1);
+    let page = Number.isInteger(entry?.page) ? Math.max(0, Math.min(entry.page, pages.length - 1)) : 0;
+    const choice = step.teaching && Number.isInteger(entry?.choice) && entry.choice >= 0 && entry.choice <= 2 ? entry.choice : null;
+    const checked = choice !== null && entry?.checked === true;
+    if (step.teaching && page === 3 && (!checked || choice !== step.teaching.checkpoint.correctIndex)) page = 2;
+    return { page, choice, checked };
+  });
+  return { plan, answers, reviews, completed, study };
 }
