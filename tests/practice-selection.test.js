@@ -64,3 +64,22 @@ test('calculation inference needs numeric practice in a relevant subject, not ev
   ]) assert.deepEqual(choose(goal, task), goal === 'Python' ? { type: 'code', language: 'python' } : { type: 'text' });
   assert.deepEqual(selectLessonPractice(undefined), { type: 'text' });
 });
+
+test('polite Russian calculation tasks and numeric discounts select calculation without broadening word counts', () => {
+  const task = 'Разберите пример ниже и ответьте на вопрос проверки. Затем в рабочем поле посчитайте размер скидки для товара за 240 ₽ со скидкой 10% и запишите первую строку: «Скидка: ... ₽».';
+  assert.deepEqual(choose('Математика: проценты', task, { type: 'text' }), { type: 'calculation' });
+  assert.deepEqual(choose('Скидки в магазине', 'Посчитай размер скидки 10% на товар за 240 ₽.'), { type: 'calculation' });
+  assert.deepEqual(choose('Математика', 'Сосчитайте сумму 12 + 8.'), { type: 'calculation' });
+  assert.deepEqual(choose('Математика', 'Посчитай 15% от 200.'), { type: 'calculation' });
+  assert.deepEqual(choose('Копирайтинг', 'Посчитайте слова в заголовке.'), { type: 'text' });
+  assert.deepEqual(choose('Реклама', 'Сосчитайте упоминания скидки в тексте.'), { type: 'text' });
+  assert.deepEqual(choose('Скидки', 'Объясните, почему скидка 10% привлекает покупателей.'), { type: 'text' });
+});
+
+test('drawing or plotting tasks are not mapped to calculation-only controls', () => {
+  for (const task of [
+    'Нарисуй график функции и найди площадь под кривой.',
+    'Построй график и вычисли площадь.',
+    'Plot the function and calculate its area.',
+  ]) assert.deepEqual(choose('Математика', task), { type: 'text' });
+});
