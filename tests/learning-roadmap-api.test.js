@@ -177,3 +177,13 @@ test('AI directions, the original topic and diagnostic input render as text', ()
     assert.match(html, directionConfirmed ? /name="diagnosticAnswer"/ : /name="direction"/);
   }
 });
+
+
+test('SMM placement asks for communication judgment rather than calendar arithmetic', async () => {
+  await generateDeepSeekClarification({goal:'SMM: контент-план кофейни',minutes:10,language:'ru'},'test-only',async(url,init)=>{
+    const prompt=JSON.parse(init.body).messages[0].content;
+    assert.match(prompt,/identify a specific audience or goal/);
+    assert.match(prompt,/Do not substitute arithmetic, counting calendar days/);
+    return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(clarification)}}]});
+  });
+});
