@@ -29,6 +29,8 @@
 | Постер | `#poster-form` и исходные имена полей `title`, `subtitle`, `cta`, `titleSize`, `subtitleSize`, `textColor`, `data-color`, `data-poster-stage`, `data-poster-preview`, `#title-size`, `#subtitle-size` |
 | Таблица и сохранённые работы | `#budget-formula`, `#budget-answer`, `data-expense`, `data-budget-total`, `#checks-container`, `data-note`, кнопки скачивания с `data-action="download"` и `data-id` |
 
+В таблицах `#time-select` на главной и `#budget-session-minutes` в курсе принимают значения `5`, `10` и `20`. В расширенной практике поле `#budget-balance` принимает остаток после расходов, в том числе отрицательный. Для квиза используй переданное `questionCount`, чтобы последняя кнопка завершала этап при любом количестве вопросов.
+
 Оставляй интерактивные элементы кнопками и полями. При показе пользовательского текста в HTML применяй `escapeHtml`. Форма сохранённых данных и ключ `mindora.workspace.v1` находятся в `core/`.
 
 ## Как отправлять изменения

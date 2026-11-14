@@ -1,6 +1,7 @@
 import { COURSES, escapeHtml } from '../core/engine.js';
 import { learningStats, dailyCourse } from '../core/progress.js';
 import { icon } from './icons.js';
+import { timeOptions } from './budget-session.js';
 
 export const courseNames = {
   design: 'Дизайн постера',
@@ -50,7 +51,7 @@ function goalBanner(icon, minutes) {
       <form id="goal-form" class="adventure-search">
         <label for="goal-input" class="search-icon"><span class="visually-hidden">Чему ты хочешь научиться?</span>${icon('search', 25)}</label>
         <input id="goal-input" placeholder="Чему ты хочешь научиться?" maxlength="180" required>
-        <input type="hidden" id="time-select" value="${minutes}">
+        <select id="time-select" class="profile-select" aria-label="Время на занятие">${timeOptions(minutes)}</select>
         <button type="submit" class="purple-button" aria-label="Построить путь">${icon('send', 23)}</button>
       </form>
       <div class="adventure-topics" aria-label="Темы обучения">
