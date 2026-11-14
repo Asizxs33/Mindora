@@ -184,32 +184,50 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
     `The final object has title (up to ${PLAN_TEXT_LIMITS.title} characters), task (up to ${PLAN_TEXT_LIMITS.task} characters), criterion (up to ${PLAN_TEXT_LIMITS.criterion} characters), and practice (required workspace object described above), with no teaching object. Write a self-contained task with a new scenario, an observable result and a specific check. Ask the learner to show their result and how they got it.`,
     `In guided include exactly ${durations.length - 1} steps of ${durations.slice(0, -1).join(', ')} minutes in order. The separate final task takes ${durations.at(-1)} minutes. Budget all explanation, example, assessment and practice within each duration. Keep a five-minute lesson especially concise.`,
   ].join('\n');
-  const raw = await completeJson([
+  const messages = [
     { role: 'system', content: prompt },
     { role: 'user', content: JSON.stringify({ ...input, materials: materials.map((item, id) => ({
       id, url: item.url, title: item.title, content: item.content,
       images: item.images.map((image, id) => ({ id, caption: image.alt })),
     })) }) },
-  ], LESSON_TOKEN_LIMITS[input.minutes], apiKey, fetcher, signal);
-  const guided = Array.isArray(raw?.guided) ? raw.guided.slice(0, durations.length - 1) : [];
-  const steps = guided.map((step, index) => {
-    const useIllustratedGuide = illustratedGuide && index === 0;
-    const material = useIllustratedGuide ? illustratedGuide : Number.isInteger(step?.sourceId) ? materials[step.sourceId] : null;
-    const illustrationUrls = (Array.isArray(step?.imageIds) ? step.imageIds : []).filter(Number.isInteger)
-      .slice(0, 2).map(id => material?.images[id]?.url).filter(Boolean);
-    return {
-      ...step,
-      practice: selectLessonPractice(step, input) ?? step?.practice,
-      sourceUrl: material?.url,
-      illustrationUrls: useIllustratedGuide && !illustrationUrls.length
-        ? illustratedGuide.images.slice(0, 2).map(image => image.url) : illustrationUrls,
-    };
-  });
-  steps.push({ ...raw?.final, practice: selectLessonPractice(raw?.final, input) ?? raw?.final?.practice, instruction: 'Independent practice', sourceUrl: null });
+  ];
   const sources = new Map(materials.map(({ url, title, images, imageSourceUrl }) => [url, { url, title, images, imageSourceUrl }]));
-  const plan = normalizePlan({ ...raw, formatVersion: 3, steps }, lessonInput, sources);
-  if (!plan?.steps.slice(0, -1).some(step => step.resource)) {
+  const correction = [
+    'The previous response was valid JSON but did not satisfy the full lesson structure. Regenerate the entire lesson using the original request and the same provided source materials. Output only one complete JSON object, not a patch or a partial lesson.',
+    `Required top-level keys: formatVersion: 3, title, outcome, guided (exactly ${durations.length - 1} complete steps), and final (one separate object). Never omit final or place it inside guided.`,
+    'Each guided step must include title, instruction, task, criterion, practice, teaching, sourceId and imageIds. Every teaching object needs why, example with input/output/explanation, a valid assessment using one of the original supported shapes, and takeaway. Follow all original field limits and cite at least one of the supplied sources in guided.',
+    `The final object must contain its own nonempty title (up to ${PLAN_TEXT_LIMITS.title} characters), task (up to ${PLAN_TEXT_LIMITS.task}), criterion (up to ${PLAN_TEXT_LIMITS.criterion}) and practice. Write a fresh self-contained independent task with concrete input data and an observable result. Do not substitute the worked example or invent source URLs. Check all required objects and strings before returning.`,
+  ].join('\n');
+  // Research is reused. At most two structural attempts (each completeJson has
+  // its own bounded parsing retry) share the original 50-second deadline.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    signal.throwIfAborted();
+    const requestMessages = attempt === 0 ? messages : [...messages, { role: 'user', content: correction }];
+    const raw = await completeJson(requestMessages, LESSON_TOKEN_LIMITS[input.minutes], apiKey, fetcher, signal);
+    const guided = Array.isArray(raw?.guided) ? raw.guided.slice(0, durations.length - 1) : [];
+    const steps = guided.map((step, index) => {
+      const useIllustratedGuide = illustratedGuide && index === 0;
+      const material = useIllustratedGuide ? illustratedGuide : Number.isInteger(step?.sourceId) ? materials[step.sourceId] : null;
+      const illustrationUrls = (Array.isArray(step?.imageIds) ? step.imageIds : []).filter(Number.isInteger)
+        .slice(0, 2).map(id => material?.images[id]?.url).filter(Boolean);
+      return {
+        ...step,
+        practice: selectLessonPractice(step, input) ?? step?.practice,
+        sourceUrl: material?.url,
+        illustrationUrls: useIllustratedGuide && !illustrationUrls.length
+          ? illustratedGuide.images.slice(0, 2).map(image => image.url) : illustrationUrls,
+      };
+    });
+    steps.push({ ...raw?.final, practice: selectLessonPractice(raw?.final, input) ?? raw?.final?.practice, instruction: 'Independent practice', sourceUrl: null });
+    const plan = normalizePlan({ ...raw, formatVersion: 3, steps }, lessonInput, sources);
+    if (plan?.steps.slice(0, -1).some(step => step.resource)) {
+      for (const step of plan.steps) {
+        if (step.teaching) mixStartingOrder(step.teaching.assessment);
+      }
+      return plan;
+    }
     console.warn('Mindora lesson response validation', {
+      attempt: attempt + 1,
       title: raw?.title?.length,
       outcome: raw?.outcome?.length,
       steps: steps.map(step => ({
@@ -218,10 +236,6 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
         hasSource: Boolean(step.sourceUrl),
       })),
     });
-    throw Object.assign(new Error('Invalid plan or missing opened lesson sources'), { name: 'LessonContentInvalid' });
   }
-  for (const step of plan.steps) {
-    if (step.teaching) mixStartingOrder(step.teaching.assessment);
-  }
-  return plan;
+  throw Object.assign(new Error('Invalid plan or missing opened lesson sources'), { name: 'LessonContentInvalid' });
 }
