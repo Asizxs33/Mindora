@@ -43,7 +43,7 @@ function researchFixture(steps, { readable = true, verify = () => {} } = {}) {
     assert.deepEqual(input.materials.map(item => item.url), [source, github]);
     assert.match(input.materials[1].content, /items of a sequence/);
     verify(request, input);
-    return modelResponse({ ...draft, steps });
+    return modelResponse({ title: draft.title, outcome: draft.outcome, guided: steps.slice(0, -1), final: steps.at(-1) });
   };
 }
 

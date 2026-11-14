@@ -55,7 +55,7 @@ export function normalizePlan(raw, input, sources) {
   if (!raw || !input || !Array.isArray(raw.steps)) return null;
   const durations = PLAN_DURATIONS[input.minutes];
   const title = text(raw.title, 90);
-  const outcome = text(raw.outcome, 260);
+  const outcome = text(raw.outcome, 450);
   if (!durations || !title || !outcome || raw.steps.length !== durations.length) return null;
   const steps = [];
   for (const [id, item] of raw.steps.entries()) {
