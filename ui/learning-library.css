@@ -9,6 +9,29 @@
 .learning-library-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 0; margin: 0; list-style: none; }
 .learning-library-card { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: #fff; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px 22px; }
 .learning-library-card-summary { min-width: 0; }
+.learning-library-card-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+.learning-library-course-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 9px;
+  background: #f3efe9;
+  color: #675142;
+}
+.learning-library-course-icon img,
+.ready-course-symbol img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
 .learning-library-card-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; color: var(--muted); font-size: 13px; }
 .learning-library-card-meta > span { display: inline-flex; align-items: center; gap: 6px; }
 .learning-library-card-meta > span:first-child { color: var(--accent, #bc4b00); }
