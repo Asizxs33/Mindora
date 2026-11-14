@@ -43,7 +43,7 @@ function mentorView(mentor, mood, content, extraClass = '', options = {}) {
 function reviewView(review, nested = false) {
   const heading = nested ? 'h4' : 'h3';
   return `<div class="ai-lesson-feedback">
-    <${heading} lang="${esc(currentLanguage())}">${icon('spark', 20)} ${t('DeepSeek feedback', 'Разбор DeepSeek', 'DeepSeek талдауы')}</${heading}>
+    <${heading} lang="${esc(currentLanguage())}">${icon('spark', 20)} ${t('AI feedback', 'Разбор ИИ', 'ЖИ талдауы')}</${heading}>
     <p>${esc(review.observation)}</p>
     <p><strong lang="${esc(currentLanguage())}">${t('What to try next', 'Что попробовать дальше', 'Келесі қадам')}</strong><br>${esc(review.nextAction)}</p>
   </div>`;
@@ -153,13 +153,12 @@ function practiceView(step, answer, review, busy, reviewError, last, mentor, use
       </div>` : `
       <form id="learning-step-form">
         ${practiceEditor(step.practice, answer, busy)}
-        <p class="small-note" lang="${esc(currentLanguage())}">${t('DeepSeek receives your answer and task for feedback.', 'Для разбора DeepSeek получит задание и твой ответ.', 'Талдау үшін тапсырма мен жауабың DeepSeek-ке жіберіледі.')}</p>
         <div class="lesson-actions">
           <button class="primary" type="submit"${disabled}>${busy === 'review' ? t('Checking…', 'Проверяем…', 'Тексеріліп жатыр…') : reviewError ? t('Retry feedback', 'Повторить разбор', 'Қайта тексеру') : t('Get feedback', 'Получить разбор', 'Кері байланыс алу')} ${icon('spark', 18)}</button>
           ${reviewError ? `<button class="secondary" type="button" data-learning-step="continue"${disabled}>${t('Continue without feedback', 'Продолжить без разбора', 'Талдаусыз жалғастыру')}</button>` : ''}
         </div>
       </form>
-      <p id="learning-review-status" role="status" tabindex="-1" lang="${esc(currentLanguage())}">${busy === 'review' ? t('Checking your answer…', 'DeepSeek проверяет ответ…', 'DeepSeek жауабыңды тексеріп жатыр…') : esc(message(reviewError))}</p>`}`;
+      <p id="learning-review-status" role="status" tabindex="-1" lang="${esc(currentLanguage())}">${busy === 'review' ? t('Checking your answer…', 'Проверяем ответ…', 'Жауабың тексеріліп жатыр…') : esc(message(reviewError))}</p>`}`;
 }
 
 function screenView(saved, busy, reviewError) {

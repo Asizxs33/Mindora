@@ -109,11 +109,38 @@ test('clarification prompts preserve concrete intent and require self-contained 
     assert.match(messages[0].content, /keep its exact intent in the first direction/);
     assert.match(messages[0].content, /Include all data needed/);
     assert.match(messages[0].content, /untrusted data/);
+    assert.match(messages[0].content, /Each direction goal must explicitly name the subject or tool/);
     assert.deepEqual(JSON.parse(messages[1].content), data);
     return Response.json({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(clarification) } }] });
   });
   assert.deepEqual(result, clarification);
   assert.deepEqual(clarificationInput(data), data);
+});
+
+test('both direction selection and path generation stay within the available practice editors', async () => {
+  const data = { ...input, goal: 'Python: process CSV files and rename photos' };
+  for (const [generate, response] of [[generateDeepSeekClarification, clarification], [generateDeepSeekRoadmap, providerRoadmap]]) {
+    await generate(data, 'test-only', async (url, init) => {
+      const { messages } = JSON.parse(init.body);
+      const prompt = messages[0].content;
+      assert.match(prompt, /literal sample data in memory and print\(\) output/);
+      assert.match(prompt, /No input\(\), stdin, user filesystem access/);
+      assert.match(prompt, /syntactically valid minimal Python/);
+      assert.match(prompt, /Preserve newlines and indentation using escaped newline characters in JSON strings/);
+      assert.match(prompt, /Never compress compound statements such as for, if or def onto a semicolon-separated line/);
+      assert.match(prompt, /deterministic, evaluable result/);
+      assert.match(prompt, /network requests, package installation/);
+      assert.match(prompt, /CSV is relevant, supply it as an embedded string/);
+      assert.match(prompt, /clearly labeled simulation with a list of filenames/);
+      assert.match(prompt, /Other programming languages support writing code, an expected result and an explanation only/);
+      assert.match(prompt, /Numeric practice supports a result, calculation steps and units/);
+      assert.match(prompt, /exactly three color roles \(background, text, accent\), a headline and a written rationale/);
+      assert.match(prompt, /Do not promise freehand drawing, arbitrary page layouts, image editing, file or screenshot uploads/);
+      assert.match(prompt, /Writing and other subjects use a text response with a concrete deliverable/);
+      assert.deepEqual(JSON.parse(messages[1].content), data);
+      return Response.json({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(response) } }] });
+    });
+  }
 });
 
 test('a diagnostic is a bounded pair; legacy questionnaire inputs remain supported', async () => {
@@ -127,6 +154,7 @@ test('a diagnostic is a bounded pair; legacy questionnaire inputs remain support
     generate: async data => { assert.deepEqual(data, answer); return providerRoadmap; },
   });
   assert.equal(response.status, 200);
+  assert.equal((await response.json()).roadmap.originalGoal, answer.originalGoal);
 });
 
 test('AI directions, the original topic and diagnostic input render as text', () => {

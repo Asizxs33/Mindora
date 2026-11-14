@@ -7,6 +7,7 @@ import { callDeepSeek, completeJson } from './deepseek-client.js';
 import { readRenderedPage as readWithJina } from './rendered-page.js';
 import { readPublicPage } from './public-page.js';
 import { sourceSuggestions } from './learning-source-catalog.js';
+import { selectLessonPractice } from './practice-selection.js';
 
 const LESSON_TOKEN_LIMITS = Object.freeze({ 5: 3500, 10: 5000, 20: 6500 });
 const CHATGPT_WEB_SEARCH_GUIDE = 'https://help.openai.com/en/articles/9237897-searching-the-web-with-chatgpt';
@@ -54,7 +55,7 @@ function mixStartingOrder(assessment) {
 
 async function research(input, apiKey, fetcher, signal, readPage, readRenderedPage, preferSearchGuide) {
   const stage = input.roadmapStage;
-  const suggested = sourceSuggestions(stage ? `${stage.goal} ${stage.title} ${stage.objective}` : input.goal);
+  const suggested = sourceSuggestions(stage ? `${stage.originalGoal || ''} ${stage.goal} ${stage.title} ${stage.objective}` : input.goal);
   const { query, githubQuery } = await completeJson([
     { role: 'system', content: [
       'Plan two targeted searches for public learning materials. Return JSON with query and githubQuery, each 90 characters or fewer.',
@@ -69,7 +70,7 @@ async function research(input, apiKey, fetcher, signal, readPage, readRenderedPa
       goal: input.goal,
       language: LANGUAGES[languageCode(input.language, 'ru')],
       ...(suggested.length ? { suggestedSources: suggested.map(({ url, title }) => ({ url, title })) } : {}),
-      ...(stage ? { stage: { goal: stage.goal, title: stage.title, objective: stage.objective, level: stage.level } } : {}),
+      ...(stage ? { stage: { goal: stage.goal, title: stage.title, objective: stage.objective, level: stage.level, ...(stage.originalGoal ? { originalGoal: stage.originalGoal } : {}) } } : {}),
     }) },
   ], 900, apiKey, fetcher, signal);
 
@@ -155,12 +156,14 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
     ...(roadmapStage?.previousStages?.length ? ['previousStages describes completed lessons in this path. Build on those skills, briefly recall one when needed, and choose fresh sample data and a different practical challenge. Do not repeat the previous lesson or assume skills beyond it and the reported starting level.'] : []),
     `Return a JSON object with formatVersion: 3, a short title (up to ${PLAN_TEXT_LIMITS.title} characters), an outcome (up to ${PLAN_TEXT_LIMITS.outcome} characters) in one sentence, a guided array, and a final object. Output only JSON.`,
     'Serialize all string values as valid JSON: escape embedded double quotes, backslashes and line breaks, especially in code examples and starter code. Do not write raw multiline strings or append explanations outside the JSON object.',
-    `Each guided step has title (up to ${PLAN_TEXT_LIMITS.title} characters), instruction (up to ${PLAN_TEXT_LIMITS.instruction} characters), task (up to ${PLAN_TEXT_LIMITS.task} characters), criterion (up to ${PLAN_TEXT_LIMITS.criterion} characters), teaching, sourceId, and imageIds (an array of up to two image IDs from that source, or []). Give a few short, actionable sentences in instruction that explain the idea and how to apply it. Name a real interface control only when the opened source supports it. Keep the task distinct from the explanation.`,
+    'Before returning, check every worked result and criterion against its exact input data. Count all loop iterations and output lines, calculate numeric results, and verify the final task and its criterion describe the same output. Do not omit the last intermediate value or require a different number of lines from the task. Prefer small examples you can verify reliably.',
+    `Each guided step has title (up to ${PLAN_TEXT_LIMITS.title} characters), instruction (up to ${PLAN_TEXT_LIMITS.instruction} characters), task (up to ${PLAN_TEXT_LIMITS.task} characters), criterion (up to ${PLAN_TEXT_LIMITS.criterion} characters), practice (required workspace object described above), teaching, sourceId, and imageIds (an array of up to two image IDs from that source, or []). Give a few short, actionable sentences in instruction that explain the idea and how to apply it. Name a real interface control only when the opened source supports it. Keep the task distinct from the explanation.`,
     'Each guided teaching object has this structure: {"why":"why this skill helps, up to 220 characters","example":{"input":"concrete starting data or prompt, up to 500 characters","output":"the worked result, up to 700 characters","explanation":"why the result works, up to 400 characters"},"assessment":{},"takeaway":"one useful rule to remember, up to 220 characters"}. Write all text as plain text.',
     `Each assessment has type, question (up to ${assessmentLimits.question} characters), and explanation (up to ${assessmentLimits.explanation} characters). Use exactly one of the following shapes, with zero-based integer indices and distinct, nonempty list strings of up to ${assessmentLimits.item} characters:`,
     '- "choice": options (3–5 strings), answer (one index in options). Give one uniquely correct option.',
     '- "multi-choice": options (3–5 strings), answers (at least two distinct indices in options and at least one incorrect option). Ask the learner to select all correct options.',
     '- "order": items (3–5 scrambled steps), answer (every index in items once, in the correct sequence). The sequence must have one correct solution.',
+    'For code or mathematics, prefer choice, gap-fill or matching when several step orders could work. Never use an order exercise to arrange independent initializations or calculations. Use ordering only when each position is forced by a dependency, such as successive values in a trace.',
     '- "match": left and right (3–4 strings each, same length), answer (for each left item in displayed order, give its unique right index). Scramble the right list, use each right index once, and ensure exactly one possible pairing.',
     `- "gap-fill": before and after (text around a single blank; at least one side must be nonempty; max ${assessmentLimits.gapContext} characters per side), accepted (1–${assessmentLimits.maxAccepted} correct short answer strings of up to ${assessmentLimits.gapAnswer} characters). Use a precise blank that does not need open-ended grading. Include common valid aliases when appropriate.`,
     'In each guided step, the learner reads the explanation, views any relevant source illustration, sees a worked example, solves the assessment, reads the takeaway, and applies the skill in practice. Show an actual result in the example. Make the assessment answerable from the explanation and example alone.',
@@ -168,7 +171,7 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
     ...(illustratedGuide ? [roadmapStage
       ? 'Use the official guide in the first guided step (sourceId 0). Choose one or two screenshots relevant to the selected Search skill.'
       : 'Use the official guide in the first guided step (sourceId 0). Teach how to start a web search in ChatGPT and check the citations. Choose one or two screenshots that show the Search controls described in that step.'] : []),
-    `The final object has title (up to ${PLAN_TEXT_LIMITS.title} characters), task (up to ${PLAN_TEXT_LIMITS.task} characters), and criterion (up to ${PLAN_TEXT_LIMITS.criterion} characters), with no teaching object. Write a self-contained task with a new scenario, an observable result and a specific check. Ask the learner to show their result and how they got it.`,
+    `The final object has title (up to ${PLAN_TEXT_LIMITS.title} characters), task (up to ${PLAN_TEXT_LIMITS.task} characters), criterion (up to ${PLAN_TEXT_LIMITS.criterion} characters), and practice (required workspace object described above), with no teaching object. Write a self-contained task with a new scenario, an observable result and a specific check. Ask the learner to show their result and how they got it.`,
     `In guided include exactly ${durations.length - 1} steps of ${durations.slice(0, -1).join(', ')} minutes in order. The separate final task takes ${durations.at(-1)} minutes. Budget all explanation, example, assessment and practice within each duration. Keep a five-minute lesson especially concise.`,
   ].join('\n');
   const raw = await completeJson([
@@ -186,12 +189,13 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
       .slice(0, 2).map(id => material?.images[id]?.url).filter(Boolean);
     return {
       ...step,
+      practice: selectLessonPractice(step, input) ?? step?.practice,
       sourceUrl: material?.url,
       illustrationUrls: useIllustratedGuide && !illustrationUrls.length
         ? illustratedGuide.images.slice(0, 2).map(image => image.url) : illustrationUrls,
     };
   });
-  steps.push({ ...raw?.final, instruction: 'Independent practice', sourceUrl: null });
+  steps.push({ ...raw?.final, practice: selectLessonPractice(raw?.final, input) ?? raw?.final?.practice, instruction: 'Independent practice', sourceUrl: null });
   const sources = new Map(materials.map(({ url, title, images, imageSourceUrl }) => [url, { url, title, images, imageSourceUrl }]));
   const plan = normalizePlan({ ...raw, formatVersion: 3, steps }, lessonInput, sources);
   if (!plan?.steps.slice(0, -1).some(step => step.resource)) {

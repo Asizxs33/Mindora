@@ -53,6 +53,11 @@ export function normalizeRoadmap(raw, input = raw) {
   const context = planInput(input?.goal, input?.minutes, input?.language);
   if (!context || !text(context.goal, ROADMAP_LIMITS.goal) || !ROADMAP_LEVELS.includes(raw?.level)
     || !Array.isArray(raw.stages) || raw.stages.length !== ROADMAP_STAGE_COUNT) return null;
+  if (input.originalGoal !== undefined) {
+    const originalGoal = text(input.originalGoal, ROADMAP_LIMITS.goal);
+    if (!originalGoal) return null;
+    context.originalGoal = originalGoal;
+  }
   const title = text(raw.title, ROADMAP_LIMITS.title);
   const outcome = text(raw.outcome, ROADMAP_LIMITS.outcome);
   const levelReason = text(raw.levelReason, ROADMAP_LIMITS.levelReason);
