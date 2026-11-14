@@ -29,8 +29,11 @@ function asksForPalette(task, context) {
 
 function asksForCalculation(task, context) {
   const subject = /\b(?:math(?:ematics)?|arithmetic|algebra|geometry|percent(?:age)?s?|fractions?|equations?)\b|математ|арифмет|алгебр|геометр|процент|пайыз|дроб|бөлшек|уравнен|теңдеу/iu;
-  const action = /\b(?:calculate|compute|solve|work out|find the (?:value|total|area|answer))\b|(?:вычисл|рассчита|реши|найди\s+(?:значение|площадь|сумму|ответ))\p{L}*|есепте|теңдеуді\s+шеш/iu;
-  return subject.test(`${context} ${task}`) && action.test(task) && !asksForCode(task);
+  const action = /\b(?:calculate|compute|solve|work out|find the (?:value|total|area|answer))\b|(?:вычисл|рассчита|посчита|сосчита|реши|найди\s+(?:значение|площадь|сумму|ответ))\p{L}*|есепте|теңдеуді\s+шеш/iu;
+  const discount = /\bdiscounts?\b|скидк|жеңілдік/iu.test(`${context} ${task}`)
+    && /\d+(?:[.,]\d+)?\s*(?:%|₽|\$|€|руб|usd|тенге)|[$€₽]\s*\d/iu.test(task);
+  const drawing = /\b(?:draw|sketch|plot)\b|нарис\p{L}*|начерт\p{L}*|постро\p{L}*[^.!?\n]{0,30}(?:график|диаграмм)|сурет\s+сал|график\p{L}*\s+сыз/iu;
+  return (subject.test(`${context} ${task}`) || discount) && action.test(task) && !asksForCode(task) && !drawing.test(task);
 }
 
 // Repairs a missing/text workspace only when the actual task supports the editor.
