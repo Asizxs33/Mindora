@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { getStarterCourse } from '../core/starter-courses.js';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.MINDORA_URL || 'http://127.0.0.1:4175';
@@ -25,8 +26,18 @@ async function context({ signedIn = true, saved = null } = {}) {
     } else if (url.pathname === '/api/learning-workspace') {
       body = request.method() === 'PUT' ? { workspace: { data: request.postDataJSON().data, revision: ++revision } } : { workspace: null };
     } else if (url.pathname === '/api/learning-courses' && request.method() === 'POST') {
-      const course = { id: `ready-${courses.size + 1}`, saved: request.postDataJSON().saved, revision: 1, updatedAt: new Date().toISOString() };
+      const course = { id: `00000000-0000-4000-8000-${String(courses.size + 1).padStart(12, '0')}`, saved: request.postDataJSON().saved, revision: 1, updatedAt: new Date().toISOString() };
       courses.set(course.id, course); body = { course };
+    } else if (url.pathname === '/api/learning-roadmap') {
+      const input = request.postDataJSON();
+      body = { roadmap: { ...input, title: 'My Python journey', outcome: 'Build a small program one lesson at a time.', level: 'beginner', levelReason: 'Fixture: you selected starting from scratch.',
+        stages: ['Print a message', 'Store a value', 'Work with numbers', 'Build a tiny project'].map(title => ({ title, objective: `Practise: ${title.toLowerCase()}.` })) } };
+    } else if (url.pathname === '/api/learning-plan') {
+      const input = request.postDataJSON(), saved = getStarterCourse('python-basics', input.language, input.minutes);
+      saved.plan.goal = input.goal;
+      saved.plan.title = input.roadmapStage?.title || saved.plan.title;
+      const course = { id: `00000000-0000-4000-8000-${String(courses.size + 1).padStart(12, '0')}`, saved, revision: 1, updatedAt: new Date().toISOString() };
+      courses.set(course.id, course); body = { plan: saved.plan, course };
     } else if (url.pathname === '/api/learning-courses' && url.searchParams.has('id')) {
       body = { course: courses.get(url.searchParams.get('id')) };
     } else if (url.pathname === '/api/learning-courses' && request.method() === 'PUT') {
@@ -86,8 +97,9 @@ try {
     const bounds = await size(page);
     assert.equal(bounds.width, bounds.vw);
     await page.screenshot({ path: join(tmpdir(), `mindora-clean-hub-${viewport.width}.png`), fullPage: true });
-    // Short phones scroll the roadmap naturally; labels and tap targets stay readable.
-    if (viewport.height >= 700) assert.equal(bounds.height, bounds.vh);
+    // Lesson paths scroll naturally; large nodes and readable labels take priority.
+    const nodes = await page.locator('.learning-hub-node').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().width));
+    assert.ok(nodes.every(width => width >= 44));
     console.log('Learning path viewport:', JSON.stringify(bounds));
     await page.screenshot({ path: join(tmpdir(), `mindora-clean-hub-${viewport.width}.png`), fullPage: true });
   }
@@ -228,6 +240,50 @@ try {
   assert.equal((await state(p)).learningPlan.completed, 2);
   assert.equal((await state(p)).learningPlan.plan.minutes, 5);
   await ready.ctx.close();
+  // The latest backend's personal roadmap coexists with the short-course catalog.
+  const journey = await context({ saved: { ...saved, active: null, sessions: {}, progress: { design: 0, budget: 0 } } });
+  const j = journey.page;
+  await j.locator('[data-intro-topic="custom"]').click();
+  await j.locator('#intro-goal').fill('Learn Python for my work');
+  await j.locator('[data-intro-action="next"]').click();
+  await j.locator('[data-intro-minutes="5"]').click();
+  await j.locator('[data-intro-action="start"]').click();
+  await j.locator('input[name="experience"][value="new"]').check();
+  await j.locator('#roadmap-form button[type="submit"]').click();
+  await j.locator('input[name="motivation"][value="work"]').check();
+  await j.locator('#roadmap-form button[type="submit"]').click();
+  await j.locator('input[name="minutes"][value="5"]').check();
+  await j.locator('#roadmap-form button[type="submit"]').click();
+  await j.waitForSelector('.roadmap-layout');
+  assert.equal(await j.locator('.roadmap-stage.is-locked').count(), 3);
+  await j.locator('[data-roadmap-stage="0"]').click();
+  await j.waitForSelector('.ai-lesson-reader');
+  await j.locator('[data-learning-page="next"]:visible').click();
+  await j.locator('[data-learning-page="next"]:visible').click();
+  await j.locator('[data-learning-gap]').fill('"Hello"');
+  await j.locator('[data-learning-page="check"]').click();
+  await j.locator('[data-learning-page="next"]:visible').click();
+  await j.locator('[data-learning-page="next"]:visible').click();
+  for (const answer of ['print("My lesson")', 'print("Hello")\nprint("Mindora")']) {
+    await j.locator('#learning-step-form textarea').fill(answer);
+    await j.locator('#learning-step-form button[type="submit"]').click();
+    await j.locator('[data-learning-step="continue"]').click();
+  }
+  await j.waitForSelector('#learning-plan-complete');
+  assert.equal((await state(j)).learningRoadmap.progress[0].completed, true);
+  await j.locator('.ai-lesson-exit').click();
+  await j.waitForSelector('.roadmap-layout');
+  assert.equal(await j.locator('[data-roadmap-stage="1"]').count(), 1);
+  await j.reload();
+  await j.waitForSelector('.roadmap-layout');
+  assert.equal((await state(j)).learningRoadmap.progress[0].completed, true);
+  await j.screenshot({ path: join(tmpdir(), 'mindora-personal-roadmap-phone.png'), fullPage: true });
+  await j.locator('[data-roadmap-stage="1"]').click();
+  await j.waitForSelector('.ai-lesson-reader');
+  assert.equal((await state(j)).learningRoadmap.progress[1].courseId !== null, true);
+  await j.locator('.ai-lesson-exit').click();
+  await j.waitForSelector('.roadmap-stage.is-active');
+  await journey.ctx.close();
   assert.deepEqual(errors, []);
-  console.log('PASS: responsive greeting/path, signup → lesson, interrupted recall, low-score repair, saved cursor/drafts, 5/10/20-minute course progress and reload, mobile signout → greeting → signin → restored course. API mocked explicitly.');
+  console.log('PASS: responsive greeting/path, signup → lesson, interrupted recall, low-score repair, saved cursor/drafts, 5/10/20-minute courses, mobile signout → greeting → signin, personalized roadmap → completion → unlock → reload → next lesson. API mocked explicitly.');
 } finally { await browser.close(); }

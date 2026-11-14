@@ -44,7 +44,7 @@ function reviewView(review, nested = false) {
   </div>`;
 }
 
-function resultView({ plan, answers, reviews }) {
+function resultView({ plan, answers, reviews }, onRoadmap) {
   const finalTask = plan.steps.at(-1);
   const review = reviews.at(-1);
   return `<section class="ai-lesson-result learning-result" lang="${esc(plan.language)}">
@@ -53,7 +53,7 @@ function resultView({ plan, answers, reviews }) {
     <p>${esc(finalTask.task)}</p>
     <div class="ai-lesson-submission learning-answer">${esc(answers.at(-1))}</div>
     ${review ? reviewView(review) : `<div class="ai-lesson-note"><strong lang="${esc(currentLanguage())}">${t('Self-check', 'Самопроверка', 'Өзін-өзі тексеру')}</strong><p>${esc(finalTask.criterion)}</p></div>`}
-    <button class="primary" type="button" data-view="courses">${t('My courses', 'Мои курсы', 'Курстарым')} ${icon('arrow', 18)}</button>
+    <button class="primary" type="button" data-view="${onRoadmap ? 'roadmap' : 'courses'}">${onRoadmap ? t('Back to my path', 'К карте обучения', 'Оқу жолыма оралу') : t('My courses', 'Мои курсы', 'Курстарым')} ${icon('arrow', 18)}</button>
   </section>`;
 }
 
@@ -200,13 +200,14 @@ function screenView(saved, busy, reviewError) {
   </section>`;
 }
 
-function lessonView(saved, busy, reviewError) {
+function lessonView(saved, busy, reviewError, onRoadmap) {
   const { plan, completed } = saved;
   return `<header class="ai-lesson-heading" lang="${esc(plan.language)}">
     <h1>${esc(plan.title)}</h1>
     <div class="ai-lesson-overall"><progress max="${plan.steps.length}" value="${completed}" aria-label="${t('Completed tasks', 'Выполненные задания', 'Орындалған тапсырмалар')}"></progress><span lang="${esc(currentLanguage())}">${t(`${completed} of ${plan.steps.length} tasks complete`, `Выполнено ${completed} из ${plan.steps.length} заданий`, `${plan.steps.length} тапсырманың ${completed} орындалды`)}</span></div>
+    ${onRoadmap ? `<button type="button" class="text-link" data-view="roadmap">${icon('back', 16)} ${t('My learning path', 'Мой путь обучения', 'Оқу жолым')}</button>` : ''}
   </header>
-  ${completed === plan.steps.length ? resultView(saved) : screenView(saved, busy, reviewError)}
+  ${completed === plan.steps.length ? resultView(saved, onRoadmap) : screenView(saved, busy, reviewError)}
   ${historyView(saved)}`;
 }
 
@@ -223,10 +224,10 @@ function goalForm({ goal, minutes, busy, error }) {
 }
 
 export function learningPlanView(screen) {
-  const { saved, busy, error, reviewError, accountSaved } = screen;
+  const { saved, busy, error, reviewError, accountSaved, onRoadmap } = screen;
   return `<div class="learning-plan ai-lesson${saved ? ' has-course' : ''}">
-    <button type="button" class="icon-button ai-lesson-exit" data-view="discover" aria-label="${t('Save and leave', 'Сохранить и выйти', 'Сақтап шығу')}">${icon('close',22)}</button>
-    ${saved ? lessonView(saved, busy, reviewError) : `<header class="ai-lesson-welcome"><p class="ai-lesson-eyebrow">${t('A little time. A new skill.', 'Немного времени. Новый навык.', 'Аз уақыт. Жаңа дағды.')}</p><h1>${t('What will we learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</h1>${mentorView('mino', busy === 'plan' ? 'thinking' : 'welcome', `<p>${t('Tell me your goal. We’ll learn one idea, see an example, then try it together.', 'Расскажи о своей цели. Разберём идею, посмотрим пример и попробуем вместе.', 'Мақсатыңды айт. Бір ойды түсініп, мысалды қарап, бірге орындап көреміз.')}</p>`)}</header>`}
-    ${saved ? `<details class="ai-lesson-settings ai-lesson-details"${busy === 'plan' || error ? ' open' : ''}><summary>${t('Course options', 'Настройки курса', 'Курс баптаулары')}</summary><div class="ai-lesson-settings-body"><p lang="${esc(saved.plan.language)}">${esc(saved.plan.outcome)}</p>${goalForm(screen)}<p class="small-note">${accountSaved ? t('Saving status is shown above. You can continue on another device after saving.', 'Статус сохранения показан выше. После сохранения можно продолжить на другом устройстве.', 'Сақтау күйі жоғарыда көрсетілген. Сақтағаннан кейін басқа құрылғыда жалғастыра аласың.') : t('Answers and feedback stay in this browser.', 'Ответы и разборы сохраняются в этом браузере.', 'Жауаптар мен талдау осы браузерде сақталады.')}</p></div></details>` : `<section class="game-card simple-panel">${goalForm(screen)}</section>`}
+    <button type="button" class="icon-button ai-lesson-exit" data-view="${onRoadmap ? 'roadmap' : 'discover'}" aria-label="${t('Save and leave', 'Сохранить и выйти', 'Сақтап шығу')}">${icon('close',22)}</button>
+    ${saved ? lessonView(saved, busy, reviewError, onRoadmap) : `<header class="ai-lesson-welcome"><p class="ai-lesson-eyebrow">${t('A little time. A new skill.', 'Немного времени. Новый навык.', 'Аз уақыт. Жаңа дағды.')}</p><h1>${t('What will we learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</h1>${mentorView('mino', busy === 'plan' ? 'thinking' : 'welcome', `<p>${t('Tell me your goal. We’ll learn one idea, see an example, then try it together.', 'Расскажи о своей цели. Разберём идею, посмотрим пример и попробуем вместе.', 'Мақсатыңды айт. Бір ойды түсініп, мысалды қарап, бірге орындап көреміз.')}</p>`)}</header>`}
+    ${saved ? `<details class="ai-lesson-settings ai-lesson-details"${busy === 'plan' || error ? ' open' : ''}><summary>${t('Course options', 'Настройки курса', 'Курс баптаулары')}</summary><div class="ai-lesson-settings-body"><p lang="${esc(saved.plan.language)}">${esc(saved.plan.outcome)}</p>${onRoadmap ? '' : goalForm(screen)}<p class="small-note">${accountSaved ? t('Saving status is shown above. You can continue on another device after saving.', 'Статус сохранения показан выше. После сохранения можно продолжить на другом устройстве.', 'Сақтау күйі жоғарыда көрсетілген. Сақтағаннан кейін басқа құрылғыда жалғастыра аласың.') : t('Answers and feedback stay in this browser.', 'Ответы и разборы сохраняются в этом браузере.', 'Жауаптар мен талдау осы браузерде сақталады.')}</p></div></details>` : onRoadmap ? '' : `<section class="game-card simple-panel">${goalForm(screen)}</section>`}
   </div>`;
 }
