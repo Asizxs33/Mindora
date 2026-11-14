@@ -1,5 +1,6 @@
 import { escapeHtml as esc } from '../core/engine.js';
-import { character } from './characters.js';
+import { mentorScene } from './mentor-scenes.js';
+export { mentorScene } from './mentor-scenes.js';
 import { icon } from './icons.js';
 import { t } from './language.js';
 
@@ -26,11 +27,6 @@ export function mentorForTopic(topic = '') {
   if (/\b(smm|social|marketing|instagram)\b|маркет|соцсет/.test(subject)) return 'smm';
   if (/\b(write|writing|copywriting|story|text|grammar|language)\b|писат|текст|жазу|граммат/.test(subject)) return 'copywriter';
   return 'mino';
-}
-
-export function mentorScene(mentor, mood, content, extraClass = '') {
-  // content is trusted, escaped markup from the caller, not an API string.
-  return `<div class="ai-lesson-mentor ${esc(extraClass)}">${character(mentor, mood, 'ai-lesson-mentor-character')}<div class="ai-lesson-mentor-speech">${content}</div></div>`;
 }
 
 function safeImage(value) {
@@ -94,10 +90,20 @@ export function normalizeLessonTemplate(raw) {
 export function renderLessonTemplate(block, state = {}, { external = false, mentor = 'mino', busy = false } = {}) {
   const type = Object.hasOwn(LESSON_TEMPLATES, block?.type) ? block.type : 'theory';
   const locked = busy || state.correct === true;
-  const mood = state.checked ? state.correct ? 'celebrate' : 'encourage' : ['choice', 'multi-choice', 'order', 'match', 'gap-fill'].includes(type) ? 'thinking' : 'explaining';
+  const mood = state.checked ? state.correct === true ? 'celebrate' : state.correct === false ? 'encourage' : 'explaining' : ['choice', 'multi-choice', 'order', 'match', 'gap-fill'].includes(type) ? 'thinking' : 'explaining';
   const speaker = block.mentor || mentor;
   const prompt = block.prompt || block.title;
-  const scene = mentorScene(speaker, mood, `${heading(prompt)}${block.intro ? `<p>${text(block.intro)}</p>` : ''}`);
+  const hints = {
+    theory: block.body, illustration: block.body, comparison: block.explanation, practice: block.criterion,
+    recap: list(block.points)[0],
+    choice: t('Read every option. Which one best answers the question?', 'Прочитай все варианты. Какой точнее отвечает на вопрос?', 'Барлық нұсқаны оқы. Қайсысы сұраққа дәл жауап береді?'),
+    'multi-choice': t('More than one can fit. Check each option separately.', 'Подходят несколько ответов. Проверь каждый отдельно.', 'Бірнеше жауап сәйкес келеді. Әрқайсысын жеке тексер.'),
+    order: t('Find the first action. Then ask what must happen next.', 'Найди первое действие, затем следующее.', 'Алғашқы әрекетті тап. Одан кейін не істеу керек?'),
+    match: t('Start with a pair you know, then compare the remaining meanings.', 'Начни со знакомой пары, затем сравни остальные значения.', 'Өзің білетін жұптан баста, содан кейін қалған мағыналарды салыстыр.'),
+    'gap-fill': t('Read the whole sentence. What connects the two parts?', 'Прочитай предложение целиком. Что связывает две части?', 'Сөйлемді толық оқы. Екі бөлікті не байланыстырады.'),
+  };
+  const hint = state.checked && block.explanation ? block.explanation : hints[type] || '';
+  const scene = mentorScene(speaker, mood, `${heading(prompt)}${block.intro ? `<p>${text(block.intro)}</p>` : ''}`, '', { hint, focus: t('Show me', 'Покажи', 'Көрсетші') });
   let content = '';
   if (type === 'theory') content = `<div class="ai-lesson-instruction learning-answer">${text(block.body)}</div>${list(block.images).map(image => safeImage(image.url) ? `<figure class="lesson-source-figure"><img src="${text(safeImage(image.url))}" alt="${text(String(image.alt ?? '').replace(/^Image\s+\d+:\s*/i, ''))}" loading="lazy" referrerpolicy="no-referrer"></figure>` : '').join('')}`;
   if (type === 'illustration') {
@@ -123,7 +129,8 @@ export function renderLessonTemplate(block, state = {}, { external = false, ment
   const interactive = ['choice', 'multi-choice', 'order', 'match', 'gap-fill', 'practice'].includes(type);
   const feedback = !external && state.checked ? `<div class="ai-lesson-check-feedback${state.correct ? ' is-correct' : ''}" role="status"><strong>${type === 'practice' ? t('Your draft is ready.', 'Черновик готов.', 'Нобайың дайын.') : state.correct ? t('That’s right.', 'Верно.', 'Дұрыс.') : t('Let’s try that again.', 'Попробуем ещё раз.', 'Қайта байқап көрейік.')}</strong><p>${text(type === 'practice' ? block.criterion : block.explanation)}</p></div>` : '';
   const check = !external && interactive ? `<button class="primary template-check" type="button" data-template-check${disabled(busy || !canCheckTemplate(block, state) || state.correct === true)}>${type === 'practice' ? t('Keep my draft', 'Сохранить черновик', 'Нобайды сақтау') : t('Check answer', 'Проверить ответ', 'Жауапты тексеру')} ${icon('arrow', 18)}</button>` : '';
-  return `<section class="lesson-template template-${type}" data-lesson-template="${type}">${type === 'theory' ? content + scene : scene + content}${feedback}${check}</section>`;
+  const material = `<div class="mentor-material" data-mentor-target>${content}</div>`;
+  return `<section class="lesson-template template-${type}" data-lesson-template="${type}">${type === 'theory' ? material + scene : scene + material}${feedback}${check}</section>`;
 }
 
 export function canCheckTemplate(block, state) {

@@ -3,6 +3,7 @@ import { posterSvg } from '../core/poster.js';
 import { courseNames, lessonNames, pageBanner } from './dashboard.js';
 import { icon } from './icons.js';
 import { character } from './characters.js';
+import { mentorScene } from './mentor-scenes.js';
 import { uiText, quizCopy } from './lesson-copy.js';
 import { budgetSession } from '../core/budget-session.js';
 import { budgetBalanceField, budgetSessionPanel } from './budget-session.js';
@@ -39,7 +40,7 @@ const stepType = index => [
 ][index];
 
 function buddy(id, message, mood = 'explaining') {
-  return `<div class="lesson-buddy">${character(guide(id), mood, 'lesson-character')}<div class="buddy-bubble"><span class="buddy-name">${id === 'design' ? t("Mia · your design buddy", "Миа · наставник по дизайну", "Миа · дизайн тәлімгерің") : t("Sam · your numbers buddy", "Сэм · наставник по таблицам", "Сэм · кестелер тәлімгерің")}</span><p>${message}</p></div></div>`;
+  return mentorScene(guide(id), mood, `<p>${message}</p>`, 'lesson-tutor');
 }
 
 function emptyView(title, text, button = t("Find my first course", "Найти курс", "Курс табу")) {
@@ -90,7 +91,7 @@ function learnContent(id, questionCount) {
   const tips = design ? [t("Start with one message. Make it the biggest text.", "Выдели главную мысль самым крупным текстом.", "Негізгі ойды ең ірі мәтінмен көрсет."), t("Choose colours that make the words easy to see.", "Выбери цвета, с которыми текст легко прочитать.", "Мәтін оңай оқылатын түстерді таңда."), t("Tell people exactly what to do next.", "Скажи читателю, что сделать дальше.", "Оқырманға келесі әрекетті айт.")] : [t("Find the column first, then the row.", "Сначала найди столбец, потом строку.", "Алдымен бағанды, содан кейін жолды тап."), t("A range includes both the first and last cell.", "Диапазон включает первую и последнюю ячейки.", "Ауқымға бірінші және соңғы ұяшықтар кіреді."), t("Every formula starts with an equals sign.", "Каждая формула начинается со знака равенства.", "Әр формула теңдік белгісінен басталады.")];
   const mentors = design ? ['mia', 'artist', 'copywriter'] : ['sam', 'sam', 'sam'];
   return `<div class="learn-deck" data-learn-deck="${id}"><div class="idea-count"><span data-learn-count>${t("Idea 1 of 3", "Идея 1 из 3", "3 ойдың 1-сі")}</span><span class="idea-dots" aria-hidden="true">${principles.map((_, i) => `<i data-learn-dot class="${i === 0 ? 'on' : ''}"></i>`).join('')}</span></div>
-    ${principles.map(([title, text], i) => `<section class="learn-page" data-learn-page ${i ? 'hidden' : ''}><h1 tabindex="-1">${title}</h1><p class="idea-description">${text}</p><div class="lesson-scene ${design ? 'scene-design' : 'scene-sheet'}"><div class="scene-mentor">${character(mentors[i], i === 2 ? 'celebrate' : 'explaining', 'teaching-character')}</div><div class="scene-example">${design ? posterExample(i) : spreadsheetExample(i)}</div></div><aside class="key-idea">${icon('spark', 23)}<div><strong>${t("Remember this", "Запомни", "Есте сақта")}</strong><p>${tips[i]}</p></div></aside></section>`).join('')}
+    ${principles.map(([title, text], i) => `<section class="learn-page" data-learn-page ${i ? 'hidden' : ''}><h1 tabindex="-1">${title}</h1>${mentorScene(mentors[i], 'explaining', `<p>${text}</p>`, 'lesson-tutor', { hint: tips[i], focus: t('Show the example', 'Покажи пример', 'Мысалды көрсет') })}<div class="lesson-demonstration" data-mentor-target><div class="scene-example">${design ? posterExample(i) : spreadsheetExample(i)}</div></div><aside class="key-idea">${icon('spark', 23)}<div><strong>${t("Remember this", "Запомни", "Есте сақта")}</strong><p>${tips[i]}</p></div></aside></section>`).join('')}
     <div class="lesson-actionbar learn-actions"><button class="lesson-prev" data-learn-prev hidden aria-label="${t("Previous idea", "Предыдущая идея", "Алдыңғы ой")}">${icon('back', 20)}</button><button class="primary" data-learn-next>${t("Continue", "Продолжить", "Жалғастыру")} ${icon('arrow', 19)}</button><button class="primary" data-action="finish-learn" hidden>${t("Let’s try it", "Попробовать", "Байқап көру")} ${icon('arrow', 19)}</button><p class="small-note">${t(`Next: ${questionCount} ${questionCount === 1 ? 'question' : 'questions'}.`, `Вопросов в тесте: ${questionCount}.`, `Тесттегі сұрақ саны: ${questionCount}.`)}</p></div></div>`;
 }
 

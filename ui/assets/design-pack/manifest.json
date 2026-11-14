@@ -1,0 +1,418 @@
+[
+  {
+    "name": "ari-brush.gif",
+    "width": 450,
+    "height": 768,
+    "bytes": 1663733,
+    "source": "Ari - artist/Ari-brush.gif",
+    "frames": 49,
+    "durationMs": 1960
+  },
+  {
+    "name": "ari-brush.png",
+    "width": 900,
+    "height": 1536,
+    "bytes": 631326,
+    "source": "Ari - artist/Ari-brush.png"
+  },
+  {
+    "name": "ari-celebrate.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 541564,
+    "source": "Ari - artist/Poses/Ari-celebrate.gif",
+    "frames": 26,
+    "durationMs": 1400
+  },
+  {
+    "name": "ari-celebrate.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 223435,
+    "source": "Ari - artist/Poses/Ari-celebrate.png"
+  },
+  {
+    "name": "ari-thinking.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 1317647,
+    "source": "Ari - artist/Poses/Ari-thinking.gif",
+    "frames": 59,
+    "durationMs": 8400
+  },
+  {
+    "name": "ari-thinking.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 234836,
+    "source": "Ari - artist/Poses/Ari-thinking.png"
+  },
+  {
+    "name": "ari-welcome.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 751287,
+    "source": "Ari - artist/Poses/Ari-welcome.gif",
+    "frames": 32,
+    "durationMs": 1280
+  },
+  {
+    "name": "ari-welcome.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 250679,
+    "source": "Ari - artist/Poses/Ari-welcome.png"
+  },
+  {
+    "name": "mia-pointing.gif",
+    "width": 360,
+    "height": 720,
+    "bytes": 744629,
+    "source": "Mia - graphic-designer/Mia-pointing.gif",
+    "frames": 31,
+    "durationMs": 1240
+  },
+  {
+    "name": "mia-pointing.png",
+    "width": 720,
+    "height": 1440,
+    "bytes": 578980,
+    "source": "Mia - graphic-designer/Mia-pointing.png"
+  },
+  {
+    "name": "mia-celebrate.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 509188,
+    "source": "Mia - graphic-designer/Poses/Mia-celebrate.gif",
+    "frames": 26,
+    "durationMs": 1400
+  },
+  {
+    "name": "mia-celebrate.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 228761,
+    "source": "Mia - graphic-designer/Poses/Mia-celebrate.png"
+  },
+  {
+    "name": "mia-thinking.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 1043337,
+    "source": "Mia - graphic-designer/Poses/Mia-thinking.gif",
+    "frames": 59,
+    "durationMs": 8400
+  },
+  {
+    "name": "mia-thinking.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 230678,
+    "source": "Mia - graphic-designer/Poses/Mia-thinking.png"
+  },
+  {
+    "name": "mia-welcome.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 643213,
+    "source": "Mia - graphic-designer/Poses/Mia-welcome.gif",
+    "frames": 32,
+    "durationMs": 1280
+  },
+  {
+    "name": "mia-welcome.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 238636,
+    "source": "Mia - graphic-designer/Poses/Mia-welcome.png"
+  },
+  {
+    "name": "mino-celebrate.gif",
+    "width": 320,
+    "height": 320,
+    "bytes": 508010,
+    "source": "Mino - mascot/Poses/Mino-celebrate.gif",
+    "frames": 31,
+    "durationMs": 1280
+  },
+  {
+    "name": "mino-celebrate.png",
+    "width": 640,
+    "height": 640,
+    "bytes": 158093,
+    "source": "Mino - mascot/Poses/Mino-celebrate.png"
+  },
+  {
+    "name": "mino-explain.gif",
+    "width": 320,
+    "height": 320,
+    "bytes": 505674,
+    "source": "Mino - mascot/Poses/Mino-explain.gif",
+    "frames": 31,
+    "durationMs": 1280
+  },
+  {
+    "name": "mino-explain.png",
+    "width": 640,
+    "height": 640,
+    "bytes": 159593,
+    "source": "Mino - mascot/Poses/Mino-explain.png"
+  },
+  {
+    "name": "mino-idle.gif",
+    "width": 320,
+    "height": 320,
+    "bytes": 746433,
+    "source": "Mino - mascot/Poses/Mino-idle.gif",
+    "frames": 45,
+    "durationMs": 6440
+  },
+  {
+    "name": "mino-idle.png",
+    "width": 640,
+    "height": 640,
+    "bytes": 151689,
+    "source": "Mino - mascot/Poses/Mino-idle.png"
+  },
+  {
+    "name": "mino-surprise.gif",
+    "width": 320,
+    "height": 320,
+    "bytes": 513975,
+    "source": "Mino - mascot/Poses/Mino-surprise.gif",
+    "frames": 31,
+    "durationMs": 1280
+  },
+  {
+    "name": "mino-surprise.png",
+    "width": 640,
+    "height": 640,
+    "bytes": 164752,
+    "source": "Mino - mascot/Poses/Mino-surprise.png"
+  },
+  {
+    "name": "mino-thinking.gif",
+    "width": 320,
+    "height": 320,
+    "bytes": 701747,
+    "source": "Mino - mascot/Poses/Mino-thinking.gif",
+    "frames": 45,
+    "durationMs": 6440
+  },
+  {
+    "name": "mino-thinking.png",
+    "width": 640,
+    "height": 640,
+    "bytes": 151155,
+    "source": "Mino - mascot/Poses/Mino-thinking.png"
+  },
+  {
+    "name": "mino-welcome.gif",
+    "width": 320,
+    "height": 320,
+    "bytes": 511000,
+    "source": "Mino - mascot/Poses/Mino-welcome.gif",
+    "frames": 32,
+    "durationMs": 1280
+  },
+  {
+    "name": "mino-welcome.png",
+    "width": 640,
+    "height": 640,
+    "bytes": 152787,
+    "source": "Mino - mascot/Poses/Mino-welcome.png"
+  },
+  {
+    "name": "nora-writing.gif",
+    "width": 450,
+    "height": 768,
+    "bytes": 1574419,
+    "source": "Nora - copywriter/Nora-writing.gif",
+    "frames": 56,
+    "durationMs": 2240
+  },
+  {
+    "name": "nora-writing.png",
+    "width": 900,
+    "height": 1536,
+    "bytes": 584605,
+    "source": "Nora - copywriter/Nora-writing.png"
+  },
+  {
+    "name": "nora-celebrate.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 501940,
+    "source": "Nora - copywriter/Poses/Nora-celebrate.gif",
+    "frames": 26,
+    "durationMs": 1400
+  },
+  {
+    "name": "nora-celebrate.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 218441,
+    "source": "Nora - copywriter/Poses/Nora-celebrate.png"
+  },
+  {
+    "name": "nora-thinking.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 1160326,
+    "source": "Nora - copywriter/Poses/Nora-thinking.gif",
+    "frames": 59,
+    "durationMs": 8400
+  },
+  {
+    "name": "nora-thinking.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 220643,
+    "source": "Nora - copywriter/Poses/Nora-thinking.png"
+  },
+  {
+    "name": "nora-welcome.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 661173,
+    "source": "Nora - copywriter/Poses/Nora-welcome.gif",
+    "frames": 32,
+    "durationMs": 1280
+  },
+  {
+    "name": "nora-welcome.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 238971,
+    "source": "Nora - copywriter/Poses/Nora-welcome.png"
+  },
+  {
+    "name": "sam-keypress.gif",
+    "width": 380,
+    "height": 768,
+    "bytes": 1072565,
+    "source": "Sam - programmer/Sam-keypress.gif",
+    "frames": 35,
+    "durationMs": 1400
+  },
+  {
+    "name": "sam-keypress.png",
+    "width": 760,
+    "height": 1536,
+    "bytes": 547235,
+    "source": "Sam - programmer/Sam-keypress.png"
+  },
+  {
+    "name": "sam-celebrate.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 472520,
+    "source": "Sam - programmer/Poses/Sam-celebrate.gif",
+    "frames": 26,
+    "durationMs": 1400
+  },
+  {
+    "name": "sam-celebrate.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 194671,
+    "source": "Sam - programmer/Poses/Sam-celebrate.png"
+  },
+  {
+    "name": "sam-thinking.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 1008553,
+    "source": "Sam - programmer/Poses/Sam-thinking.gif",
+    "frames": 59,
+    "durationMs": 8400
+  },
+  {
+    "name": "sam-thinking.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 189855,
+    "source": "Sam - programmer/Poses/Sam-thinking.png"
+  },
+  {
+    "name": "sam-welcome.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 566157,
+    "source": "Sam - programmer/Poses/Sam-welcome.gif",
+    "frames": 32,
+    "durationMs": 1280
+  },
+  {
+    "name": "sam-welcome.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 186381,
+    "source": "Sam - programmer/Poses/Sam-welcome.png"
+  },
+  {
+    "name": "zoe-wave.gif",
+    "width": 420,
+    "height": 768,
+    "bytes": 967509,
+    "source": "Zoe - smm/Zoe-wave.gif",
+    "frames": 37,
+    "durationMs": 1480
+  },
+  {
+    "name": "zoe-wave.png",
+    "width": 840,
+    "height": 1536,
+    "bytes": 521250,
+    "source": "Zoe - smm/Zoe-wave.png"
+  },
+  {
+    "name": "zoe-celebrate.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 506302,
+    "source": "Zoe - smm/Poses/Zoe-celebrate.gif",
+    "frames": 26,
+    "durationMs": 1400
+  },
+  {
+    "name": "zoe-celebrate.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 199999,
+    "source": "Zoe - smm/Poses/Zoe-celebrate.png"
+  },
+  {
+    "name": "zoe-thinking.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 1106887,
+    "source": "Zoe - smm/Poses/Zoe-thinking.gif",
+    "frames": 59,
+    "durationMs": 8400
+  },
+  {
+    "name": "zoe-thinking.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 201233,
+    "source": "Zoe - smm/Poses/Zoe-thinking.png"
+  },
+  {
+    "name": "zoe-welcome.gif",
+    "width": 294,
+    "height": 512,
+    "bytes": 608308,
+    "source": "Zoe - smm/Poses/Zoe-welcome.gif",
+    "frames": 32,
+    "durationMs": 1280
+  },
+  {
+    "name": "zoe-welcome.png",
+    "width": 588,
+    "height": 1024,
+    "bytes": 199052,
+    "source": "Zoe - smm/Poses/Zoe-welcome.png"
+  }
+]

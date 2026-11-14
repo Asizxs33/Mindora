@@ -34,18 +34,7 @@
 .ai-lesson-page p { margin-block: 8px; }
 .ai-lesson-instruction { font-size: 18px; line-height: 1.8; }
 .ai-lesson-page-navigation > [hidden] { display: none; }
-/* The mentor is the speaker for the current learning action, not decoration. */
-.ai-lesson-mentor { display: grid; grid-template-columns: 140px minmax(0, 1fr); align-items: center; gap: 20px; margin-block: 18px 26px; }
-.ai-lesson .ai-lesson-mentor-character { --character-size: 140px; --character-height: 210px; --character-frame-width: 100%; --character-frame-height: 100%; justify-self: center; }
-.ai-lesson .ai-lesson-mentor-character.character-mino { --character-height: 140px; }
-.ai-lesson-mentor-speech { position: relative; min-width: 0; border: 1px solid #f1d8c5; border-radius: 20px; background: var(--lesson-tint); padding: 20px 22px; }
-.ai-lesson-mentor-speech::before { content: ''; position: absolute; width: 14px; height: 14px; left: -8px; top: 40%; border-left: 1px solid #f1d8c5; border-bottom: 1px solid #f1d8c5; background: var(--lesson-tint); transform: rotate(45deg); }
-.ai-lesson-mentor-speech > :first-child { margin-top: 0; }
-.ai-lesson-mentor-speech > :last-child { margin-bottom: 0; }
-.ai-lesson-mentor-speech p { color: #594b43; font-size: 16px; line-height: 1.7; }
-.ai-lesson-mentor-speech h3 { margin-bottom: 9px; }
-.ai-lesson-check .ai-lesson-mentor-speech h3 { font-size: 19px; line-height: 1.55; }
-.ai-lesson-mentor-practice .ai-lesson-mentor-speech p { color: var(--lesson-ink); font-size: 17px; }
+/* Tutor layout is shared in mentor-scenes.css. */
 .ai-lesson .lesson-source-figure { margin: 24px 0 0; }
 .ai-lesson .lesson-source-figure img { display: block; width: 100%; max-height: 500px; object-fit: contain; border-radius: 12px; }
 .ai-lesson-example { display: grid; gap: 0; border: 1px solid var(--lesson-line); border-radius: 15px; overflow: hidden; }
@@ -125,12 +114,6 @@
   .ai-lesson-page-heading { margin-bottom: 22px; }
   .ai-lesson-page-heading h2 { font-size: 24px; }
   .ai-lesson-instruction { font-size: 17px; }
-  .ai-lesson-mentor { grid-template-columns: 96px minmax(0, 1fr); gap: 12px; margin-block: 16px 24px; }
-  .ai-lesson .ai-lesson-mentor-character { --character-size: 96px; --character-height: 144px; }
-  .ai-lesson .ai-lesson-mentor-character.character-mino { --character-height: 96px; }
-  .ai-lesson-mentor-speech { padding: 15px; border-radius: 16px; }
-  .ai-lesson-mentor-speech p, .ai-lesson-mentor-practice .ai-lesson-mentor-speech p { font-size: 15px; line-height: 1.65; }
-  .ai-lesson-check .ai-lesson-mentor-speech h3 { font-size: 17px; }
   .ai-lesson-example > section, .ai-lesson-feedback { padding: 18px; }
   .ai-lesson-choice { gap: 10px; padding: 14px; font-size: 16px; }
   .ai-lesson-page-navigation { padding: 16px 18px; flex-wrap: wrap; gap: 12px; }

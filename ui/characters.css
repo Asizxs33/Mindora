@@ -1,4 +1,5 @@
 @import url('./character-rigs.css');
+@import url('./mentor-scenes.css');
 /* User-supplied full-body mentor illustrations and Mino's capybara. */
 :where(.mindora-character){--character-size:180px;--character-frame-size:var(--character-size);position:relative;display:inline-grid;place-items:center;flex:0 0 auto;width:var(--character-size);height:var(--character-height,var(--character-size));min-width:0;margin:0;padding:0;border:0;border-radius:24%;background:transparent;color:inherit;box-shadow:none;cursor:pointer;isolation:isolate;vertical-align:middle;touch-action:manipulation;-webkit-tap-highlight-color:transparent;overflow:visible}
 .mindora-character:hover,.mindora-character:active{background:transparent;border-color:transparent;box-shadow:none;transform:none}
