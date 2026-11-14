@@ -178,12 +178,13 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
         ? { dataset: { index: presentation.get(`mindora.reading.${state.active}.v1`) || '0' } } : null;
       if (view === 'certificate') elements.get('#certificate-name').value = html.args[0].name;
     },
-    dashboard: screen('dashboard'), coursesPage: screen('courses'), sidePage: screen('side'),
+    courseHomeView: screen('course-home'), readyCoursesView: () => '', coursesPage: screen('courses'), sidePage: screen('side'),
     guidedStartView: screen('guided-start'), quietHomeView: screen('quiet-home'), returnReviewView: screen('return-review'),
     pathView: screen('path'), lesson: screen('lesson'), result: screen('result'), workView: screen('work'),
     recapView: screen('recap'), certificateView: screen('certificate'),
     refreshCertificatePreview() {},
     courseNames: { design: 'Your first poster', budget: 'Everyday spreadsheets' },
+    lessonNames: { design: ['Design intro', 'Design check', 'Design practice', 'Design project'], budget: ['Formula intro', 'Formula check', 'Formula practice', 'Formula project'] },
     dialogContent: () => '', resetWorkCheck() {}, refreshPosterPreview() {}, clearBudgetTotal() {},
     // These tests use the real spreadsheet evaluator. Poster layout/export is a separate tested subsystem.
     posterLayout() { throw new Error('Unexpected poster layout call in controller-flow test'); },
@@ -249,8 +250,8 @@ test('starting either built-in course requires authentication and does not expos
   assert.deepEqual(run.current.state.progress, { design: 0, budget: 0 });
 });
 
-test('a first visit asks one thing at a time, then opens the selected built-in course path before the lesson', () => {
-  const run = app(seed({ active: null }));
+test('a first visit asks one thing at a time, then opens the selected built-in course path before the lesson', async () => {
+  const run = app(seed({ active: null }), { account: { user: null, profile: null } });
   assert.equal(run.current.view, 'discover');
   assert.equal(run.current.html.kind, 'guided-start');
   assert.equal(run.current.html.args[0].step, 0);
@@ -266,7 +267,9 @@ test('a first visit asks one thing at a time, then opens the selected built-in c
   assert.equal(run.current.html.args[0].step, 3);
   run.click({ introMinutes: '5' });
   run.click({ introAction: 'start' });
-  assert.equal(run.current.view, 'discover', 'onboarding ends at the course path, not inside a lesson');
+  run.signIn({ id: 'test-user' }, 'signup-complete');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'builtin-path', 'onboarding ends at the course path, not inside a lesson');
   assert.equal(run.current.html.kind, 'quiet-home');
   assert.equal(run.current.state.active, 'design');
   assert.equal(run.current.state.minutes, 5);
@@ -289,7 +292,7 @@ test('a ready mini-course creates one account copy and opens its path without AI
   finishCopy(true);
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(run.generations, []);
-  assert.equal(run.current.view, 'discover');
+  assert.equal(run.current.view, 'course-path');
   assert.equal(run.current.html.kind, 'quiet-home');
   assert.equal(run.current.state.learningPlan.completed, 0);
   assert.equal(run.current.state.learningCourse.ownerId, 'test-user');
@@ -305,7 +308,7 @@ test('a ready mini-course creates one account copy and opens its path without AI
 test('catalog built-in cards open the same roadmap and retain the selected pace', () => {
   const run = app(seed({ minutes: 20, learningPlan: savedAiCourse() }));
   run.click({ course: 'budget' }, { attributes: ['data-course-path'] });
-  assert.equal(run.current.view, 'discover');
+  assert.equal(run.current.view, 'builtin-path');
   assert.equal(run.current.html.kind, 'quiet-home');
   assert.equal(run.current.state.active, 'budget');
   assert.equal(run.current.state.lastLearningType, 'builtin');
@@ -325,7 +328,7 @@ test('choosing an existing ready mini-course loads the saved copy without cleari
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(run.copiedCourses, []);
   assert.deepEqual(run.loadedCourses, ['my-writing-course']);
-  assert.equal(run.current.view, 'discover');
+  assert.equal(run.current.view, 'course-path');
   assert.equal(run.current.state.learningPlan.completed, 1);
   assert.equal(run.current.state.learningPlan.answers[1], saved.answers[1]);
 });
@@ -396,7 +399,7 @@ test('signout opens the greeting and signing back in retains the exact lesson', 
   assert.equal(run.current.state.learningPlan, null);
   run.signIn({ id: 'test-user' });
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(run.current.html.kind, 'quiet-home');
+  assert.equal(run.current.html.kind, 'course-home');
   assert.deepEqual(run.current.state.learningPlan, saved);
 });
 
@@ -448,7 +451,7 @@ test('a starter copy finishing after account switch cannot replace the next acco
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.current.state.learningPlan, null);
   assert.equal(run.current.state.learningCourse, undefined);
-  assert.equal(run.current.html.kind, 'guided-start');
+  assert.equal(run.current.html.kind, 'course-home');
 });
 
 test('a guest goal waits for account restoration, then prefills the requested roadmap without generating a lesson', async () => {
@@ -483,8 +486,8 @@ test('an explicitly requested roadmap builds a personalized path and starts only
   const run = app(seed(), { account: { user: null, profile: null }, roadmapResponse });
   run.signIn({ id: 'new-learner' }, 'signup-complete');
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(run.current.view, 'discover', 'signup keeps the simple guided topic selection');
-  assert.equal(run.current.html.kind, 'guided-start');
+  assert.equal(run.current.view, 'discover', 'signup opens the simple course home');
+  assert.equal(run.current.html.kind, 'course-home');
   run.click({ roadmapAction: 'setup' });
   assert.equal(run.current.view, 'roadmap');
   assert.equal(run.current.html.args[0].wizard.step, 0);
@@ -534,7 +537,7 @@ test('signup preserves a pending built-in introduction instead of replacing it w
   assert.equal(run.current.state.active, null);
   run.signIn({ id: 'new-learner' }, 'signup-complete');
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(run.current.view, 'discover');
+  assert.equal(run.current.view, 'builtin-path');
   assert.equal(run.current.html.kind, 'quiet-home');
   assert.equal(run.current.state.active, 'budget');
   assert.equal(run.current.state.minutes, 20);
@@ -553,7 +556,7 @@ test('English introduction opens the ready course while a custom topic explicitl
     await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(run.roadmapRequests, [], 'neither choice automatically requests a generated roadmap');
     if (topic === 'english') {
-      assert.equal(run.current.view, 'discover');
+      assert.equal(run.current.view, 'course-path');
       assert.equal(run.current.html.kind, 'quiet-home');
       assert.deepEqual(run.copiedCourses, [getStarterCourse('everyday-english', 'en', 20)]);
     } else {
@@ -565,7 +568,7 @@ test('English introduction opens the ready course while a custom topic explicitl
   }
 });
 
-test('a saved roadmap stays the selected home after reload without forcing its setup wizard', () => {
+test('a saved roadmap stays selected in the home card and opens without its setup wizard', () => {
   const roadmap = savedRoadmap();
   const run = app(seed({ learningPlan: savedAiCourse(), learningRoadmap: roadmap }), { realPlans: true });
   run.click({ view: 'roadmap' });
@@ -573,14 +576,19 @@ test('a saved roadmap stays the selected home after reload without forcing its s
   run.click({ roadmapAction: 'setup' });
   assert.ok(run.current.html.args[0].wizard);
   run.click({ view: 'discover' });
+  assert.equal(run.current.html.kind, 'course-home');
+  assert.equal(run.current.html.args[1].current.title, roadmap.title);
+  run.click({ view: 'my-path' });
   assert.equal(run.current.html.kind, 'roadmap');
   assert.equal(run.current.html.args[0].wizard, null, 'home shows the saved path rather than an unfinished setup form');
   const reloaded = app(null, { storage: run.storage, realPlans: true });
+  assert.equal(reloaded.current.html.kind, 'course-home');
+  reloaded.click({ view: 'my-path' });
   assert.equal(reloaded.current.html.kind, 'roadmap');
   assert.deepEqual(reloaded.current.html.args[0].roadmap, roadmap);
   assert.equal(reloaded.current.html.args[0].wizard, null);
   const roadmapOnly = app(seed({ active: null, learningRoadmap: roadmap }));
-  assert.equal(roadmapOnly.current.html.kind, 'roadmap', 'an account with only a roadmap still has a usable home');
+  assert.equal(roadmapOnly.current.html.args[1].current.title, roadmap.title, 'an account with only a roadmap still has a usable home');
 });
 
 test('an existing roadmap stage resumes the saved lesson and draft without another generation', async () => {
@@ -599,10 +607,10 @@ test('an existing roadmap stage resumes the saved lesson and draft without anoth
   assert.equal(run.current.state.learningPlan.study[1].page, 1);
   assert.equal(run.saved().lastLearningType, 'roadmap');
   run.click({ view: 'discover' });
-  assert.equal(run.current.html.kind, 'roadmap', 'leaving a linked lesson returns to its full learning path');
+  assert.equal(run.current.html.args[1].current.title, savedRoadmap().title);
   const reloaded = app(null, { storage: run.storage, realPlans: true, libraryCourses: [course] });
-  assert.equal(reloaded.current.html.kind, 'roadmap', 'reopening the app preserves the parent path');
-  reloaded.click({ roadmapAction: 'start', roadmapStage: '0' });
+  assert.equal(reloaded.current.html.kind, 'course-home', 'reopening the app shows the same parent course');
+  reloaded.click({ action: 'resume-current' });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(reloaded.current.view, 'learning-plan', 'the stage button on restored home must actually open the lesson');
   assert.deepEqual(reloaded.loadedCourses, [id]);
@@ -619,6 +627,8 @@ test('opening an archived roadmap preserves the other path and reloads the selec
   assert.equal(run.saved().learningRoadmap.id, second.id);
   assert.deepEqual(run.saved().learningRoadmaps, [first]);
   const reloaded = app(null, { storage: run.storage });
+  assert.equal(reloaded.current.html.args[1].current.title, second.title);
+  reloaded.click({ view: 'my-path' });
   assert.equal(reloaded.current.html.kind, 'roadmap');
   assert.equal(reloaded.current.html.args[0].roadmap.id, second.id);
   assert.deepEqual(reloaded.current.state.learningRoadmaps, [first]);
@@ -647,12 +657,15 @@ for (const succeeds of [true, false]) test(`a roadmap request settling on home c
   let finish;
   const stageGeneration = new Promise(resolve => { finish = resolve; });
   const run = app(seed({ learningRoadmap: savedRoadmap(), lastLearningType: 'roadmap' }), { stageGeneration });
+  run.click({ view: 'my-path' });
   run.click({ roadmapAction: 'start', roadmapStage: '0' });
-  run.click({ view: 'discover' });
   assert.equal(run.current.html.args[0].busy, 'stage');
+  run.click({ view: 'discover' });
+  assert.equal(run.current.html.kind, 'course-home');
   finish(succeeds);
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.current.view, 'discover', 'a completed request never steals navigation');
+  run.click({ view: 'my-path' });
   assert.equal(run.current.html.kind, 'roadmap');
   assert.equal(Boolean(run.current.html.args[0].busy), false);
   if (succeeds) assert.equal(run.current.html.args[0].active[0].status, 'active');
@@ -721,13 +734,53 @@ test('switching accounts selects separate local workspaces and signout hides lea
   assert.deepEqual(run.current.state.notes, {});
 });
 
-test('budget reload opens a quiet home, then continuing requires the overdue review and preserves the reading page', () => {
+test('budget home card resumes through overdue review and preserves the reading page', () => {
   const run = app(seed({ active: 'budget', budgetActivity: { view: 'lesson', step: 0 }, sessions: { budget: { lastSeen: NOW - RECAP_AFTER_MS - 1, cursor: { step: 0, page: 2 } } } }));
   assert.equal(run.current.view, 'discover');
-  assert.equal(run.current.html.kind, 'quiet-home');
-  run.click({ action: 'resume-course', id: 'budget' });
+  assert.equal(run.current.html.kind, 'course-home');
+  run.click({ action: 'resume-current' });
   assert.equal(run.current.view, 'return-review');
   assert.equal(run.saved().sessions.budget.cursor.page, 2);
+});
+
+test('home goal draft survives navigation and reload and stays separate between accounts', async () => {
+  const run = app(seed());
+  run.input('goal-input', 'Learn video editing');
+  run.click({ view: 'profile' });
+  run.click({ view: 'courses' });
+  assert.equal(run.current.html.args[0].homeGoal, 'Learn video editing');
+  const reloaded = app(null, { storage: run.storage });
+  assert.equal(reloaded.current.html.args[0].homeGoal, 'Learn video editing');
+  run.signIn({ id: 'another-learner' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.html.args[0].homeGoal, undefined);
+});
+
+test('home card and path button select the same saved course and resume its exact draft', () => {
+  const saved = savedAiCourse();
+  const run = app(seed({ learningPlan: saved }), { realPlans: true });
+  assert.equal(run.current.html.args[1].current.title, saved.plan.title);
+  assert.equal(run.current.html.args[1].current.completed, saved.completed);
+  run.click({ view: 'my-path' });
+  assert.equal(run.current.view, 'course-path');
+  run.click({ view: 'courses' });
+  run.click({ action: 'resume-current' });
+  assert.equal(run.current.view, 'learning-plan');
+  assert.equal(run.current.state.learningPlan.answers[1], 'My current draft');
+  assert.equal(run.current.state.learningPlan.study[1].page, 1);
+});
+
+test('home goal rejects blank and oversized requests before opening roadmap setup', () => {
+  const run = app(seed());
+  for (const goal of ['  ', 'ab', 'x'.repeat(181)]) {
+    run.startGoal(goal, 10);
+    assert.equal(run.current.view, 'discover');
+    assert.deepEqual(run.roadmapRequests, []);
+  }
+  run.startGoal('Create a small game', 20);
+  assert.equal(run.current.view, 'roadmap');
+  assert.equal(run.current.html.args[0].wizard.goal, 'Create a small game');
+  assert.equal(run.current.html.args[0].wizard.minutes, 20);
 });
 
 test('an older tab cannot overwrite a completed AI task through the real app save path', async () => {

@@ -6,15 +6,33 @@ import { t } from './language.js';
 import { rigMarkup } from './character-rigs.js';
 import { interactWithMentor } from './mentor-interactions.js';
 
-const pose = (stem, width = 294, height = 512, duration = 1280, pause = 7000) => ({ image: stem + '.gif', still: stem + '.png', width, height, duration, pause });
+// Most supplied gestures are one-shot GIFs lasting about 1.3 seconds. A seven
+// second poster between plays made a visible mentor look like a static image.
+// Keep a short, quiet beat between gestures; offscreen/reduced-motion mentors
+// still use the PNG and never run this loop.
+const pose = (stem, width = 294, height = 512, duration = 1280, pause = 1000) => ({ image: stem + '.gif', still: stem + '.png', width, height, duration, pause });
+const humanPose = (stem, width, height, duration) => pose(stem, width, height, duration, 3000);
 const humanPoses = (name, action, width, height, duration) => ({
-  welcome: pose(name + '-welcome'), thinking: pose(name + '-thinking', 294, 512, 8400, 3500),
-  celebrate: pose(name + '-celebrate', 294, 512, 1400),
-  explaining: pose(name + '-' + action, width, height, duration),
-  encourage: pose(name + '-welcome'), incorrect: pose(name + '-thinking', 294, 512, 8400, 3500),
+  welcome: humanPose(name + '-welcome'), thinking: humanPose(name + '-thinking', 294, 512, 8400),
+  celebrate: humanPose(name + '-celebrate', 294, 512, 1400),
+  explaining: humanPose(name + '-' + action, width, height, duration),
+  encourage: humanPose(name + '-welcome'), incorrect: humanPose(name + '-thinking', 294, 512, 8400),
 });
+const minoScene = (stem, duration, pause = 1000) => ({ ...pose(stem, 288, 288, duration, pause), directory: 'characters/mino-scenes' });
 const characters = Object.freeze({
-  mino: { name: 'Mino', atlas: 'mino-poses-v3.png', fallback: 'capybara.png', poses: Object.fromEntries(Object.entries({ welcome: 'welcome', thinking: 'thinking', explaining: 'explain', encourage: 'explain', incorrect: 'surprise', celebrate: 'celebrate' }).map(([mood, name]) => [mood, pose('mino-' + name, 320, 320, name === 'thinking' ? 6440 : 1280)])) },
+  mino: { name: 'Mino', atlas: 'mino-poses-v3.png', fallback: 'capybara.png', poses: {
+    ...Object.fromEntries(Object.entries({ welcome: 'welcome', thinking: 'thinking', explaining: 'explain', encourage: 'explain', incorrect: 'surprise', celebrate: 'celebrate' }).map(([mood, name]) => [mood, pose('mino-' + name, 320, 320, name === 'thinking' ? 6440 : 1280)])),
+    listening: minoScene('01-listening', 1600),
+    idea: minoScene('02-bright-idea', 1600),
+    map: minoScene('03-learning-map', 2920),
+    waiting: minoScene('04-patient-wait', 4080, 1200),
+    drawing: minoScene('05-draw-a-poster', 2080),
+    chart: minoScene('06-show-a-chart', 2600),
+    applause: minoScene('07-applause', 1720),
+    encouragement: minoScene('08-encouragement', 2040),
+    break: minoScene('09-tea-break', 4620, 1200),
+    trophy: minoScene('10-trophy', 1960),
+  } },
   mia: { name: 'Mia', role: 'graphic_designer', image: 'graphic-designer-v3.png', order: 0,
     poses: humanPoses('mia', 'pointing', 360, 720, 1240) },
   sam: { name: 'Sam', role: 'programmer', image: 'programmer-v3.png', order: 1, poses: humanPoses('sam', 'keypress', 380, 768, 1400) },
@@ -24,10 +42,10 @@ const characters = Object.freeze({
   smm: { name: 'Zoe', role: 'smm', image: 'smm-v3.png', order: 4, poses: humanPoses('zoe', 'wave', 420, 768, 1480) },
 });
 const aliases = { programmer: 'leo', designer: 'mia', graphic_designer: 'mia', teacher: 'sam', capybara: 'mino', art: 'artist', writing: 'copywriter', social: 'smm' };
-const moods = new Set(['welcome', 'thinking', 'explaining', 'encourage', 'celebrate', 'incorrect']);
 const MOTION_KEY = 'mindora.characters.motion.v1';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, value => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value]));
 const asset = file => new URL(`./assets/${file}`, import.meta.url).href;
+const poseAsset = (motion, file) => asset(`${motion.directory || 'design-pack'}/${file}`);
 const motionFor = element => characters[element.dataset.characterKind]?.poses?.[element.dataset.characterMood];
 const helloTimers = new WeakMap(), observed = new Set();
 const animatedMedia = new WeakMap();
@@ -36,9 +54,10 @@ let mounted = false, preference = 'on', reducedMotion, resizeObserver, visibilit
 export function character(kind = 'mino', mood = 'welcome', className = '') {
   kind = aliases[kind] || kind;
   if (!Object.hasOwn(characters, kind)) kind = 'mino';
-  mood = moods.has(mood) ? mood : 'welcome';
-  const model = characters[kind], human = Boolean(model.role), motion = model.poses[mood];
-  const art = `<img class="${human ? 'human-source-image' : 'character-fallback'}" data-character-animation src="${escape(asset(`design-pack/${motion.still}`))}" alt="" width="${motion.width}" height="${motion.height}" loading="lazy" decoding="async" draggable="false">${human ? `<span class="human-source-fallback">${rigMarkup(model.role)}</span>` : ''}`;
+  const model = characters[kind];
+  mood = Object.hasOwn(model.poses, mood) ? mood : 'welcome';
+  const human = Boolean(model.role), motion = model.poses[mood];
+  const art = `<img class="${human ? 'human-source-image' : 'character-fallback'}" data-character-animation src="${escape(poseAsset(motion, motion.still))}" alt="" width="${motion.width}" height="${motion.height}" loading="lazy" decoding="async" draggable="false">${human ? `<span class="human-source-fallback">${rigMarkup(model.role)}</span>` : ''}`;
   const label = t(`Talk to ${model.name}`, `Поговорить с ${model.name}`, `${model.name} тәлімгерімен сөйлесу`);
   return `<button type="button" class="mindora-character character-${kind} ${human ? 'character-human character-portrait' : 'character-capybara'} character-animated-source ${escape(className)}" data-character-kind="${kind}" data-character-mood="${mood}" data-character-hello style="--character-aspect-ratio:${motion.width}/${motion.height}" aria-label="${label}" title="${label}"><span class="character-frame" aria-hidden="true"><span class="character-art">${art}</span></span><span class="character-reaction" aria-hidden="true">${t('Hi there!', 'Привет!', 'Сәлем!')}</span></button>`;
 }
@@ -62,24 +81,31 @@ function fitFrame(element) {
 function syncAnimatedCharacter(element, restart = false) {
   const motion = motionFor(element), image = element.querySelector('[data-character-animation]');
   if (!motion || !image) return;
-  const still = asset(`design-pack/${motion.still}`), animation = asset(`design-pack/${motion.image}`);
+  const still = poseAsset(motion, motion.still), animation = poseAsset(motion, motion.image);
   let playback = animatedMedia.get(element);
   if (!playback) {
-    playback = { enabled: false, failed: false, timer: null, animation: '', still: '', motion: null };
+    playback = { enabled: false, failed: false, retries: 0, timer: null, retryTimer: null, animation: '', still: '', motion: null };
     animatedMedia.set(element, playback);
     image.addEventListener('load', () => {
       if (image.naturalWidth > 0) element.classList.remove('character-image-error');
       if (image.src !== playback.animation || !playback.enabled || !canAnimate(element)) return;
-      clearTimeout(playback.timer); element.dataset.characterPlaying = 'true';
+      clearTimeout(playback.timer); clearTimeout(playback.retryTimer); playback.retryTimer = null;
+      playback.retries = 0; element.dataset.characterPlaying = 'true';
       playback.timer = setTimeout(() => {
         image.src = playback.still; element.dataset.characterPlaying = 'false';
         playback.timer = setTimeout(() => syncAnimatedCharacter(element, true), playback.motion.pause);
       }, playback.motion.duration);
     });
     image.addEventListener('error', () => {
-      clearTimeout(playback.timer); playback.failed = true; playback.enabled = false;
+      clearTimeout(playback.timer); clearTimeout(playback.retryTimer); playback.retryTimer = null;
+      playback.failed = true; playback.enabled = false;
       element.dataset.characterPlaying = 'false';
-      if (image.src === playback.animation) { image.src = playback.still; return; }
+      if (image.src === playback.animation) {
+        image.src = playback.still;
+        syncAnimatedCharacter(element);
+        return;
+      }
+      playback.retries = 2;
       const model = characters[element.dataset.characterKind];
       const fallback = asset(model.role ? `team/${model.image}` : model.fallback);
       if (image.src !== fallback) image.src = fallback;
@@ -87,7 +113,8 @@ function syncAnimatedCharacter(element, restart = false) {
     });
   }
   if (playback.animation !== animation) {
-    clearTimeout(playback.timer); playback.enabled = false; playback.failed = false;
+    clearTimeout(playback.timer); clearTimeout(playback.retryTimer); playback.retryTimer = null;
+    playback.enabled = false; playback.failed = false; playback.retries = 0;
     playback.animation = animation; playback.still = still; playback.motion = motion;
     image.src = still; image.width = motion.width; image.height = motion.height;
     element.classList.remove('character-image-error'); fitFrame(element);
@@ -95,10 +122,19 @@ function syncAnimatedCharacter(element, restart = false) {
   if (!canAnimate(element) || playback.failed) {
     clearTimeout(playback.timer); playback.enabled = false; element.dataset.characterPlaying = 'false';
     if (!playback.failed && image.src !== still) image.src = still;
+    if (!canAnimate(element)) { clearTimeout(playback.retryTimer); playback.retryTimer = null; }
+    // Recover from a brief connection failure, without retrying a broken asset
+    // forever or downloading it after the mentor has scrolled offscreen.
+    else if (playback.retries < 2 && !playback.retryTimer) {
+      playback.retryTimer = setTimeout(() => {
+        playback.retryTimer = null; playback.retries++; playback.failed = false;
+        syncAnimatedCharacter(element, true);
+      }, 2000 * (playback.retries + 1));
+    }
     return;
   }
   if (playback.enabled && !restart) return;
-  clearTimeout(playback.timer); playback.enabled = true;
+  clearTimeout(playback.timer); clearTimeout(playback.retryTimer); playback.retryTimer = null; playback.enabled = true;
   const play = () => {
     if (!canAnimate(element) || playback.failed) { syncAnimatedCharacter(element); return; }
     image.src = playback.animation;
@@ -139,12 +175,13 @@ function release(root) {
   for (const element of observed) {
     if (root !== element && !root.contains(element)) continue;
     resizeObserver?.unobserve(element); visibilityObserver?.unobserve(element); observed.delete(element);
-    clearTimeout(animatedMedia.get(element)?.timer); animatedMedia.delete(element);
+    clearTimeout(animatedMedia.get(element)?.timer); clearTimeout(animatedMedia.get(element)?.retryTimer); animatedMedia.delete(element);
     clearTimeout(helloTimers.get(element)); helloTimers.delete(element);
   }
 }
 function visibleDialogue(element) {
   const scenes = [
+    ['.course-home-heading', '.course-home-greeting'],
     ['.guided-content,.learning-hub-guide,.quiet-home', '.guided-dialogue'],
     ['.return-review-tutor', '.return-review-speech'],
     ['.roadmap-tutor', '.roadmap-tutor-speech'],
@@ -195,6 +232,24 @@ export function mountCharacters() {
     }
   });
   statusElement = document.createElement('div'); statusElement.className = 'character-live-status'; statusElement.setAttribute('role', 'status'); statusElement.setAttribute('aria-live', 'polite'); document.body.append(statusElement);
+  function respondOnHome(field) {
+    const home = field.closest('.course-home');
+    if (!home || !['goal-input', 'time-select'].includes(field.id)) return;
+    const mino = home.querySelector('.course-home-mino');
+    const speech = home.querySelector('.course-home-greeting');
+    const choosingTime = field.id === 'time-select';
+    const hasGoal = !choosingTime && field.value.trim().length >= 3;
+    const mood = choosingTime ? 'map' : hasGoal ? 'idea' : 'listening';
+    const message = choosingTime
+      ? t(`Let’s try ${field.value} minutes.`, `Начнём с ${field.value} минут.`, `${field.value} минуттан бастайық.`)
+      : hasGoal ? t('Let’s make a plan!', 'Составим план!', 'Жоспар құрайық!')
+        : t('I’m listening.', 'Я слушаю.', 'Тыңдап тұрмын.');
+    if (mino.dataset.characterMood !== mood) mino.dataset.characterMood = mood;
+    if (speech.textContent !== message) speech.textContent = message;
+  }
+  for (const event of ['focusin', 'input', 'change']) {
+    document.addEventListener(event, e => { if (e.target instanceof Element) respondOnHome(e.target); });
+  }
   document.addEventListener('click', event => {
     const target = event.target instanceof Element ? event.target : event.target?.parentElement;
     const toggle = target?.closest('[data-character-motion]');

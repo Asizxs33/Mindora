@@ -81,7 +81,7 @@ function wizardView(wizard, busy, error) {
       <div><progress value="${step + 1}" max="4" aria-label="${stepText}"></progress><p>${stepText}</p></div>
     </div>
     <header class="roadmap-wizard-intro">
-      ${character('mino', busy ? 'thinking' : 'explaining', 'roadmap-guide')}
+      ${character('mino', busy ? 'waiting' : step === 0 ? 'listening' : 'idea', 'roadmap-guide')}
       <div><h1 id="roadmap-title" tabindex="-1">${title}</h1><p>${hint}</p></div>
     </header>
     <form id="roadmap-form" aria-busy="${Boolean(busy)}">
@@ -175,7 +175,7 @@ export function roadmapView({ roadmap, wizard, active = [], busy = false, error 
       </header>
       <details class="roadmap-about"><summary>${icon('book', 17)} ${t('About this course', 'Об этом курсе', 'Курс туралы')}</summary><div><p>${escape(roadmap.outcome)}</p><div class="roadmap-level"><strong>${t('Estimated level', 'Стартовый уровень', 'Бастапқы деңгей бағасы')}<span>${levelName(roadmap.level)}</span></strong><p>${escape(roadmap.levelReason)}</p></div><ol>${roadmap.stages.map(stage => `<li><strong>${escape(stage.title)}</strong><p>${escape(stage.objective)}</p></li>`).join('')}</ol></div></details>
       ${feedback(busy, error, notice)}
-      <div class="roadmap-tutor">${character('mino', complete ? 'celebrate' : 'explaining', 'roadmap-guide')}<div class="roadmap-tutor-speech"><p>${complete ? t('Look how far you’ve come. You did it!', 'Посмотри, какой путь ты прошёл. Получилось!', 'Қаншама жол жүріп өттің. Жарайсың!') : t('Follow the bright step. We’ll learn it together.', 'Начни с яркого шага. Разберёмся вместе.', 'Жарқын қадамнан баста. Бірге үйренеміз.')}</p></div></div>
+      <div class="roadmap-tutor">${character('mino', busy ? 'waiting' : complete ? 'trophy' : 'map', 'roadmap-guide')}<div class="roadmap-tutor-speech"><p>${complete ? t('Look how far you’ve come. You did it!', 'Посмотри, какой путь ты прошёл. Получилось!', 'Қаншама жол жүріп өттің. Жарайсың!') : t('Follow the bright step. We’ll learn it together.', 'Начни с яркого шага. Разберёмся вместе.', 'Жарқын қадамнан баста. Бірге үйренеміз.')}</p></div></div>
       <ol class="roadmap-stages" aria-label="${t('Lessons in order', 'Порядок занятий', 'Сабақтар реті')}">${stageRows(roadmap, active, busy)}</ol>
       <button type="button" class="text-link roadmap-new-goal" data-roadmap-action="setup"${busy ? ' disabled' : ''}>${icon('plus', 17)} ${t('Set another goal', 'Выбрать другую цель', 'Басқа мақсат таңдау')}</button>
     </div>
