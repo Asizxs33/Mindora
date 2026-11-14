@@ -1,6 +1,6 @@
-import { brandNav, courseNames } from './dashboard.js';
+import { brandNav, courseHomeView, courseNames } from './dashboard.js';
 import { icon } from './icons.js';
-import { mountCharacters } from './characters.js';
+import { character, mountCharacters } from './characters.js';
 import { mountPresentation } from './presentation.js';
 import { languagePicker, t } from './language.js';
 import { mountLessonFlow, syncLessonFlow } from './lesson-flow.js';
@@ -9,6 +9,7 @@ import { rewardMetrics } from './roadmap.js';
 
 const $ = selector => document.querySelector(selector);
 let desktopLayout;
+let resizeGreeting;
 
 function openDesktopLibrary(panel = $('.course-home-library')) {
   if (panel) panel.open = desktopLayout.matches;
@@ -71,6 +72,10 @@ export function mountShell() {
   </header>
   <aside class="sidebar" aria-label="Main menu">
     <nav id="navigation" aria-label="Main navigation"></nav>
+    <div class="side-companion">
+      ${character('mino', 'welcome', 'sidebar-character')}
+      <strong></strong><p></p><button type="button" class="text-link" data-action="about"></button>
+    </div>
   </aside>
   <div class="app-shell"><main id="main" tabindex="-1"></main></div>
   <nav class="mobile-navigation" id="mobile-navigation" aria-label="Main navigation"></nav>
@@ -84,7 +89,10 @@ export function mountShell() {
   mountLessonFlow();
   mountAccount();
   desktopLayout = window.matchMedia('(min-width: 921px)');
-  desktopLayout.addEventListener('change', () => openDesktopLibrary());
+  desktopLayout.addEventListener('change', () => {
+    if (resizeGreeting) resizeGreeting();
+    else openDesktopLibrary();
+  });
   window.addEventListener('mindora:account-changed', updateAccountLinks);
 }
 
@@ -158,6 +166,10 @@ export function renderShell(view, state, stats, html, rewards) {
     ? ['.style-disclosure', '.practice-hint'].filter(selector => main.querySelector(`${selector}[open]`)) : [];
   const owner = getAccountState().user?.id || '';
   const signedIn = Boolean(owner);
+  const guestGreeting = !signedIn && html.includes('data-guided-step="0"');
+  const originalHtml = html;
+  resizeGreeting = guestGreeting ? () => renderShell(view, state, stats, originalHtml, rewards) : null;
+  if (guestGreeting && desktopLayout.matches) html = courseHomeView(state, { guest: true });
   const guided = html.includes('data-guided-step=');
   $('#navigation').innerHTML = brandNav(icon, view, 'side', signedIn);
   $('#top-navigation').innerHTML = brandNav(icon, view, 'top', signedIn);
@@ -168,6 +180,9 @@ export function renderShell(view, state, stats, html, rewards) {
   $('#top-actions').innerHTML = guided ? '' : `${rewardMetrics(headerRewards, true)}${languagePicker()}<button class="header-pace" data-view="profile" aria-label="${t('Daily learning time','Время на обучение','Оқу уақыты')}">${icon('clock', 17)}<span>${t(`${state.minutes} min a day`, `${state.minutes} мин в день`, `Күніне ${state.minutes} мин`)}</span></button><button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
   $('.skip-link').textContent = t('Skip to learning','К содержимому','Мазмұнға өту');
   $('.modal-close').setAttribute('aria-label', t('Close window','Закрыть окно','Терезені жабу'));
+  $('.side-companion strong').textContent = t('Learn one step at a time.','Учись шаг за шагом.','Біртіндеп үйрен.');
+  $('.side-companion p').textContent = t('Go at your own pace.','Продолжай в своём темпе.','Өз қарқыныңмен жалғастыр.');
+  $('.side-companion .text-link').innerHTML = `${t('About Mindora','О Mindora','Mindora туралы')} ${icon('arrow', 15)}`;
   main.classList.toggle('dashboard-main', view === 'discover');
   main.classList.toggle('inside-main', view !== 'discover');
   main.dataset.page = view;
