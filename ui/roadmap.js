@@ -51,6 +51,7 @@ function feedback(busy, error, notice) {
 
 function wizardView(wizard, busy, error) {
   const { step, goal, experience, evidence, motivation, minutes } = wizard;
+  const compact = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 920px)').matches;
   const choosingDirection = step === 1 && !wizard.directionConfirmed;
   const prompts = [
     [t('What would you like to learn?', 'Чему хочешь научиться?', 'Не үйренгің келеді?'),
@@ -75,7 +76,12 @@ function wizardView(wizard, busy, error) {
     </label>`).join('')}${radioOptions('direction', [['custom', 'edit', t('My own result', 'Свой результат', 'Өз нәтижем')]], wizard.direction)}
       <label class="field roadmap-custom-goal"><span>${t('Your own result (if you chose it above)', 'Свой результат, если выбрал этот вариант', 'Осы нұсқаны таңдасаң, нәтижеңді жаз')}</span><input name="customGoal" maxlength="180" value="${escape(wizard.customGoal || '')}" placeholder="${t('For example, make a weekly meal budget', 'Например, рассчитать бюджет питания на неделю', 'Мысалы, апталық тамақ бюджетін есептеу')}"></label></div>` : '';
   } else if (step === 1) {
-    fields = `${radioOptions('experience', experienceOptions(), experience)}
+    const choices = compact ? [
+      ['new', 'leaf', t('New to this', 'С нуля', 'Жаңадан')],
+      ['some', 'layers', t('Some experience', 'Пробовал', 'Біраз білемін')],
+      ['comfortable', 'zap', t('Know the basics', 'Знаю основы', 'Негізін білемін')],
+    ] : experienceOptions();
+    fields = `<div class="roadmap-experience">${radioOptions('experience', choices, experience)}</div>
       <div class="roadmap-diagnostic">
         <label class="field"><span>${t('Try a small example', 'Попробуй маленький пример', 'Шағын мысалды орындап көр')}</span>
           <span class="roadmap-diagnostic-question">${escape(wizard.diagnosticQuestion || '')}</span>
@@ -83,8 +89,9 @@ function wizardView(wizard, busy, error) {
         </label>
         <label class="roadmap-unknown"><input name="diagnosticUnknown" type="checkbox"${wizard.diagnosticUnknown ? ' checked' : ''}><span>${t('I don’t know yet — help me start', 'Пока не знаю — помоги начать', 'Әзірге білмеймін — бастауға көмектес')}</span></label>
       </div>
+      ${compact ? `<details class="roadmap-extra-context"${evidence ? ' open' : ''}><summary>${t('Add context (optional)', 'Добавить контекст (необязательно)', 'Қосымша мәлімет (міндетті емес)')}</summary>` : ''}
       <label class="field roadmap-evidence"><span>${t('What have you tried? (optional)', 'Что уже пробовал? (необязательно)', 'Не жасап көрдің? (міндетті емес)')}</span>
-      <textarea name="evidence" rows="2" maxlength="360" placeholder="${t('Something you have already made or tried', 'Что уже делал или пробовал по этой теме', 'Осы тақырыпта не жасап көрдің')}">${escape(evidence)}</textarea></label>`;
+      <textarea name="evidence" rows="2" maxlength="360" placeholder="${t('Something you have already made or tried', 'Что уже делал или пробовал по этой теме', 'Осы тақырыпта не жасап көрдің')}">${escape(evidence)}</textarea></label>${compact ? '</details>' : ''}`;
   } else if (step === 2) {
     fields = radioOptions('motivation', motivationOptions(), motivation);
   } else if (step === 3) {
