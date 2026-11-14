@@ -260,3 +260,58 @@ test('lesson navigation and headings follow the selected English, Russian, or Ka
     globalThis.document = previousDocument;
   }
 });
+
+function v3Saved(assessment, page, response, checked = false) {
+  const saved = savedAt();
+  saved.plan.formatVersion = 3;
+  const guided = saved.plan.steps[0].teaching;
+  delete guided.checkpoint;
+  guided.assessment = { question: 'Test the learned skill', explanation: 'A useful explanation.', ...assessment };
+  saved.study[0] = { page, response, checked };
+  const restored = restorePlan(saved);
+  assert.ok(restored);
+  return restored;
+}
+
+test('live lessons use every template, preserving answer hooks and unlock behavior', () => {
+  const exercises = [
+    {
+      assessment: { type: 'choice', options: ['A', 'B', 'C'], answer: 1 }, response: 1,
+      draft: '[data-learning-choice="1"][aria-pressed="true"]',
+    },
+    {
+      assessment: { type: 'multi-choice', options: ['A', 'B', 'C'], answers: [0, 2] }, response: [0, 2],
+      draft: '[data-learning-choice="2"][aria-pressed="true"]',
+    },
+    {
+      assessment: { type: 'order', items: ['A Item', 'B Item', 'C Item'], answer: [1, 0, 2] }, response: [1, 0, 2],
+      draft: '[data-learning-order="0"][data-direction="1"][aria-label="Move down: B Item"]',
+    },
+    {
+      assessment: { type: 'match', left: ['A', 'B', 'C'], right: ['X', 'Y', 'Z'], answer: [1, 2, 0] }, response: [1, 2, 0],
+      draft: '[data-learning-match="0"] option[value="1"][selected]',
+    },
+    {
+      assessment: { type: 'gap-fill', before: 'Run', after: 'to check the version.', accepted: ['tool --version'] }, response: 'tool --version',
+      draft: '[data-learning-gap][value="tool --version"]',
+    },
+  ];
+  for (const { assessment, response, draft } of exercises) {
+    const waiting = view(v3Saved(assessment, 3, response)).document;
+    assert.ok(waiting.querySelector(`[data-lesson-template="${assessment.type}"]`));
+    assert.ok(waiting.querySelector(draft), assessment.type);
+    assert.equal(waiting.querySelector('[data-learning-page="check"]').hasAttribute('disabled'), false);
+    assert.equal(waiting.querySelector('[data-learning-page="next"]').hasAttribute('hidden'), true);
+    assert.equal(waiting.querySelector('#learning-check-feedback'), null);
+    const passed = view(v3Saved(assessment, 3, response, true)).document;
+    assert.ok(passed.querySelector('#learning-check-feedback.is-correct'));
+    assert.equal(passed.querySelector('[data-learning-page="next"]').hasAttribute('disabled'), false);
+  }
+  const { assessment, response } = exercises[0];
+  for (const [page, type] of [[0, 'theory'], [1, 'illustration'], [2, 'comparison'], [4, 'recap'], [5, 'practice']]) {
+    const { document } = view(v3Saved(assessment, page, response, true));
+    assert.ok(document.querySelector(`[data-lesson-template="${type}"]`), type);
+    assert.equal(Boolean(document.querySelector('.lesson-source-figure img')), type === 'illustration');
+    assert.equal(Boolean(document.querySelector('#learning-step-form textarea')), type === 'practice');
+  }
+});

@@ -1,4 +1,5 @@
 import { languageCode } from './language.js';
+import { isAssessmentCorrect, isAssessmentReady, normalizeAssessment, normalizeAssessmentResponse } from './lesson-assessment.js';
 
 export const PLAN_DURATIONS = Object.freeze({
   5: Object.freeze([2, 3]),
@@ -67,35 +68,49 @@ export function normalizeTaskReview(raw) {
   return observation && nextAction ? { observation, nextAction } : null;
 }
 
-function normalizeTeaching(raw) {
+function normalizeCheckpoint(raw) {
+  const question = text(raw?.question, 220);
+  const choices = Array.isArray(raw?.choices) && raw.choices.length === 3
+    ? Array.from(raw.choices, choice => text(choice, 160)) : [];
+  const correctIndex = raw?.correctIndex;
+  const feedback = text(raw?.explanation, 320);
+  if (!question || choices.length !== 3
+    || choices.some(choice => !choice) || new Set(choices).size !== 3
+    || !Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 2 || !feedback) return null;
+  return { question, choices, correctIndex, explanation: feedback };
+}
+
+function normalizeTeaching(raw, version) {
   const why = text(raw?.why, 220);
   const input = text(raw?.example?.input, 500);
   const output = text(raw?.example?.output, 700);
   const explanation = text(raw?.example?.explanation, 400);
-  const question = text(raw?.checkpoint?.question, 220);
-  const choices = Array.isArray(raw?.checkpoint?.choices) && raw.checkpoint.choices.length === 3
-    ? raw.checkpoint.choices.map(choice => text(choice, 160)) : [];
-  const correctIndex = raw?.checkpoint?.correctIndex;
-  const feedback = text(raw?.checkpoint?.explanation, 320);
   const takeaway = text(raw?.takeaway, 220);
-  if (!why || !input || !output || !explanation || !question || choices.length !== 3
-    || choices.some(choice => !choice) || new Set(choices).size !== 3
-    || !Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 2 || !feedback || !takeaway) return null;
-  return {
-    why, example: { input, output, explanation },
-    checkpoint: { question, choices, correctIndex, explanation: feedback }, takeaway,
-  };
+  if (!why || !input || !output || !explanation || !takeaway) return null;
+  const teaching = { why, example: { input, output, explanation }, takeaway };
+  if (version === 3) {
+    const assessment = normalizeAssessment(raw?.assessment);
+    return assessment ? { ...teaching, assessment } : null;
+  }
+  const checkpoint = normalizeCheckpoint(raw?.checkpoint);
+  return checkpoint ? { ...teaching, checkpoint } : null;
 }
 
 export function lessonPages(step, isFinal = false) {
-  return isFinal ? ['practice'] : step?.teaching ? ['explain', 'example', 'check', 'practice'] : ['explain', 'practice'];
+  if (isFinal) return ['practice'];
+  if (step?.teaching?.assessment) {
+    const illustrations = step.resource?.images?.length ? ['illustration'] : [];
+    return ['explain', ...illustrations, 'example', 'check', 'recap', 'practice'];
+  }
+  return step?.teaching ? ['explain', 'example', 'check', 'practice'] : ['explain', 'practice'];
 }
 
 // The server supplies the source map from provider results; free-form model URLs cannot become links.
 export function normalizePlan(raw, input, sources) {
   if (!raw || !input || !Array.isArray(raw.steps)) return null;
-  if (raw.formatVersion !== undefined && raw.formatVersion !== 2) return null;
-  const detailed = raw.formatVersion === 2;
+  const { formatVersion } = raw;
+  if (formatVersion !== undefined && formatVersion !== 2 && formatVersion !== 3) return null;
+  const detailed = formatVersion !== undefined;
   const durations = PLAN_DURATIONS[input.minutes];
   const title = text(raw.title, PLAN_TEXT_LIMITS.title);
   const outcome = text(raw.outcome, PLAN_TEXT_LIMITS.outcome);
@@ -107,7 +122,7 @@ export function normalizePlan(raw, input, sources) {
     const task = text(item?.task, PLAN_TEXT_LIMITS.task);
     const criterion = text(item?.criterion, PLAN_TEXT_LIMITS.criterion);
     if (!title || !instruction || !task || !criterion) return null;
-    const teaching = detailed && id < durations.length - 1 ? normalizeTeaching(item.teaching) : null;
+    const teaching = detailed && id < durations.length - 1 ? normalizeTeaching(item.teaching, formatVersion) : null;
     if (detailed && id < durations.length - 1 && !teaching) return null;
     const source = sources.get(sourceUrl(item.sourceUrl));
     const selected = Array.isArray(item.illustrationUrls) ? item.illustrationUrls.slice(0, 2) : [];
@@ -119,7 +134,24 @@ export function normalizePlan(raw, input, sources) {
     steps.push({ id, title, instruction, task, criterion, minutes: durations[id], resource, ...(teaching ? { teaching } : {}) });
   }
   if (!steps.some(step => step.resource)) return null;
-  return { ...input, ...(detailed ? { formatVersion: 2 } : {}), title, outcome, steps };
+  return { ...input, ...(detailed ? { formatVersion } : {}), title, outcome, steps };
+}
+
+function restoreStudy(step, entry, pages) {
+  let page = Number.isInteger(entry?.page) ? Math.max(0, Math.min(entry.page, pages.length - 1)) : 0;
+  const assessment = step.teaching?.assessment;
+  const checkPage = pages.indexOf('check');
+  if (assessment) {
+    const response = normalizeAssessmentResponse(assessment, entry?.response);
+    const checked = entry?.checked === true && isAssessmentReady(assessment, entry.response);
+    if (page > checkPage && (!checked || !isAssessmentCorrect(assessment, response))) page = checkPage;
+    return { page, choice: null, checked, response };
+  }
+  const checkpoint = step.teaching?.checkpoint;
+  const choice = checkpoint && Number.isInteger(entry?.choice) && entry.choice >= 0 && entry.choice <= 2 ? entry.choice : null;
+  const checked = choice !== null && entry?.checked === true;
+  if (checkpoint && page > checkPage && (!checked || choice !== checkpoint.correctIndex)) page = checkPage;
+  return { page, choice, checked };
 }
 
 export function restorePlan(saved) {
@@ -147,14 +179,8 @@ export function restorePlan(saved) {
   });
   let completed = 0;
   while (completed < plan.steps.length && completed < saved.completed && answers[completed].trim()) completed++;
-  const study = plan.steps.map((step, index) => {
-    const entry = saved.study?.[index];
-    const pages = lessonPages(step, index === plan.steps.length - 1);
-    let page = Number.isInteger(entry?.page) ? Math.max(0, Math.min(entry.page, pages.length - 1)) : 0;
-    const choice = step.teaching && Number.isInteger(entry?.choice) && entry.choice >= 0 && entry.choice <= 2 ? entry.choice : null;
-    const checked = choice !== null && entry?.checked === true;
-    if (step.teaching && page === 3 && (!checked || choice !== step.teaching.checkpoint.correctIndex)) page = 2;
-    return { page, choice, checked };
-  });
+  const study = plan.steps.map((step, index) => restoreStudy(
+    step, saved.study?.[index], lessonPages(step, index === plan.steps.length - 1),
+  ));
   return { plan, answers, reviews, completed, study };
 }

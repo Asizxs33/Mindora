@@ -85,19 +85,9 @@ The presenter reports answer state, not course completion. Free text returns `co
 
 ## What is connected to the production controller
 
-`learning-plan.js` now uses the shared mentor scene, subject mapping, theory and comparison renderers. Existing quiz/practice hooks and state transitions are preserved. The remaining assessment variants work in the studio and are ready for a course adapter.
+`learning-plan.js` uses the shared mentor scenes and template renderers in generated lessons. In format v3, each guided step uses theory, an illustration if a verified source has one, a worked comparison, one AI-selected exercise, a recap and practice. The five exercise options are choice, multi-choice, ordering, matching and gap-fill. The controller checks their results and saves attempts alongside practice in the account. Older lessons keep their original format.
 
-The existing backend v2 contract still supports `why`, `example`, a three-option `checkpoint` and `takeaway`. It strips unknown fields. **It does not yet generate arbitrary blocks from all ten templates.** Do not add a model prompt claiming that these variants are available in live plans until the backend validator and controller accept them.
-
-To connect every template to generated lessons, the backend owner should:
-
-1. Introduce a versioned block schema; validate types, sizes, media sources and answer keys server-side.
-2. Reuse stable block IDs and store answers by block ID, including `choice`, `selected`, `order`, `matches` and `value`.
-3. Add block-level progression to the controller while retaining migration for existing v1/v2 saved plans.
-4. Retain the implemented revision-based cloud reconciliation and account-scoped local storage. The home screen currently prioritizes the selected AI plan; users can choose another saved lesson in My courses. If automatic most-recent-course selection is wanted, add a dedicated last-opened timestamp across both course kinds.
-5. Grade deterministic questions on the server if they award credit. Route written practice to the review endpoint. Do not trust client answer keys as proof of completion.
-6. Extend the inactive-return recap to generated plans. Existing recap behavior covers the ready-made courses.
-7. Issue AI course certificates only after defining server-side completion criteria.
+See [Detailed AI lessons](../docs/DETAILED-LESSONS.md) for the live contract. Awarding credit or issuing certificates would require server-side grading and completion rules.
 
 ## Account and storage boundary
 
@@ -105,7 +95,7 @@ The UI continues to call `/api/account`, `/api/learning-courses`, `/api/learning
 
 Required backend setup is documented in the existing [backend handoff](https://github.com/Asizxs33/Mindora/blob/feat/account-onboarding/docs/BACKEND-HANDOFF.md). Environment names include `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_COOKIE_SECRET` and `DEEPSEEK_API_KEY`; actual values must remain in the deployment secret store.
 
-The merged backend already provides profile, account-owned learning course and built-in workspace stores. For the next block-based iteration, add explicit course content versions, ordered blocks and per-block attempts. Store the content version on an enrollment so a new deployment can update the UI without silently invalidating a learner's work. Do not reset progress on every commit.
+The backend provides profile, account-owned learning courses and built-in workspace stores. Each generated lesson keeps its format version and per-step attempts. Do not reset progress on every commit.
 
 ## Extension checklist
 

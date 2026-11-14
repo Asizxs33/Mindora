@@ -121,6 +121,15 @@ function response(value) {
   return Response.json({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(value) } }] });
 }
 
+const { checkpoint, ...teachingWithoutCheckpoint } = teaching;
+const teachingWithAssessment = {
+  ...teachingWithoutCheckpoint,
+  assessment: {
+    type: 'choice', question: checkpoint.question, options: checkpoint.choices,
+    answer: checkpoint.correctIndex, explanation: checkpoint.explanation,
+  },
+};
+
 function modelFixture(minutes, { resultUrl = source, resultContent, searchResults, fetchedContent, verify = () => {}, mutate = () => {} } = {}) {
   const content = resultContent ?? 'A for loop visits each item in a sequence and performs its indented action once for each item.';
   const calls = [];
@@ -134,8 +143,8 @@ function modelFixture(minutes, { resultUrl = source, resultContent, searchResult
     if (!input.materials) return response({ query: 'Python loop official beginner guide', githubQuery: '' });
     verify(body, input);
     const draft = lessonDraft(minutes);
-    const guided = draft.steps.slice(0, -1).map(step => ({ ...step, sourceId: 0, imageIds: [] }));
-    const composed = { title: draft.title, outcome: draft.outcome, guided, final: draft.steps.at(-1) };
+    const guided = draft.steps.slice(0, -1).map(step => ({ ...step, teaching: structuredClone(teachingWithAssessment), sourceId: 0, imageIds: [] }));
+    const composed = { formatVersion: 3, title: draft.title, outcome: draft.outcome, guided, final: draft.steps.at(-1) };
     mutate(composed);
     return response(composed);
   };
@@ -148,18 +157,45 @@ test('the composer requests teaching pages within bounded output budgets for eve
       assert.equal(body.max_tokens, maxTokens);
       assert.equal(input.minutes, minutes);
       const prompt = body.messages[0].content;
-      assert.match(prompt, /formatVersion: 2/);
+      assert.match(prompt, /formatVersion: 3/);
       assert.match(prompt, /"example"/);
-      assert.match(prompt, /"checkpoint"/);
+      assert.match(prompt, /"assessment"/);
       assert.match(prompt, /"takeaway"/);
-      assert.match(prompt, /four pages/);
+      for (const type of ['choice', 'multi-choice', 'order', 'match', 'gap-fill']) {
+        assert.ok(prompt.includes(`- "${type}"`));
+      }
       assert.match(prompt, /source filenames/);
     } });
     const plan = await generateDeepSeekPlan(inputFor(minutes), 'test-only', fixture.fetcher, offlineReaders);
-    assert.equal(plan.formatVersion, 2);
-    assert.deepEqual(plan.steps[0].teaching, teaching);
+    assert.equal(plan.formatVersion, 3);
+    assert.deepEqual(plan.steps[0].teaching, teachingWithAssessment);
     assert.equal(plan.steps.at(-1).teaching, undefined);
   }
+});
+
+test('the composer preserves the chosen exercise formats and mixes already ordered exercises', async () => {
+  const assessments = [{
+    type: 'order', question: 'In what order do you set up the loop?',
+    items: ['Create the list.', 'Write the for loop.', 'Run the script.'], answer: [0, 1, 2],
+    explanation: 'Define the input, write the action, then run the script.',
+  }, {
+    type: 'match', question: 'Match the loop concept with its example.',
+    left: ['Sequence', 'Element', 'Action'], right: ['names', 'name', 'print(name)'], answer: [0, 1, 2],
+    explanation: 'The loop applies the action once for each element in the sequence.',
+  }, {
+    type: 'gap-fill', question: 'Complete the print statement.',
+    before: 'print(', after: ')', accepted: ['name'], explanation: 'Print the current value of name.',
+  }];
+  const fixture = modelFixture(20, {
+    mutate: ({ guided }) => guided.forEach((step, i) => { step.teaching.assessment = assessments[i]; }),
+  });
+  const plan = await generateDeepSeekPlan(inputFor(20), 'test-only', fixture.fetcher, offlineReaders);
+  const [order, match, gap] = plan.steps.slice(0, -1).map(step => step.teaching.assessment);
+  assert.notDeepEqual(order.answer, [0, 1, 2]);
+  assert.deepEqual(order.answer.map(index => order.items[index]), assessments[0].items);
+  assert.notDeepEqual(match.answer, [0, 1, 2]);
+  assert.deepEqual(match.answer.map(index => match.right[index]), assessments[1].right);
+  assert.deepEqual(gap, assessments[2]);
 });
 
 test('the composer states accepted lesson and final-task text limits for every session size', async () => {
@@ -206,8 +242,8 @@ test('oversized lesson and final-task text remains invalid instead of being trun
   }
 });
 
-test('the composer rejects a legacy-shaped response instead of silently dropping teaching', async () => {
-  const fixture = modelFixture(5, { mutate: composed => { delete composed.guided[0].teaching; } });
+test('the composer rejects a legacy checkpoint instead of silently dropping the assessment', async () => {
+  const fixture = modelFixture(5, { mutate: composed => { composed.guided[0].teaching = teaching; } });
   await assert.rejects(generateDeepSeekPlan(inputFor(5), 'test-only', fixture.fetcher, offlineReaders), { name: 'LessonContentInvalid' });
 });
 
