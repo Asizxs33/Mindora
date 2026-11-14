@@ -15,24 +15,33 @@ const draft = {
   })),
 };
 
-function modelResponse(steps, { search = true } = {}) {
+function modelResponse(steps, { search = true, opened = true } = {}) {
   return Response.json({ choices: [{
     finish_reason: 'stop', message: {
       content: JSON.stringify({ ...draft, steps }),
       server_tool_calls: search ? [{ calls: [{
-        type: 'deepseek_web_search', status: 'completed', sources: [{ type: 'url', url: source, title: 'Python Tutorial' }],
+        type: 'deepseek_web_search', kind: 'deep_search', status: 'completed', action: { type: 'search' },
+        sources: [{ type: 'url', url: source, title: 'Python Tutorial' }],
+      }, {
+        type: 'deepseek_web_search', kind: 'deep_search', status: opened ? 'completed' : 'failed',
+        action: { type: 'open_page', url: source }, page: { url: source, title: 'Python Tutorial' },
+      }, {
+        type: 'deepseek_web_search', kind: 'deep_search', status: 'completed',
+        action: { type: 'open_page' }, page: { url: 'https://made-up.example.org/cycle', title: 'Unsearched page' },
       }] }] : [],
     },
   }] });
 }
 
-test('DeepSeek plans use the selected total time and link only to URLs returned by web search', async () => {
+test('the research agent builds timed lessons using sources it both found and opened', async () => {
   for (const [minutes, count] of [[5, 2], [10, 3], [20, 4]]) {
     const plan = await generateDeepSeekPlan({ goal: 'Освоить циклы', minutes }, 'test-only',
       async (url, options) => {
         assert.equal(url, 'https://api.deepseek.com/chat/completions');
         const request = JSON.parse(options.body);
         assert.deepEqual(request.tools, [{ type: 'deepseek_web_search' }]);
+        assert.equal(request.thinking.type, 'enabled');
+        assert.match(request.messages[0].content, /site:github\.com/);
         assert.equal(JSON.parse(request.messages[1].content).minutes, minutes);
         return modelResponse(draft.steps.slice(0, count));
       });
@@ -42,6 +51,8 @@ test('DeepSeek plans use the selected total time and link only to URLs returned 
   }
   await assert.rejects(generateDeepSeekPlan({ goal: 'Освоить циклы', minutes: 5 }, 'test-only',
     async () => modelResponse(draft.steps.slice(0, 2), { search: false })));
+  await assert.rejects(generateDeepSeekPlan({ goal: 'Освоить циклы', minutes: 5 }, 'test-only',
+    async () => modelResponse(draft.steps.slice(0, 2), { opened: false })), /missing opened lesson sources/);
 });
 
 test('a saved plan restores answers and opens the first unfinished task', async () => {

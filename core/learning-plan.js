@@ -59,7 +59,7 @@ export function normalizePlan(raw, input, sources) {
   const steps = [];
   for (const [id, item] of raw.steps.entries()) {
     const title = text(item?.title, 90);
-    const instruction = text(item?.instruction, 480);
+    const instruction = text(item?.instruction, 900);
     const task = text(item?.task, 480);
     const criterion = text(item?.criterion, 320);
     if (!title || !instruction || !task || !criterion) return null;

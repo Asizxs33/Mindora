@@ -19,6 +19,9 @@
 .learning-task-list h3, .learning-result h3 { margin-block: 0 10px; overflow-wrap: anywhere; }
 .learning-task-list p, .learning-result p { margin-block: 8px; overflow-wrap: anywhere; }
 .learning-answer { white-space: pre-wrap; }
+.lesson-source-figure { margin: 12px 0; }
+.lesson-source-figure img { display: block; max-width: 100%; height: auto; border-radius: 10px; }
+.lesson-source-figure figcaption { margin-top: 6px; color: var(--muted); font-size: .85rem; }
 .learning-plan form .field { margin-block-end: 12px; }
 .learning-plan .lesson-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-block: 12px; }
 @media (max-width: 520px) {

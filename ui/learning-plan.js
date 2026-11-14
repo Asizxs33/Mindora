@@ -29,7 +29,7 @@ function resultView({ plan, answers, reviews }) {
 function currentTask(step, answer, review, busy, reviewError, last) {
   const disabled = busy ? ' disabled' : '';
   return `
-    ${last ? '' : `<p>${esc(step.instruction)}</p>`}
+    ${last ? '' : `<p class="learning-answer">${esc(step.instruction)}</p>`}
     <p><strong>${t('Task', 'Задание', 'Тапсырма')}</strong><br>${esc(step.task)}</p>
     ${last ? '' : `<p><strong>${t('Self-check', 'Самопроверка', 'Өзін-өзі тексеру')}</strong><br>${esc(step.criterion)}</p>`}
     ${review ? `
@@ -50,6 +50,18 @@ function currentTask(step, answer, review, busy, reviewError, last) {
       <p id="learning-review-status" role="status" tabindex="-1">${busy === 'review' ? t('Checking your answer…', 'DeepSeek проверяет ответ…', 'DeepSeek жауабыңды тексеріп жатыр…') : esc(message(reviewError))}</p>`}`;
 }
 
+function sourceIllustration(resource) {
+  const url = new URL(resource.url);
+  if (url.hostname !== 'help.openai.com' || !/^\/[a-z-]+\/articles\/9237897(?:-|$)/.test(url.pathname)) return '';
+  const alt = t(
+    'The ChatGPT composer with the tools button highlighted',
+    'Поле ввода ChatGPT с выделенной кнопкой инструментов',
+    'Құралдар батырмасы белгіленген ChatGPT хабарлама өрісі',
+  );
+  const screenshot = 'https://images.ctfassets.net/j22is2dtoxu1/intercom-img-9ce62ecef76c516e5c56a21a/78a2e1227a5a1bf23d98d53dcf32d828/Screenshot_2025-04-28_at_14_44_26.png?fm=webp&q=80&w=1344';
+  return `<figure class="lesson-source-figure"><img src="${esc(screenshot)}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer"><figcaption>${esc(alt)} · <a href="${esc(resource.url)}" target="_blank" rel="noopener noreferrer">OpenAI Help Center</a></figcaption></figure>`;
+}
+
 function stepsView({ plan, answers, reviews, completed }, busy, reviewError) {
   const steps = plan.steps.map((step, index) => {
     const last = index === plan.steps.length - 1;
@@ -60,6 +72,7 @@ function stepsView({ plan, answers, reviews, completed }, busy, reviewError) {
       <h3>${last ? t('Independent task', 'Самостоятельная работа', 'Өздік жұмыс') : esc(step.title)} <span class="tag">${t(`${step.minutes} min`, `${step.minutes} мин`, `${step.minutes} мин`)}</span></h3>
       ${done ? `<details><summary>${t('View my answer', 'Посмотреть ответ', 'Жауапты көру')}</summary><p class="learning-answer">${esc(answers[index])}</p>${review ? reviewView(review) : ''}</details>` : ''}
       ${(current || done) && step.resource ? `<p><a class="source-link" href="${esc(step.resource.url)}" target="_blank" rel="noopener noreferrer">${esc(step.resource.title)} ${icon('arrow', 14)}</a></p>` : ''}
+      ${current && step.resource ? sourceIllustration(step.resource) : ''}
       ${current ? currentTask(step, answers[index], review, busy, reviewError, last) : ''}
       ${!done && !current ? `<p>${t('Opens after the previous task.', 'Откроется после предыдущего задания.', 'Алдыңғы тапсырмадан кейін ашылады.')}</p>` : ''}
     </li>`;
