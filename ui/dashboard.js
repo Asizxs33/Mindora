@@ -64,8 +64,10 @@ export function phoneCourseNav(selected) {
 
 export function phoneCourseLibrary(libraryHtml, readyHtml) {
   return `<section class="phone-library course-library"><header class="course-library-heading"><h1>${t('My courses', 'Мои курсы', 'Курстарым')}</h1><button type="button" class="secondary course-library-create" data-view="new-course">${icon('plus', 18)} ${t('Create a course', 'Создать курс', 'Курс жасау')}</button></header>
-    <div data-course-library>${libraryHtml}</div>
-    <details class="phone-catalog"><summary>${icon('book', 20)}${t('Explore mini-courses', 'Открыть мини-курсы', 'Мини-курстарды көру')}${icon('chevron', 18)}</summary>${readyHtml}</details>
+    <div class="course-library-search"><label class="visually-hidden" for="course-search">${t('Find a course', 'Найти курс', 'Курс іздеу')}</label>${icon('search',20)}<input id="course-search" type="search" data-course-search placeholder="${t('Find a course', 'Найти курс', 'Курс іздеу')}" autocomplete="off"><button type="button" class="icon-button" data-course-search-clear aria-label="${t('Clear search', 'Очистить поиск', 'Іздеуді тазалау')}" hidden>${icon('close',18)}</button></div>
+    <p class="course-search-status" role="status" data-course-search-status></p>
+    <section class="course-saved-section"><h2 class="course-section-title">${t('Continue learning', 'Продолжить обучение', 'Оқуды жалғастыру')}</h2><div data-course-library>${libraryHtml}</div></section>
+    <section class="phone-catalog" aria-labelledby="course-catalog-title"><h2 class="course-section-title" id="course-catalog-title">${t('Explore mini-courses', 'Готовые мини-курсы', 'Дайын шағын курстар')}</h2>${readyHtml}</section>
   </section>`;
 }
 

@@ -4,6 +4,11 @@ import { parseHTML } from 'linkedom';
 import { learningLibraryView, learningSyncView, loginRequiredView } from '../ui/learning-library.js';
 import { setLanguage } from '../ui/language.js';
 
+test('a guest who can study sees local courses without a contradictory login gate', () => {
+  assert.equal(learningLibraryView({ user: null }, { guest: true }), '');
+  assert.match(learningLibraryView({ user: null }), /data-account-open="signup"/);
+});
+
 const course = { id: 'bfa0ca10-bcbc-4d90-8d08-f65d55dd4e55', title: 'A <useful> lesson', goal: 'Learn & practise', minutes: 5, language: 'en', completed: 1, totalSteps: 2 };
 const documentFor = html => parseHTML(`<html><body>${html}</body></html>`).document;
 

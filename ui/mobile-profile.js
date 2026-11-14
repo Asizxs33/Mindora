@@ -21,7 +21,11 @@ export function mobileProfileView(state, stats) {
         <button type="button" class="text-link profile-signout" data-account-signout hidden>${icon('logout', 17)}<span>${t('Sign out', 'Выйти', 'Шығу')}</span></button>
       </div>
     </section>
-    <section class="mobile-profile-preferences" aria-label="${t('Learning settings', 'Настройки обучения', 'Оқу баптаулары')}">
+    <div class="mobile-profile-stats"><span><strong>${stats.total}</strong> ${t('steps done', 'этапов пройдено', 'кезең аяқталды')}</span><span><strong>${Object.keys(state.works).length}</strong> ${t('works saved', 'работ сохранено', 'жұмыс сақталды')}</span></div>
+    <nav class="mobile-profile-tools" aria-label="${t('Learning tools', 'Учебные инструменты', 'Оқу құралдары')}">
+      ${tools.map(([view, symbol, title]) => `<button type="button" data-view="${view}">${icon(symbol, 23)}<span>${title}</span></button>`).join('')}
+    </nav>
+    <h2 class="profile-settings-heading">${t('Settings', 'Настройки', 'Баптаулар')}</h2><section class="mobile-profile-preferences" aria-label="${t('Learning settings', 'Настройки обучения', 'Оқу баптаулары')}">
       <label class="mobile-preference-row" for="profile-minutes"><span class="mobile-preference-icon" aria-hidden="true">${icon('clock', 21)}</span><span>${t('Lesson time', 'Время на урок', 'Сабақ уақыты')}</span>
         <select class="profile-select" id="profile-minutes">${timeOptions(state.minutes)}</select>
       </label>
@@ -29,13 +33,6 @@ export function mobileProfileView(state, stats) {
         <button type="button" class="motion-switch" role="switch" data-character-motion aria-label="${t('Character animations', 'Анимация персонажей', 'Кейіпкерлер анимациясы')}"><span>${t('Animations', 'Анимация', 'Анимация')}</span></button>
       </div>
     </section>
-    <details class="profile-more">
-      <summary>${icon('book', 21)}<span>${t('Learning & progress', 'Обучение и прогресс', 'Оқу және үлгерім')}</span>${icon('chevron', 18)}</summary>
-      <div class="mobile-profile-stats"><span><strong>${stats.total}</strong> ${t('steps done', 'этапов пройдено', 'кезең аяқталды')}</span><span><strong>${Object.keys(state.works).length}</strong> ${t('works saved', 'работ сохранено', 'жұмыс сақталды')}</span></div>
-      <nav class="mobile-profile-tools" aria-label="${t('Learning tools', 'Учебные инструменты', 'Оқу құралдары')}">
-        ${tools.map(([view, symbol, title]) => `<button type="button" data-view="${view}">${icon(symbol, 20)}<span>${title}</span>${icon('arrow', 17)}</button>`).join('')}
-        <button type="button" data-action="about">${icon('leaf', 20)}<span>${t('About Mindora', 'О Mindora', 'Mindora туралы')}</span>${icon('arrow', 17)}</button>
-      </nav>
-    </details>
+    <button type="button" class="text-link mobile-profile-about" data-action="about">${icon('leaf', 19)} ${t('About Mindora', 'О Mindora', 'Mindora туралы')} ${icon('arrow', 16)}</button>
   </section>`;
 }
