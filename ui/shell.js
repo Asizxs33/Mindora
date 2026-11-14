@@ -2,6 +2,7 @@ import { brandNav, courseNames } from './dashboard.js';
 import { icon } from './icons.js';
 import { character, mountCharacters } from './characters.js';
 import { mountPresentation } from './presentation.js';
+import { mountLessonFlow, syncLessonFlow } from './lesson-flow.js';
 
 const $ = selector => document.querySelector(selector);
 
@@ -22,13 +23,17 @@ function restoreQuizFocus(main, remembered) {
   if (!remembered) return;
   if (remembered.kind === 'check-work') {
     const result = main.querySelector('.check-panel h2');
-    if (result) { result.tabIndex = -1; result.focus({ preventScroll: true }); }
+    if (result) {
+      result.tabIndex = -1;
+      result.focus({ preventScroll: true });
+      result.scrollIntoView({ block: 'center', behavior: 'instant' });
+    }
     return;
   }
   if (!main.querySelector('.mini-quiz')) return;
   const target = remembered.kind === 'choice'
     ? [...main.querySelectorAll('[data-choice]')].find(button => button.dataset.choice === remembered.value && !button.disabled)
-    : main.querySelector(remembered.kind === 'check-quiz' ? '.answer-feedback' : '.mini-quiz h2');
+    : main.querySelector(remembered.kind === 'check-quiz' ? '.answer-feedback' : '.mini-quiz h1');
   if (!target) return;
   if (remembered.kind !== 'choice') target.setAttribute('tabindex', '-1');
   target.focus({ preventScroll: remembered.kind === 'choice' });
@@ -55,12 +60,15 @@ export function mountShell() {
   </dialog>`;
   mountCharacters();
   mountPresentation();
+  mountLessonFlow();
 }
 
 export function renderShell(view, state, stats, html) {
   const id = state.active;
   const main = $('#main');
   const quizFocus = rememberQuizFocus(main, view);
+  const expandedPanels = view === 'lesson' && main.dataset.page === view
+    ? ['.style-disclosure', '.practice-hint'].filter(selector => main.querySelector(`${selector}[open]`)) : [];
   $('#navigation').innerHTML = brandNav(icon, view, 'side');
   $('#top-navigation').innerHTML = brandNav(icon, view, 'top');
   $('#mobile-navigation').innerHTML = brandNav(icon, view, 'bottom');
@@ -68,7 +76,10 @@ export function renderShell(view, state, stats, html) {
   main.classList.toggle('dashboard-main', view === 'discover');
   main.classList.toggle('inside-main', view !== 'discover');
   main.dataset.page = view;
+  document.body.classList.toggle('is-learning', view === 'lesson');
   main.innerHTML = html;
+  expandedPanels.forEach(selector => { const panel = main.querySelector(selector); if (panel) panel.open = true; });
+  syncLessonFlow(main);
   restoreQuizFocus(main, quizFocus);
   const titles = { discover: 'Learn', courses: 'My courses', practice: 'Practice', path: 'My learning path', lesson: courseNames[id], result: 'You did it', work: 'My work', achievements: 'Milestones', community: 'Community', profile: 'Profile' };
   document.title = `${titles[view] || 'Learn'} · Mindora`;
