@@ -1,6 +1,4 @@
 .learning-sync.is-transient { position:fixed; z-index:60; right:22px; bottom:22px; width:fit-content; max-width:min(390px,calc(100vw - 32px)); margin:0; padding:12px 16px; border:1px solid #dde7df; border-radius:13px; background:#f5faf5; box-shadow:0 4px 22px #34251416; font-size:13px; }
-.learning-sync.is-saved { animation:mindora-save-notice 3s both; pointer-events:none; }
-@keyframes mindora-save-notice { 0% { opacity:0; transform:translateY(8px); } 10%,75% { opacity:1; transform:translateY(0); } 100% { opacity:0; visibility:hidden; transform:translateY(5px); } }
 @media(max-width:920px) {
   .learning-sync.is-transient { bottom:calc(85px + env(safe-area-inset-bottom)); right:16px; }
   .phone-course-nav ~ .roadmap-layout .roadmap-heading { padding:0 0 14px; border-bottom:1px solid #e7dbce; background:white; border-radius:0; gap:10px; }
