@@ -3,8 +3,27 @@ import { LANGUAGES, languageCode } from '../core/language.js';
 import { enrichLearningMaterials } from './learning-materials.js';
 import { COURSE_SKILLS } from './course-skills.js';
 import { readRenderedPage as readWithJina } from './rendered-page.js';
+import { readPublicPage } from './public-page.js';
 
 const LESSON_TOKEN_LIMITS = Object.freeze({ 5: 3500, 10: 5000, 20: 6500 });
+const CHATGPT_WEB_SEARCH_GUIDE = 'https://help.openai.com/en/articles/9237897-searching-the-web-with-chatgpt';
+
+function helpCenterArticle(url) {
+  return url.hostname === 'help.openai.com'
+    ? url.pathname.match(/^\/([a-z]{2}(?:-[a-z0-9]{2,4}){0,2})\/articles\/(\d+)(?:-[^/]+)?\/?$/i) : null;
+}
+
+function isChatGptWebSearchGuide(value) {
+  const url = sourceUrl(value);
+  return Boolean(url && helpCenterArticle(new URL(url))?.[2] === '9237897');
+}
+
+function isConsumerChatGptWebSearch(goal) {
+  const hasChatGpt = /\bchat[\s-]*gpt\b|чат[\s-]*(?:гпт|gpt)/iu.test(goal);
+  const specialized = /\b(?:enterprise|edu|workspace|admin(?:istrator)?|chat history|(?:saved|previous|past|old) chats|deep research|restauran\w*)\b|администратор|рабоч\p{L}* пространств|истори\p{L}* чат|ресторан|жұмыс кеңістіг|әкімші|чаттар тарих/iu.test(goal);
+  const webSearch = /\b(?:web[\s-]+search|search the web|search (?:the )?internet|find information online|chatgpt\s+search)\b|веб[\s-]*поиск|поиск\p{L}* (?:в интернете|в сети|в chatgpt)|искать (?:в интернете|в сети)|интернет\p{L}*[^.!?]{0,60}ізде|ізде\p{L}*[^.!?]{0,60}интернет/iu.test(goal);
+  return hasChatGpt && webSearch && !specialized;
+}
 
 function learningSourceUrl(value) {
   const safe = sourceUrl(value);
@@ -12,8 +31,7 @@ function learningSourceUrl(value) {
   const url = new URL(safe);
   // Article IDs are stable across the Help Center's localized article routes.
   // The English target must be fetched; translated search text is not its content.
-  const article = url.hostname === 'help.openai.com'
-    ? url.pathname.match(/^\/([a-z]{2}(?:-[a-z0-9]{2,4}){0,2})\/articles\/(\d+)(?:-[^/]+)?\/?$/i) : null;
+  const article = helpCenterArticle(url);
   if (article && article[1].toLowerCase() !== 'en') {
     url.pathname = `/en/articles/${article[2]}`;
     url.search = '';
@@ -63,7 +81,7 @@ async function completeJson(messages, maxTokens, apiKey, fetcher, signal) {
   return JSON.parse(output);
 }
 
-async function research(input, apiKey, fetcher, signal, readPage, readRenderedPage) {
+async function research(input, apiKey, fetcher, signal, readPage, readRenderedPage, preferSearchGuide) {
   const { query, githubQuery } = await completeJson([
     { role: 'system', content: [
       'Plan two targeted searches for public beginner learning materials. Return JSON with query and githubQuery, each 90 characters or fewer.',
@@ -83,15 +101,20 @@ async function research(input, apiKey, fetcher, signal, readPage, readRenderedPa
   const searched = await Promise.allSettled(queries.map(query => callDeepSeek('/v1/tools/search', {
     query, count: 4, need_content: true,
   }, apiKey, fetcher, signal)));
-  if (searched.length && searched.every(result => result.status === 'rejected')) throw searched[0].reason;
+  const searchFailed = searched.length > 0 && searched.every(result => result.status === 'rejected');
+  if (searchFailed && !preferSearchGuide) throw searched[0].reason;
 
   const candidates = new Map();
+  if (preferSearchGuide) {
+    candidates.set(CHATGPT_WEB_SEARCH_GUIDE, { url: CHATGPT_WEB_SEARCH_GUIDE, title: 'help.openai.com', content: '' });
+  }
   for (const [index, result] of searched.entries()) {
     if (result.status !== 'fulfilled') continue;
     for (const item of result.value.results ?? []) {
       const originalUrl = sourceUrl(item?.url);
       const url = learningSourceUrl(item?.url);
-      if (!url || candidates.has(url) || (queries[index].endsWith(' site:github.com') && new URL(url).hostname !== 'github.com')) continue;
+      if (!url || candidates.has(url) || (preferSearchGuide && isChatGptWebSearchGuide(url))
+        || (queries[index].endsWith(' site:github.com') && new URL(url).hostname !== 'github.com')) continue;
       const localized = originalUrl !== url;
       const title = !localized && typeof item.title === 'string' ? item.title.trim().slice(0, 160) : '';
       const content = !localized && typeof item.content === 'string' ? item.content.trim().slice(0, 50000) : '';
@@ -100,17 +123,37 @@ async function research(input, apiKey, fetcher, signal, readPage, readRenderedPa
   }
 
   const materials = [...candidates.values()];
-  const missing = materials.filter(item => !item.content).slice(0, 3);
+  // The canonical guide already gets a direct and a rendered reader slot.
+  const missing = materials.filter(item => !item.content && !(preferSearchGuide && item.url === CHATGPT_WEB_SEARCH_GUIDE)).slice(0, 3);
   await Promise.allSettled(missing.map(async item => {
     const page = await callDeepSeek('/v1/tools/fetch', { url: item.url }, apiKey, fetcher, signal);
     if (typeof page.content === 'string') item.content = page.content.trim().slice(0, 50000);
   }));
-  return (await enrichLearningMaterials(materials, { signal, readPage, readRenderedPage, query })).filter(item => item.content);
+  // Only a version of the same Help Center article can supply evidence for
+  // this candidate. A redirect to a different article cannot lend it images.
+  const readGuide = read => async (url, options) => {
+    const page = await read(url, options);
+    return url !== CHATGPT_WEB_SEARCH_GUIDE || isChatGptWebSearchGuide(page?.url) ? page : null;
+  };
+  const enriched = await enrichLearningMaterials(materials, {
+    signal, query,
+    readPage: preferSearchGuide ? readGuide(readPage ?? readPublicPage) : readPage,
+    readRenderedPage: preferSearchGuide && readRenderedPage ? readGuide(readRenderedPage) : readRenderedPage,
+  });
+  const readable = enriched.filter(item => item.content);
+  if (!readable.length && searchFailed) throw searched[0].reason;
+  return readable;
 }
 
 export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { readPage, readRenderedPage = readWithJina } = {}) {
   const signal = AbortSignal.timeout(50000);
-  const materials = await research(input, apiKey, fetcher, signal, readPage, readRenderedPage);
+  const preferSearchGuide = isConsumerChatGptWebSearch(input.goal);
+  const researched = await research(input, apiKey, fetcher, signal, readPage, readRenderedPage, preferSearchGuide);
+  const illustratedGuide = preferSearchGuide
+    ? researched.find(item => item.url === CHATGPT_WEB_SEARCH_GUIDE && item.images.length) : null;
+  // For this specific beginner task, the official guide covers both enabling
+  // Search and checking citations. Keep admin-only results out of its prompt.
+  const materials = illustratedGuide ? [illustratedGuide] : researched;
   if (!materials.length) throw Object.assign(new Error('No readable learning materials'), { name: 'NoOpenedLessonSources' });
 
   const durations = PLAN_DURATIONS[input.minutes];
@@ -125,6 +168,7 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
     'Each guided teaching object must have exactly this structure: {"why":"why this skill helps, up to 220 characters","example":{"input":"concrete starting data or prompt, up to 500 characters","output":"the worked result, up to 700 characters","explanation":"why the result works, up to 400 characters"},"checkpoint":{"question":"one question about the taught concept, up to 220 characters","choices":["choice A","choice B","choice C"],"correctIndex":0,"explanation":"why the correct answer works and how a common error fails, up to 320 characters"},"takeaway":"one useful rule to remember, up to 220 characters"}. All text fields must be nonempty plain-text strings. Checkpoint choices must be exactly three distinct strings, each at most 160 characters; correctIndex must be the integer 0, 1 or 2 pointing to the sole correct choice.',
     'The learner sees four pages in each guided step: explanation with why; worked example; checkpoint with feedback; independent attempt with takeaway. The example must show an actual answer, not an instruction to find one. The checkpoint must be answerable from the explanation and example alone. Avoid trivia about sources, trick questions and ambiguous choices.',
     'Use an integer sourceId copied from the materials when the step uses a source. Cite at least one source in a guided step. When a relevant source documents UI actions with screenshots, cite it at that step.',
+    ...(illustratedGuide ? ['Use the official guide in the first guided step (sourceId 0). Teach how to start a web search in ChatGPT and check the citations. Choose one or two screenshots that show the Search controls described in that step.'] : []),
     `The final object has title (up to ${PLAN_TEXT_LIMITS.title} characters), task (up to ${PLAN_TEXT_LIMITS.task} characters), and criterion (up to ${PLAN_TEXT_LIMITS.criterion} characters), with no teaching object. Write a self-contained task with a new scenario, an observable result and a specific check. Ask the learner to show their result and how they got it.`,
     `In guided include exactly ${durations.length - 1} steps of ${durations.slice(0, -1).join(', ')} minutes in order. The separate final task takes ${durations.at(-1)} minutes. Budget all explanation, example, checkpoint and practice within each duration. Keep a five-minute lesson especially concise.`,
   ].join('\n');
@@ -136,13 +180,16 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
     })) }) },
   ], LESSON_TOKEN_LIMITS[input.minutes], apiKey, fetcher, signal);
   const guided = Array.isArray(raw?.guided) ? raw.guided.slice(0, durations.length - 1) : [];
-  const steps = guided.map(step => {
-    const material = Number.isInteger(step?.sourceId) ? materials[step.sourceId] : null;
+  const steps = guided.map((step, index) => {
+    const useIllustratedGuide = illustratedGuide && index === 0;
+    const material = useIllustratedGuide ? illustratedGuide : Number.isInteger(step?.sourceId) ? materials[step.sourceId] : null;
+    const illustrationUrls = (Array.isArray(step?.imageIds) ? step.imageIds : []).filter(Number.isInteger)
+      .slice(0, 2).map(id => material?.images[id]?.url).filter(Boolean);
     return {
       ...step,
       sourceUrl: material?.url,
-      illustrationUrls: (Array.isArray(step?.imageIds) ? step.imageIds : []).filter(Number.isInteger)
-        .slice(0, 2).map(id => material?.images[id]?.url).filter(Boolean),
+      illustrationUrls: useIllustratedGuide && !illustrationUrls.length
+        ? illustratedGuide.images.slice(0, 2).map(image => image.url) : illustrationUrls,
     };
   });
   steps.push({ ...raw?.final, instruction: 'Independent practice', sourceUrl: null });
