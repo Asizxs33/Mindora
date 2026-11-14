@@ -23,6 +23,17 @@ const copy = () => ({
 
 export const recapQuestion = (id, index) => copy()[id].questions[index];
 
+export function builtinReviewContent(id) {
+  const item = copy()[id];
+  if (!item) return null;
+  return { title: item.title, mentor: id === 'design' ? 'mia' : 'sam', reminder: item.reminder,
+    questions: item.questions.map(question => ({
+      assessment: { type: 'choice', question: question.text, options: question.choices, answer: question.answer, explanation: question.tip },
+      title: item.title, reminder: question.tip, detail: question.tip,
+    })),
+  };
+}
+
 export function recapView(id, { phase = 0, choice = null, checked = false } = {}) {
   const item = copy()[id], q = phase ? item.questions[phase - 1] : null;
   const correct = q && choice === q.answer;

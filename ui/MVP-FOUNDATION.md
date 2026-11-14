@@ -33,16 +33,22 @@ This document describes the implemented UI, its content contract and the remaini
 
 | Character | Role | Source / motion |
 | --- | --- | --- |
-| Mino | Welcome, goals, unfamiliar subjects, recap | existing capybara atlas and fallback |
-| Mia | Design and layout | supplied full-body GIF, with a still frame and original PNG fallback |
-| Sam | Coding and spreadsheets | supplied full-body programmer artwork |
-| Ari | Illustration and drawing | supplied full-body artist artwork |
-| Nora | Writing and languages | supplied full-body copywriter artwork |
-| Zoe | Social content and marketing | supplied full-body SMM artwork |
+| Mino | Welcome, goals, unfamiliar subjects, recap | supplied welcome / thinking / explain / surprise / celebration GIFs and PNGs |
+| Mia | Design and layout | welcome / thinking / celebration poses and pointing gesture |
+| Sam | Coding and spreadsheets | welcome / thinking / celebration poses and keyboard gesture |
+| Ari | Illustration and drawing | welcome / thinking / celebration poses and painting gesture |
+| Nora | Writing and languages | welcome / thinking / celebration poses and writing gesture |
+| Zoe | Social content and marketing | welcome / thinking / celebration poses and wave gesture |
 
 States: `welcome`, `thinking`, `explaining`, `encourage`, `celebrate`, `incorrect`. A character stands alongside their actual instruction, question or feedback. The full body uses `object-fit: contain`; never crop the image into an avatar for a lesson scene.
 
-Mia plays a short pointing sequence with pauses. Playback stops when hidden, offscreen, disabled in the profile or when the device requests reduced motion. Static artwork remains visible. Other people currently use still artwork and existing presentation motion; they do not yet have independent limb animation. Add an approved GIF and still frame to the character registry to upgrade them without changing a lesson.
+All six characters now use genuine animations from the supplied **Mindora Design Pack**, with distinct mood poses and teaching gestures. `ui/assets/design-pack/manifest.json` records measured source dimensions and durations; `README.md` records provenance. Only the visible pose's GIF loads. Playback pauses between gestures and stops when hidden, offscreen, disabled in the profile or when the device requests reduced motion. A matching PNG stays visible. A failed GIF falls back to its PNG, then original art / SVG; reconnect retries the media.
+
+`mentor-scenes.js` renders the shared large tutor, name, contextual state and speech bubble. It is used by the ten templates, real AI lessons and built-in courses. Mobile figures have a 224–250 px stage and desktop figures a 330 px stage, with the whole source figure contained. The home and onboarding Mino is also larger.
+
+`mentorScene(mentor, mood, escapedContent, extraClass, { hint, focus })` accepts an optional plain-text hint and a focus-button label. Set `data-mentor-target` on the actual learning material. The helper actions reveal that lesson's hint or highlight/focus its example or answers. Tapping the character reveals the hint when available; otherwise the current speech is announced to assistive technology and its gesture replays. There is no automatic audio, simulated chat response or invented grading. `mentor-interactions.js` never modifies account, course or assessment state.
+
+The initial question uses a thinking pose, a correct check celebrates, and a wrong check encourages another attempt. A saved practice draft remains neutral because saving is not a grade. To add a topic, supply content and a mentor using this same contract. To add an animation, add a still/GIF pair and the measured dimensions and duration to `characters.js`.
 
 ## Ten reusable templates
 
@@ -110,6 +116,8 @@ The backend provides profile, account-owned learning courses and built-in worksp
 
 ## Delivery
 
-Work is isolated on `design/orange-mentors`. The checkpoint is `9c21927`; the template/UI foundation is `63e8bf6`. The final integration includes upstream `bbb508e` (account saving and updated AI behavior). Relative to that upstream, changes remain in `ui/`; backend/core functionality is retained. Deploy the design project `mindora-design`, leaving the team's main production project under its existing release workflow.
+Work is isolated on `design/orange-mentors`. The original checkpoint is `9c21927`; the template/UI foundation is `63e8bf6`. The animated mentor update is `daad57a`, using the new supplied Design Pack. Integration includes upstream `5dfb8be`, retaining the team's account, course synchronization and updated lesson-image behavior. Relative to upstream, changes remain in `ui/`. Deploy the design project `mindora-design`, leaving the team's main production project under its existing release workflow.
+
+The mentor update was verified at 320 / 390 / 1440 px: all ten studio templates, hint reveal/hide, focus/highlight, wrong/correct pose changes, draft refresh, and all three reading pages plus quiz UI for both built-in courses. The built-in views were rendered as fixtures because the local auth service is unavailable. No horizontal overflow or browser JavaScript errors were observed. Reduced motion and offscreen rendering requested no GIFs; GIF failure fell back to PNG, and reconnect recovered from complete media failure. Build and syntax checks passed; the full test invocation passed 205 tests (including the copied UI tests in build output).
 
 At delivery, `mindora-design` has no auth/AI environment configured. The frontend and template studio can be previewed, but real registration, synchronized courses and AI generation require the backend environment above. Do not report these external services as live based only on UI tests.

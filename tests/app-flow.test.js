@@ -8,9 +8,12 @@ import * as budget from '../core/budget-session.js';
 import * as learningModel from '../core/learning-plan.js';
 import * as roadmapModel from '../core/roadmap-model.js';
 import * as rewardsModel from '../core/roadmap-rewards.js';
+import * as assessments from '../core/lesson-assessment.js';
+import * as returnReview from '../core/return-review.js';
 import { createWorkspaceStorage } from '../core/workspace-storage.js';
 import { resumeCursor, needsRecap, certificateEligible, RECAP_AFTER_MS } from '../core/resume.js';
-import { recapQuestion } from '../ui/recap.js';
+import { recapQuestion, builtinReviewContent } from '../ui/recap.js';
+import { getStarterCourse, starterCourses } from '../core/starter-courses.js';
 
 // Run the real controller and its registered event handlers. Only DOM/rendering,
 // file download and account identity are ports; curriculum and resume rules stay real.
@@ -19,6 +22,8 @@ const controller = readFileSync(new URL('../core/app.js', import.meta.url), 'utf
   .replace(/^import .+ from .+;\r?$/gm, '');
 const planController = readFileSync(new URL('../core/plan-controller.js', import.meta.url), 'utf8')
   .replace(/^import .+ from .+;\r?$/gm, '').replace('export function createPlanController', 'function createPlanController');
+const reviewController = readFileSync(new URL('../ui/return-review.js', import.meta.url), 'utf8')
+  .split('export function mountReturnReview')[1];
 const KEY = 'mindora.workspace.v1.test-user';
 const NOW = Date.UTC(2026, 10, 14, 12);
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -29,6 +34,25 @@ function seed(overrides = {}) {
     progress: { design: 0, budget: 0 }, drafts: {}, works: {}, notes: {},
     sessions: {}, certificates: {}, practiceCount: 0, studyDays: [], ...overrides,
   };
+}
+
+function savedAiCourse() {
+  const url = 'https://docs.python.org/3/tutorial/controlflow.html';
+  const plan = learningModel.normalizePlan({
+    formatVersion: 3, title: 'Python loops', outcome: 'Print every item in a list.',
+    steps: Array.from({ length: 3 }, (_, index) => ({
+      title: `Loop idea ${index + 1}`, instruction: 'A loop runs once for each item.',
+      task: 'Print the names in your own list.', criterion: 'Every name appears once.', sourceUrl: url,
+      teaching: {
+        why: 'One loop can repeat a useful action.',
+        example: { input: "for name in ['Ada', 'Lin']:\n    print(name)", output: 'Ada\nLin', explanation: 'Two names produce two lines.' },
+        assessment: { type: 'choice', question: 'How many lines appear?', options: ['One', 'Two', 'Three'], answer: 1, explanation: 'There are two names in the list.' },
+        takeaway: 'A loop visits each item once.',
+      },
+    })),
+  }, { goal: 'Learn Python loops', minutes: 10, language: 'en' }, new Map([[url, { url, title: 'Python tutorial' }]]));
+  assert.ok(plan);
+  return learningModel.restorePlan({ plan, completed: 1, answers: ['Ada\nLin', 'My current draft'], study: [{ page: 3, response: 1, checked: true }, { page: 1 }] });
 }
 
 function emitter() {
@@ -55,7 +79,11 @@ function node() {
   };
 }
 
-function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profile: null }, storage: priorStorage, realPlans = false, failStorageWrites = false, reconcile = Promise.resolve(), roadmapResponse } = {}) {
+function app(initial, {
+  now = NOW, account = { user: { id: 'test-user' }, profile: null }, storage: priorStorage,
+  realPlans = false, failStorageWrites = false, reconcile = Promise.resolve(), roadmapResponse,
+  libraryCourses = [], starterCopy = Promise.resolve(true),
+} = {}) {
   let time = now, current, deck = null, uuidCount = 0, reloads = 0, conflictNotice = false, accountOpens = 0;
   const storage = priorStorage || new Map([[KEY, JSON.stringify(initial)]]);
   const presentation = new Map();
@@ -69,6 +97,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
   const downloads = [];
   const generations = [];
   const roadmapRequests = [];
+  const copiedCourses = [], loadedCourses = [];
   const storePort = map => ({
     getItem: key => map.get(key) ?? null,
     setItem(key, value) {
@@ -83,17 +112,37 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
   }
   const screen = kind => (...args) => ({ kind, args: clone(args) });
   const context = vm.createContext({
-    ...engine, ...progress, ...budget, ...learningModel, ...roadmapModel, ...rewardsModel, resumeCursor, certificateEligible, recapQuestion,
+    ...engine, ...progress, ...budget, ...learningModel, ...roadmapModel, ...rewardsModel, ...assessments, ...returnReview,
+    resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, getStarterCourse, starterCourses,
+    needsReturnReview: (lastSeen, learned) => returnReview.needsReturnReview(lastSeen, learned, time),
     languageCode: value => value || 'en', setLanguage() {}, message: value => value, t: value => value,
     createCloudDrafts: () => ({ render() {}, async init() {} }),
-    createPlanController: () => ({ screen: () => ({}), reset() {}, async generate(goal, minutes, context) {
-      generations.push(clone({ goal, minutes, context }));
-      if (context?.roadmapStage) {
-        vm.runInContext("state.learningCourse = { id: '12345678-1234-4000-8000-123456789012' }", runtime);
+    createPlanController: () => ({ screen: () => ({}), reset() {}, async generate(goal, minutes, options) {
+      generations.push(clone({ goal, minutes, context: options }));
+      if (options?.roadmapStage) {
+        vm.runInContext("state.learningCourse = { id: '12345678-1234-4000-8000-123456789012' }", context);
         return true;
       }
     } }),
-    createLearningLibrary: () => ({ screen: () => ({ user: account.user, courses: [] }), async setUser() { await reconcile; return true; }, changed() {}, async flush() { return true; } }),
+    createLearningLibrary: hooks => ({
+      screen: () => ({ user: account.user, courses: libraryCourses }),
+      async setUser() { await reconcile; return true; }, changed() {}, async flush() { return true; },
+      async importLocal(saved) {
+        const owner = account.user?.id;
+        copiedCourses.push(clone(saved));
+        if (!await starterCopy) return false;
+        const course = { id: `ready-${copiedCourses.length}`, revision: 1, updatedAt: new Date(time).toISOString(), saved: clone(saved) };
+        hooks.setCurrent(course, owner);
+        return true;
+      },
+      async load(id) {
+        loadedCourses.push(id);
+        const course = libraryCourses.find(item => item.id === id);
+        if (!course?.saved) return false;
+        hooks.setCurrent(course, account.user?.id);
+        return true;
+      },
+    }),
     createBuiltinSync: () => ({ screen: () => ({}), async setUser() { return true; }, changed() {}, async flush() { return true; } }),
     learningLibraryView: () => '', learningSyncView: () => '', loginRequiredView: () => '',
     createWorkspaceStorage,
@@ -123,6 +172,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
       if (view === 'certificate') elements.get('#certificate-name').value = html.args[0].name;
     },
     dashboard: screen('dashboard'), coursesPage: screen('courses'), sidePage: screen('side'),
+    guidedStartView: screen('guided-start'), quietHomeView: screen('quiet-home'), returnReviewView: screen('return-review'),
     pathView: screen('path'), lesson: screen('lesson'), result: screen('result'), workView: screen('work'),
     recapView: screen('recap'), certificateView: screen('certificate'),
     refreshCertificatePreview() {},
@@ -135,18 +185,19 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
     openAccount() { accountOpens++; }, closeAccount() {}, expireAccountSession() { account.user = null; window.dispatch('mindora:account-changed'); },
     downloadCertificate: data => downloads.push(clone(data)),
   });
-  const runtime = context;
+  new vm.Script(`function mountReturnReview${reviewController}`, { filename: 'ui/return-review.js' }).runInContext(context);
   if (realPlans) new vm.Script(planController, { filename: 'core/plan-controller.js' }).runInContext(context);
   new vm.Script(controller, { filename: 'core/app.js' }).runInContext(context);
   return {
     get current() { return current; },
     get lesson() { return current.html.args[1]; },
     get recap() { return current.html.args[1]; },
+    get review() { return current.state.returnReview; },
     get reloads() { return reloads; },
     get conflictNotice() { return conflictNotice; },
     get accountOpens() { return accountOpens; },
     saved: () => JSON.parse(storage.get(KEY)), storage, presentation, downloads,
-    generations, roadmapRequests,
+    generations, roadmapRequests, copiedCourses, loadedCourses,
     signIn(user, reason) { account.user = user; window.dispatch('mindora:account-changed', { detail: { reason } }); },
     answerRoadmap(fields) { document.dispatch('submit', { target: { id: 'roadmap-form', fields } }); },
     startGoal(goal, minutes) {
@@ -157,7 +208,11 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
     element: selector => elements.get(selector),
     advance(ms) { time += ms; },
     click(dataset, { disabled = false, attributes = [] } = {}) {
-      const target = { dataset, disabled, closest: () => target, matches: selector => selector === '[data-home]' && attributes.includes('data-home'), hasAttribute: name => attributes.includes(name) };
+      const target = { dataset, disabled,
+        closest: selector => selector.includes('[data-return-') && !Object.keys(dataset).some(key => key.startsWith('return')) ? null : target,
+        matches: selector => selector === '[data-home]' && attributes.includes('data-home'),
+        hasAttribute: name => attributes.includes(name) || (name === 'data-return-choice' && dataset.returnChoice !== undefined),
+      };
       document.dispatch('click', { target });
     },
     input(id, value, dataset = {}) {
@@ -165,7 +220,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
       Object.assign(target, { id, value, dataset, closest: selector => selector === '#main' ? elements.get('#main') : null });
       document.dispatch('input', { target });
     },
-    change(id, value) { document.dispatch('change', { target: { id, value } }); },
+    change(id, value) { document.dispatch('change', { target: { id, value, dataset: {} } }); },
     answer(value) { document.dispatch('input', { target: { form: { id: 'learning-step-form' }, name: 'answer', value, dataset: {}, closest: () => null } }); },
     submitAnswer(value) { document.dispatch('submit', { target: { id: 'learning-step-form', elements: { answer: { value } } } }); },
     storageChanged(key = KEY) { window.dispatch('storage', { key }); },
@@ -185,6 +240,72 @@ test('starting either built-in course requires authentication and does not expos
   assert.equal(run.current.view, 'discover');
   assert.equal(run.accountOpens, 2);
   assert.deepEqual(run.current.state.progress, { design: 0, budget: 0 });
+});
+
+test('a ready mini-course creates one account copy and opens its path before starting the lesson', async () => {
+  let finishCopy;
+  const starterCopy = new Promise(resolve => { finishCopy = resolve; });
+  const run = app(seed({ active: null, language: 'kk' }), { realPlans: true, starterCopy });
+  run.click({ starterCourse: 'python-basics' });
+  run.click({ starterCourse: 'python-basics' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.copiedCourses.length, 1, 'double clicks cannot create parallel copies');
+  assert.deepEqual(run.copiedCourses[0], getStarterCourse('python-basics', 'kk'));
+  finishCopy(true);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(run.generations, []);
+  assert.equal(run.current.view, 'course-path');
+  assert.equal(run.current.state.learningPlan.completed, 0);
+  assert.equal(run.current.state.learningCourse.ownerId, 'test-user');
+  run.click({ view: 'profile' });
+  run.click({ view: 'my-path' });
+  assert.equal(run.current.view, 'course-path');
+  run.click({ view: 'learning-plan' });
+  assert.equal(run.current.view, 'learning-plan');
+});
+
+test('choosing an existing ready mini-course loads the saved copy without clearing progress or draft', async () => {
+  const saved = getStarterCourse('clear-writing', 'en');
+  saved.completed = 1;
+  saved.answers = ['My completed first exercise.', 'My unfinished independent draft.'];
+  const course = { id: 'my-writing-course', revision: 3, updatedAt: new Date(NOW).toISOString(), saved,
+    title: saved.plan.title, goal: saved.plan.goal, language: saved.plan.language };
+  const run = app(seed({ active: null }), { realPlans: true, libraryCourses: [course] });
+  run.click({ starterCourse: 'clear-writing' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(run.copiedCourses, []);
+  assert.deepEqual(run.loadedCourses, ['my-writing-course']);
+  assert.equal(run.current.view, 'course-path');
+  assert.equal(run.current.state.learningPlan.completed, 1);
+  assert.equal(run.current.state.learningPlan.answers[1], saved.answers[1]);
+});
+
+test('ready mini-course requires an account and an unsuccessful save keeps prior work', async () => {
+  const guest = app(seed(), { account: { user: null, profile: null } });
+  guest.click({ starterCourse: 'everyday-english' });
+  assert.equal(guest.accountOpens, 1);
+  assert.deepEqual(guest.copiedCourses, []);
+  const existing = savedAiCourse();
+  const run = app(seed({ learningPlan: existing }), { realPlans: true, starterCopy: Promise.resolve(false) });
+  run.click({ starterCourse: 'ai-prompts' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'courses');
+  assert.deepEqual(run.current.state.learningPlan, existing);
+  assert.deepEqual(run.generations, []);
+});
+
+test('a starter copy finishing after account switch cannot replace the next account workspace', async () => {
+  let finishCopy;
+  const starterCopy = new Promise(resolve => { finishCopy = resolve; });
+  const run = app(seed({ active: null }), { realPlans: true, starterCopy });
+  run.click({ starterCourse: 'ai-prompts' });
+  run.signIn({ id: 'second-user' });
+  await new Promise(resolve => setImmediate(resolve));
+  finishCopy(true);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.state.learningPlan, null);
+  assert.equal(run.current.state.learningCourse, undefined);
+  assert.equal(run.current.view, 'courses');
 });
 
 test('a guest goal waits for account restoration, then prefills onboarding without generating a lesson', async () => {
@@ -266,9 +387,9 @@ test('switching accounts selects separate local workspaces and signout hides lea
   assert.deepEqual(run.current.state.notes, {});
 });
 
-test('automatic budget reload requires the overdue recap and preserves the reading page', () => {
+test('budget reload opens the overdue review and retains the reading page', () => {
   const run = app(seed({ active: 'budget', budgetActivity: { view: 'lesson', step: 0 }, sessions: { budget: { lastSeen: NOW - RECAP_AFTER_MS - 1, cursor: { step: 0, page: 2 } } } }));
-  assert.equal(run.current.view, 'recap');
+  assert.equal(run.current.view, 'return-review');
   assert.equal(run.saved().sessions.budget.cursor.page, 2);
 });
 
@@ -280,7 +401,9 @@ test('an older tab cannot overwrite a completed AI task through the real app sav
   }, { goal: 'Learn Python loops', minutes: 5, language: 'en' }, new Map([[url, { url, title: 'Python tutorial' }]]));
   const initial = seed({ learningPlanOpen: true, learningPlan: { plan, study: [{ page: 1 }] } });
   const first = app(initial, { realPlans: true });
+  first.click({ view: 'learning-plan' });
   const older = app(null, { storage: first.storage, realPlans: true });
+  older.click({ view: 'learning-plan' });
   first.answer('Ada, Lin, Sam');
   first.submitAnswer('Ada, Lin, Sam');
   await new Promise(resolve => setImmediate(resolve));
@@ -410,11 +533,11 @@ test('quiz selection, checked feedback and question position survive reload thro
   assert.equal(reloaded.saved().progress.design, 1);
 });
 
-test('resume offers a recap strictly after 24 hours, and skips it when nothing was learned', () => {
+test('resume offers a return review strictly after 24 hours, and skips it when nothing was learned', () => {
   for (const [elapsed, learned, expected] of [
     [RECAP_AFTER_MS - 1, true, 'lesson'],
     [RECAP_AFTER_MS, true, 'lesson'],
-    [RECAP_AFTER_MS + 1, true, 'recap'],
+    [RECAP_AFTER_MS + 1, true, 'return-review'],
     [RECAP_AFTER_MS * 2, false, 'lesson'],
   ]) {
     const run = app(seed({ sessions: { design: { lastSeen: NOW - elapsed, cursor: { step: 0, page: learned ? 1 : 0 } } } }));
@@ -445,12 +568,12 @@ test('a selected path node wins over a different saved review position, while lo
 test('a path-node choice survives an overdue recap instead of restoring a different saved stage', () => {
   const run = app(seed({ progress: { design: 2, budget: 0 }, sessions: { design: { lastSeen: NOW - RECAP_AFTER_MS - 1, cursor: { step: 1, quizIndex: 1 } } } }));
   run.click({ step: '0' });
-  assert.equal(run.current.view, 'recap');
-  run.click({ action: 'recap-next' });
+  assert.equal(run.current.view, 'return-review');
+  run.click({ returnAction: 'next' });
   for (let index = 0; index < 2; index++) {
-    run.click({ recapChoice: String(recapQuestion('design', index).answer) });
-    run.click({ action: 'recap-check' });
-    run.click({ action: 'recap-next' });
+    run.click({ returnChoice: String(recapQuestion('design', index).answer) });
+    run.click({ returnAction: 'check' });
+    run.click({ returnAction: 'next' });
   }
   assert.equal(run.current.view, 'lesson');
   assert.equal(run.lesson.step, 0);
@@ -463,19 +586,23 @@ for (const [completed, expectedStep, action] of [[2, 2, 'practice'], [4, 3, 'mix
     const key = `budget-${expectedStep === 2 ? 'practice' : 'challenge'}`;
     const oldDraft = { values: [10, 20, 5], formula: '=SUM(B2:B4)', answer: '35', seed: expectedStep === 2 ? 0 : 6 };
     const earned = { name: 'Alex', completedAt: new Date(NOW - RECAP_AFTER_MS * 3).toISOString(), certificateId: 'MD-BUDGET-EARNED' };
-    const run = app(seed({
+    let run = app(seed({
       active: 'budget', progress: { design: 0, budget: completed }, drafts: { [key]: oldDraft },
       certificates: completed === 4 ? { budget: earned } : {},
       sessions: { budget: { lastSeen: NOW - RECAP_AFTER_MS - 1, cursor: { step: 0, page: 2 } } },
     }));
     run.click({ action, id: 'budget' });
-    assert.equal(run.current.view, 'recap');
+    assert.equal(run.current.view, 'return-review');
     assert.deepEqual(run.saved().drafts[key], oldDraft, 'keep the old draft until the recap has finished');
-    run.click({ action: 'recap-next' });
+    assert.equal(run.saved().returnReview.intent, 'practice');
+    run = app(null, { storage: run.storage });
+    run.click({ action: 'resume-course', id: 'budget' });
+    assert.equal(run.review.intent, 'practice', 'the pending fresh task request survives reload');
+    run.click({ returnAction: 'next' });
     for (let index = 0; index < 2; index++) {
-      run.click({ recapChoice: String(recapQuestion('budget', index).answer) });
-      run.click({ action: 'recap-check' });
-      run.click({ action: 'recap-next' });
+      run.click({ returnChoice: String(recapQuestion('budget', index).answer) });
+      run.click({ returnAction: 'check' });
+      run.click({ returnAction: 'next' });
     }
     assert.equal(run.current.view, 'lesson');
     assert.equal(run.lesson.step, expectedStep, 'the fresh task request wins over the saved reading position');
@@ -490,24 +617,42 @@ for (const [completed, expectedStep, action] of [[2, 2, 'practice'], [4, 3, 'mix
   });
 }
 
-test('recap blocks unanswered/wrong checks, then restores the exact saved quiz and draft without advancing the course', () => {
+test('weak first attempts require basics and repair across reload, preserving saved quiz, work and completion', () => {
   const cursor = { step: 1, page: 0, quizIndex: 2, quizChoice: 1, quizFeedback: true };
   const drafts = { 'budget-practice': { values: [10, 20, 5], formula: '=SUM(B2:B4)', answer: '35', seed: 0 } };
-  const run = app(seed({ active: 'budget', progress: { design: 0, budget: 2 }, drafts, sessions: { budget: { lastSeen: NOW - RECAP_AFTER_MS - 1, cursor } } }));
+  let run = app(seed({ active: 'budget', progress: { design: 0, budget: 2 }, drafts, sessions: { budget: { lastSeen: NOW - RECAP_AFTER_MS - 1, cursor } } }));
   run.click({ action: 'resume-course', id: 'budget' });
-  assert.equal(run.current.view, 'recap');
-  assert.equal(run.recap.phase, 0);
-  run.click({ action: 'recap-next' });
-  run.click({ action: 'recap-next' });
-  assert.equal(run.recap.phase, 1, 'cannot skip an unanswered question');
-  run.click({ recapChoice: String((recapQuestion('budget', 0).answer + 1) % 3) });
-  run.click({ action: 'recap-check' });
-  run.click({ action: 'recap-next' });
-  assert.equal(run.recap.phase, 1, 'wrong answer does not advance');
+  assert.equal(run.current.view, 'return-review');
+  assert.equal(run.review.phase, 'intro');
+  run.click({ returnAction: 'next' });
+  run.click({ returnAction: 'check' });
+  run.click({ returnAction: 'next' });
+  assert.equal(run.review.index, 0, 'cannot skip an unanswered question');
+  run.click({ returnChoice: String((recapQuestion('budget', 0).answer + 1) % 3) });
+  run.click({ returnAction: 'check' });
+  run.click({ returnChoice: String(recapQuestion('budget', 0).answer) });
+  assert.deepEqual(run.review.firstPass, [false, null], 'a corrected click cannot replace the first attempt');
+  run.click({ returnAction: 'next' });
+  run.click({ returnChoice: String(recapQuestion('budget', 1).answer) });
+  run.click({ returnAction: 'check' });
+  run.click({ returnAction: 'next' });
+  assert.equal(run.review.phase, 'foundations', '50% first pass requires rereading the basics');
+  const reviewBeforeReload = clone(run.review);
+  run = app(null, { storage: run.storage });
+  run.click({ action: 'resume-course', id: 'budget' });
+  assert.deepEqual(run.review, reviewBeforeReload);
+  run.click({ returnAction: 'next' });
+  run.click({ returnAction: 'next' });
+  assert.equal(run.review.phase, 'repair');
+  run.click({ returnChoice: String((recapQuestion('budget', 0).answer + 1) % 3) });
+  run.click({ returnAction: 'check' });
+  run.click({ returnAction: 'next' });
+  assert.equal(run.review.index, 0, 'wrong repair cannot skip ahead');
   for (let index = 0; index < 2; index++) {
-    run.click({ recapChoice: String(recapQuestion('budget', index).answer) });
-    run.click({ action: 'recap-check' });
-    run.click({ action: 'recap-next' });
+    run.click({ returnChoice: String(recapQuestion('budget', index).answer) });
+    run.click({ returnAction: 'check' });
+    assert.deepEqual(run.review.firstPass, [false, true]);
+    run.click({ returnAction: 'next' });
   }
   assert.equal(run.current.view, 'lesson');
   for (const field of ['step', 'quizIndex', 'quizChoice', 'quizFeedback']) assert.equal(run.lesson[field], cursor[field], field);
@@ -528,8 +673,54 @@ test('returning to a long-hidden lesson triggers recap without losing its readin
   run.leave();
   assert.equal(run.saved().sessions.design.lastSeen, NOW, 'pagehide does not turn an old hidden session into fresh activity');
   run.visible(true);
-  assert.equal(run.current.view, 'recap');
+  assert.equal(run.current.view, 'return-review');
   assert.equal(run.saved().sessions.design.cursor.page, 1);
+});
+
+test('an AI course resumes its exact page and draft after the same first-attempt review, including reload and account isolation', async () => {
+  const saved = savedAiCourse();
+  const oldVisit = NOW - RECAP_AFTER_MS * 3;
+  let run = app(seed({ learningPlan: saved, learningCourse: { id: 'python-course', updatedAt: new Date(oldVisit).toISOString() }, learningVisits: { 'ai:python-course': oldVisit } }), { realPlans: true });
+  assert.equal(run.current.view, 'discover');
+  run.click({ view: 'learning-plan' });
+  assert.equal(run.current.view, 'return-review');
+  assert.equal(run.review.key, 'ai:python-course');
+  assert.equal(run.review.questions.length, 2, 'uses only the two encountered lesson checkpoints');
+  assert.equal(run.saved().learningVisits['ai:python-course'], oldVisit, 'opening a review does not count as completing it');
+  run.click({ returnAction: 'next' });
+  run.click({ returnChoice: '1' });
+  run.click({ returnAction: 'check' });
+  run.click({ returnAction: 'next' });
+  const partial = clone(run.review);
+  run = app(null, { storage: run.storage, realPlans: true });
+  run.click({ view: 'learning-plan' });
+  assert.deepEqual(run.review, partial);
+  run.signIn({ id: 'second-user' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.state.returnReview, undefined, 'another account cannot see this review or draft');
+  run.signIn({ id: 'test-user' });
+  await new Promise(resolve => setImmediate(resolve));
+  run.click({ view: 'learning-plan' });
+  assert.deepEqual(run.review, partial);
+  run.click({ returnChoice: '1' });
+  run.click({ returnAction: 'check' });
+  run.click({ returnAction: 'next' });
+  assert.equal(run.current.view, 'learning-plan');
+  assert.deepEqual(run.saved().learningPlan, saved, 'review never grants course credit or rewrites the original study cursor');
+  assert.equal(run.saved().learningVisits['ai:python-course'], NOW);
+  assert.equal(run.saved().returnReview, undefined);
+});
+
+test('AI returning after a hidden tab is closed retains the inactivity timestamp and requires recall', () => {
+  const run = app(seed({ learningPlan: savedAiCourse(), learningCourse: { id: 'python-course' } }), { realPlans: true });
+  run.click({ view: 'learning-plan' });
+  run.visible(false);
+  run.advance(RECAP_AFTER_MS + 1);
+  run.leave();
+  assert.equal(run.saved().learningVisits['ai:python-course'], NOW, 'closing a long-hidden tab is not new learning activity');
+  run.visible(true);
+  assert.equal(run.current.view, 'return-review');
+  assert.equal(run.saved().learningPlan.study[1].page, 1);
 });
 
 test('certificate is denied before full completion or without a saved final challenge', () => {

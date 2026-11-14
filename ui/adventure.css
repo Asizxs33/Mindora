@@ -42,10 +42,13 @@
 
 /* A single question starts the first visit. */
 .learn-home { max-width: 550px; margin: -12px auto 0; text-align: center; }
-.hero-character { display: flex; justify-content: center; margin: 0 auto 0; width: fit-content; border-radius: 50%; background: radial-gradient(ellipse at center, #fff2e5 0 56%, transparent 57%); }
-.hero-character .home-character { --character-size: 176px; }
-.speech-bubble { position: relative; display: table; max-width: 100%; padding: 7px 13px; margin: 0 auto 22px; border: 1px solid #eee0d4; border-radius: 14px; background: #fffaf5; color: #6c5e55; font-size: 14px; font-weight: 500; line-height: 1.4; }
-.speech-bubble:before { content: ''; position: absolute; top: -6px; left: calc(50% - 6px); width: 10px; height: 10px; border-top: 1px solid #eee0d4; border-left: 1px solid #eee0d4; background: #fffaf5; transform: rotate(45deg); }
+.home-introduction { display: grid; grid-template-columns: 230px minmax(0,1fr); align-items: center; gap: 16px; margin-bottom: 22px; }
+.hero-character { display: flex; justify-content: center; margin: 0 auto; width: fit-content; border-radius: 50%; background: radial-gradient(ellipse at center, #fff2e5 0 56%, transparent 57%); }
+.hero-character .home-character { --character-size: 230px; }
+.speech-bubble { position: relative; max-width: 100%; padding: 20px; margin: 0; border: 2px solid #efd5bd; border-radius: 24px 24px 24px 8px; background: #fffaf5; color: #44372e; font-size: 17px; font-weight: 600; line-height: 1.55; text-align: left; box-shadow: 0 4px 0 #f9eadb; }
+.speech-bubble:before { content: ''; position: absolute; top: 48%; left: -9px; width: 14px; height: 14px; border-bottom: 2px solid #efd5bd; border-left: 2px solid #efd5bd; background: #fffaf5; transform: rotate(45deg); }
+.home-guide-label { display: block; margin-bottom: 8px; color: #a64b13; font-size: 12px; font-weight: 800; line-height: 1.5; }
+.speech-bubble p { margin: 0; }
 .goal-copy h1 { font-size: 38px; line-height: 1.16; letter-spacing: -.9px; font-weight: 750; }
 .goal-copy p { margin-top: 15px; font-size: 18px; line-height: 1.6; color: var(--muted); }
 .goal-form { display: grid; gap: 14px; margin: 29px auto 0; }
@@ -64,11 +67,14 @@
 .return-home { max-width: 700px; margin: 0 auto; }
 .return-heading { margin-bottom: 28px; }
 .return-heading h1 { font-size: 34px; line-height: 1.2; font-weight: 750; letter-spacing: -.7px; }
-.resume-card { display: grid; grid-template-columns: 180px minmax(0,1fr); align-items: center; gap: 26px; padding: 30px; border: 0; border-radius: 22px; background: #fff3e8; }
+.resume-card { display: grid; grid-template-columns: 220px minmax(0,1fr); align-items: center; gap: 30px; padding: 30px; border: 0; border-radius: 22px; background: #fff3e8; }
 .resume-card.budget { background: #fff7e8; }
-.resume-mentor { text-align: center; min-width: 0; }
-.resume-mentor .resume-character { --character-size: 190px; margin-left: -5px; }
-.resume-mentor>span { display: block; max-width: 180px; margin: 1px auto 0; color: #7b6b60; font-size: 13px; line-height: 1.5; }
+.resume-mentor { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
+.resume-mentor .resume-character { --character-size: 220px; --character-frame-width: 100%; --character-frame-height: 100%; margin: 0; }
+.resume-mentor .character-human { --character-height: 290px; }
+.resume-mentor>span { position: relative; display: block; order: -1; width: 100%; max-width: 240px; margin: 0 auto 18px; padding: 15px 17px; border: 1.5px solid #edcdb3; border-radius: 20px 20px 8px 20px; background: #fff; color: #5d4b3e; font-size: 15px; line-height: 1.5; text-align: left; }
+.resume-mentor>span:after { content: ''; position: absolute; bottom: -8px; left: 48%; width: 13px; height: 13px; border-right: 1.5px solid #edcdb3; border-bottom: 1.5px solid #edcdb3; transform: rotate(45deg); background: #fff; }
+.resume-mentor>span>strong { display: block; margin-bottom: 5px; color: #a64b13; font-size: 12px; font-weight: 800; }
 .resume-body { min-width: 0; }
 .resume-body .resume-path-link { display: flex; margin: 13px auto 0; min-height: 44px; font-size: 14px; }
 .resume-card.personalized { border: 1px solid #f0d8c3; }
@@ -161,8 +167,9 @@
 
 @media (max-width: 1050px) and (min-width: 761px) {
   #main { padding: 32px 28px 50px; }
-  .resume-card { grid-template-columns: 135px minmax(0,1fr); gap: 19px; padding: 24px; }
-  .resume-mentor .resume-character { --character-size: 155px; margin-left: -10px; }
+  .resume-card { grid-template-columns: 180px minmax(0,1fr); gap: 19px; padding: 24px; }
+  .resume-mentor .resume-character { --character-size: 180px; margin: 0; }
+  .resume-mentor .character-human { --character-height: 270px; }
   .resume-body h2 { font-size: 25px; }
   .course-grid { grid-template-columns: 1fr; }
 }
@@ -184,8 +191,12 @@
   .mobile-navigation .nav-item svg { width: 22px; height: 22px; }
   .mobile-navigation .nav-item>span { display: block; }
   .learn-home { max-width: 500px; margin-top: -12px; }
-  .hero-character .home-character { --character-size: 155px; }
-  .speech-bubble { font-size: 13px; padding: 6px 11px; margin-bottom: 20px; }
+  .home-introduction { grid-template-columns: 1fr; gap: 8px; margin-bottom: 18px; }
+  .hero-character { grid-row: 2; }
+  .hero-character .home-character { --character-size: 200px; }
+  .speech-bubble { max-width: 360px; margin: 0 auto; font-size: 16px; padding: 15px 18px; text-align: center; border-radius: 22px; }
+  .speech-bubble:before { top: auto; bottom: -9px; left: calc(50% - 8px); border-left: 0; border-right: 2px solid #efd5bd; }
+  .home-guide-label { margin-bottom: 5px; }
   .goal-copy h1 { font-size: 32px; letter-spacing: -.6px; line-height: 1.18; }
   .goal-copy p { font-size: 17px; line-height: 1.6; margin-top: 14px; }
   .goal-form { gap: 13px; margin-top: 26px; }
@@ -198,9 +209,11 @@
   .return-heading { margin-bottom: 24px; }
   .return-heading h1 { font-size: 31px; }
   .resume-card { display: flex; flex-direction: column; align-items: stretch; gap: 20px; padding: 24px; border-radius: 20px; }
-  .resume-mentor { display: flex; align-items: center; justify-content: center; gap: 12px; margin: -8px 0 0; }
-  .resume-mentor .resume-character { --character-size: 145px; margin: 0; }
-  .resume-mentor>span { max-width: 110px; font-size: 14px; margin: 0; text-align: left; }
+  .resume-mentor { flex-direction: row; align-items: center; justify-content: center; gap: 14px; margin: -4px 0 0; }
+  .resume-mentor .resume-character { --character-size: 180px; flex: 0 1 180px; margin: 0; }
+  .resume-mentor .character-human { --character-height: 250px; }
+  .resume-mentor>span { order: 0; max-width: 230px; flex: 1; font-size: 15px; margin: 0; padding: 14px; text-align: left; }
+  .resume-mentor>span:after { bottom: auto; top: 46%; left: -8px; border-right: 0; border-left: 1.5px solid #edcdb3; }
   .resume-body h2 { font-size: 27px; }
   .resume-progress { margin-top: 20px; font-size: 14px; margin-bottom: 10px; }
   .resume-next { margin: 18px 0 24px; font-size: 18px; }
@@ -243,6 +256,12 @@
   .profile-links strong { font-size: 17px; }
   .profile-note { font-size: 12px; }
 }
+@media (max-width: 500px) {
+  .resume-mentor { flex-direction: column; gap: 8px; }
+  .resume-mentor .resume-character { --character-size: 190px; flex-basis: auto; }
+  .resume-mentor>span { order: -1; width: 100%; max-width: none; }
+  .resume-mentor>span:after { top: auto; bottom: -8px; left: 48%; border-left: 0; border-right: 1.5px solid #edcdb3; }
+}
 @media (max-width: 360px) {
   .topbar { padding: 0 16px; }
   .brand-mark { width: 31px; height: 31px; }
@@ -252,7 +271,10 @@
   .goal-copy h1,.page-banner h1 { font-size: 30px; }
   .topic-shortcut { flex-direction: column; gap: 5px; font-size: 14px; min-height: 75px; padding: 10px 6px; }
   .resume-card { padding: 22px; }
-  .resume-mentor .resume-character { --character-size: 125px; }
+  .resume-mentor { flex-direction: column; gap: 8px; }
+  .resume-mentor .resume-character { --character-size: 190px; flex-basis: auto; }
+  .resume-mentor>span { order: -1; width: 100%; max-width: none; }
+  .resume-mentor>span:after { top: auto; bottom: -8px; left: 48%; border-left: 0; border-right: 1.5px solid #edcdb3; }
   .resume-body h2 { font-size: 25px; }
   .profile-settings { column-gap: 12px; }
   .profile-settings h2 { font-size: 16px; }

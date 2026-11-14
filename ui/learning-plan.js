@@ -6,6 +6,7 @@ import { icon } from './icons.js';
 import { currentLanguage, t } from './language.js';
 import { message } from './messages.js';
 import { mentorForTopic, mentorScene, renderLessonTemplate } from './lesson-templates.js';
+import { sceneForTopic } from './learning-scenes.js';
 
 if (typeof document !== 'undefined' && !document.getElementById('mindora-template-styles')) {
   const stylesheet = document.createElement('link');
@@ -30,8 +31,8 @@ function lessonMentor(plan) {
   return mentorForTopic(`${plan.goal ?? ''} ${plan.title ?? ''}`);
 }
 
-function mentorView(mentor, mood, content, extraClass = '') {
-  return mentorScene(mentor, mood, content, extraClass);
+function mentorView(mentor, mood, content, extraClass = '', options = {}) {
+  return mentorScene(mentor, mood, content, extraClass, options);
 }
 
 function reviewView(review, nested = false) {
@@ -43,7 +44,7 @@ function reviewView(review, nested = false) {
   </div>`;
 }
 
-function resultView({ plan, answers, reviews }, onRoadmap) {
+function resultView({ plan, answers, reviews }) {
   const finalTask = plan.steps.at(-1);
   const review = reviews.at(-1);
   return `<section class="ai-lesson-result learning-result" lang="${esc(plan.language)}">
@@ -52,7 +53,7 @@ function resultView({ plan, answers, reviews }, onRoadmap) {
     <p>${esc(finalTask.task)}</p>
     <div class="ai-lesson-submission learning-answer">${esc(answers.at(-1))}</div>
     ${review ? reviewView(review) : `<div class="ai-lesson-note"><strong lang="${esc(currentLanguage())}">${t('Self-check', 'Самопроверка', 'Өзін-өзі тексеру')}</strong><p>${esc(finalTask.criterion)}</p></div>`}
-    <button class="primary" type="button" data-view="${onRoadmap ? 'roadmap' : 'courses'}">${onRoadmap ? t('Back to my path', 'К карте обучения', 'Оқу жолыма оралу') : t('My courses', 'Мои курсы', 'Курстарым')} ${icon('arrow', 18)}</button>
+    <button class="primary" type="button" data-view="my-path">${t('Back to my path', 'К карте обучения', 'Оқу жолыма оралу')} ${icon('arrow', 18)}</button>
   </section>`;
 }
 
@@ -80,7 +81,7 @@ function sourceMaterialLink(resource) {
 
 function explanationView(step, mentor) {
   const images = step.teaching?.assessment ? [] : step.resource?.images;
-  return `${renderLessonTemplate({ type: 'theory', prompt: t('Let’s make it simple.', 'Разберёмся вместе.', 'Бірге түсініп алайық.'), intro: step.teaching?.why ?? step.criterion, body: step.instruction, images }, {}, { external: true, mentor })}
+  return `${renderLessonTemplate({ type: 'theory', intro: step.teaching?.why ?? step.criterion, body: step.instruction, images }, {}, { external: true, mentor })}
     ${sourceMaterialLink(step.resource)}`;
 }
 
@@ -88,15 +89,15 @@ function illustrationView(step) {
   return renderLessonTemplate({ type: 'illustration', images: step.resource.images }, {}, { external: true });
 }
 
-function exampleView(teaching, mentor) {
-  return renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output }, {}, { external: true, mentor });
+function exampleView(teaching, mentor, topic) {
+  return renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output, explanation: teaching.example.explanation, sceneFrame: sceneForTopic(topic) }, {}, { external: true, mentor });
 }
 
 function checkpointView(teaching, study, busy, mentor) {
   const checkpoint = teaching.checkpoint;
   const correct = study.checked && study.choice === checkpoint.correctIndex;
   return `<div class="ai-lesson-check">
-    ${mentorView(mentor, study.checked ? correct ? 'celebrate' : 'encourage' : 'thinking', `<h3 id="learning-check-question">${esc(checkpoint.question)}</h3>`)}
+    ${mentorView(mentor, study.checked ? correct ? 'celebrate' : 'encourage' : 'thinking', `<h3 id="learning-check-question">${esc(checkpoint.question)}</h3>`, '', { hint: study.checked ? checkpoint.explanation : t('Compare each answer with the example you just saw.', 'Сравни каждый ответ с предыдущим примером.', 'Әр жауапты жаңа ғана көрген мысалмен салыстыр.'), focus: t('See the answers', 'К вариантам', 'Жауаптарға өту') })}
     <div class="ai-lesson-choices" role="group" aria-labelledby="learning-check-question">
       ${checkpoint.choices.map((choice, index) => {
         const selected = study.choice === index;
@@ -133,7 +134,7 @@ function practiceView(step, answer, review, busy, reviewError, last, mentor, use
   const prompt = t('Your turn.', 'Теперь твоя очередь.', 'Енді сенің кезегің.');
   const task = useTemplates
     ? renderLessonTemplate({ type: 'practice', prompt, body: step.task, criterion: step.criterion }, {}, { external: true, mentor, sceneMood: mood })
-    : `${mentorView(mentor, mood, `<h3 lang="${esc(currentLanguage())}">${prompt}</h3><p class="learning-answer">${esc(step.task)}</p>`, 'ai-lesson-mentor-practice')}
+    : `${mentorView(mentor, mood, `<h3 lang="${esc(currentLanguage())}">${prompt}</h3><p class="learning-answer">${esc(step.task)}</p>`, 'ai-lesson-mentor-practice', { hint: step.teaching?.takeaway || step.criterion, focus: t('What to check', 'Что проверить', 'Нені тексеру керек') })}
       ${step.teaching && !last ? `<div class="ai-lesson-note"><strong lang="${esc(currentLanguage())}">${t('Keep in mind', 'Запомни', 'Есте сақта')}</strong><p>${esc(step.teaching.takeaway)}</p></div>` : ''}
       <div class="ai-lesson-criterion"><strong lang="${esc(currentLanguage())}">${t('Before you submit', 'Перед проверкой', 'Тексеруге жіберер алдында')}</strong><p>${esc(step.criterion)}</p></div>`;
   return `${task}
@@ -174,7 +175,7 @@ function screenView(saved, busy, reviewError) {
   switch (page) {
     case 'explain': content = explanationView(step, mentor); break;
     case 'illustration': content = illustrationView(step); break;
-    case 'example': content = exampleView(teaching, mentor); break;
+    case 'example': content = exampleView(teaching, mentor, `${plan.goal || ''} ${plan.title}`); break;
     case 'check': content = assessment
       ? assessmentView(assessment, response, study.checked, checkedCorrect, busy, mentor)
       : checkpointView(teaching, study, busy, mentor); break;
@@ -199,14 +200,17 @@ function screenView(saved, busy, reviewError) {
   </section>`;
 }
 
-function lessonView(saved, busy, reviewError, accountSaved, onRoadmap) {
+function lessonView(saved, busy, reviewError, accountSaved, rewards) {
   const { plan, completed } = saved;
   return `<header class="ai-lesson-heading" lang="${esc(plan.language)}">
-    <div class="ai-lesson-heading-meta" lang="${esc(currentLanguage())}"><span>${icon('book', 18)} ${t('My lesson', 'Моё занятие', 'Сабағым')}</span><span>${icon('clock', 16)} ${t(`${plan.minutes} minutes`, `${plan.minutes} минут`, `${plan.minutes} минут`)}</span></div>
-    <h1>${esc(plan.title)}</h1><p>${esc(plan.outcome)}</p>
+    <h1>${esc(plan.title)}</h1>
+    <div class="ai-lesson-heading-meta" lang="${esc(currentLanguage())}">
+      <span>${icon('clock', 16)} ${t(`${plan.minutes} minutes`, `${plan.minutes} минут`, `${plan.minutes} минут`)}</span>
+      ${rewards ? `<span class="ai-lesson-life-count">${icon('heart', 18)} ${t(`${rewards.hearts}/${rewards.maxHearts} lives`, `Жизни ${rewards.hearts}/${rewards.maxHearts}`, `Өмір ${rewards.hearts}/${rewards.maxHearts}`)}</span>` : ''}
+    </div>
     <div class="ai-lesson-overall"><progress max="${plan.steps.length}" value="${completed}" aria-label="${t('Completed tasks', 'Выполненные задания', 'Орындалған тапсырмалар')}"></progress><span lang="${esc(currentLanguage())}">${t(`${completed} of ${plan.steps.length} tasks complete`, `Выполнено ${completed} из ${plan.steps.length} заданий`, `${plan.steps.length} тапсырманың ${completed} орындалды`)}</span></div>
   </header>
-  ${completed === plan.steps.length ? resultView(saved, onRoadmap) : screenView(saved, busy, reviewError)}
+  ${completed === plan.steps.length ? resultView(saved) : screenView(saved, busy, reviewError)}
   ${historyView(saved)}
   <p class="small-note ai-lesson-storage-note">${accountSaved ? t('Saving status is shown above. You can continue on another device after saving.', 'Статус сохранения показан выше. После сохранения можно продолжить на другом устройстве.', 'Сақтау күйі жоғарыда көрсетілген. Сақтағаннан кейін басқа құрылғыда жалғастыра аласың.') : t('Answers and feedback stay in this browser.', 'Ответы и разборы сохраняются в этом браузере.', 'Жауаптар мен талдау осы браузерде сақталады.')}</p>`;
 }
@@ -224,9 +228,10 @@ function goalForm({ goal, minutes, busy, error }) {
 }
 
 export function learningPlanView(screen) {
-  const { saved, busy, error, reviewError, accountSaved, onRoadmap } = screen;
-  return `<div class="learning-plan ai-lesson">
-    ${saved ? lessonView(saved, busy, reviewError, accountSaved, onRoadmap) : `<header class="ai-lesson-welcome"><p class="ai-lesson-eyebrow">${t('A little time. A new skill.', 'Немного времени. Новый навык.', 'Аз уақыт. Жаңа дағды.')}</p><h1>${t('What will we learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</h1>${mentorView('mino', busy === 'plan' ? 'thinking' : 'welcome', `<p>${t('Tell me your goal. We’ll learn one idea, see an example, then try it together.', 'Расскажи о своей цели. Разберём идею, посмотрим пример и попробуем вместе.', 'Мақсатыңды айт. Бір ойды түсініп, мысалды қарап, бірге орындап көреміз.')}</p>`)}</header>`}
-    ${onRoadmap ? '' : saved ? `<details class="ai-lesson-settings"${busy === 'plan' || error ? ' open' : ''}><summary>${icon('edit', 18)} <span>${t('Change goal or lesson time', 'Изменить цель или время занятия', 'Мақсатты немесе сабақ уақытын өзгерту')}</span>${icon('chevron', 18)}</summary><div class="ai-lesson-settings-body">${goalForm(screen)}</div></details>` : `<section class="game-card simple-panel">${goalForm(screen)}</section>`}
+  const { saved, busy, error, reviewError, accountSaved, onRoadmap, rewards } = screen;
+  return `<div class="learning-plan ai-lesson${saved ? ' has-course' : ''}">
+    <button type="button" class="icon-button ai-lesson-exit" data-view="${saved ? 'my-path' : 'discover'}" aria-label="${t('Save and leave', 'Сохранить и выйти', 'Сақтап шығу')}">${icon('close',22)}</button>
+    ${saved ? lessonView(saved, busy, reviewError, accountSaved, rewards) : `<header class="ai-lesson-welcome"><p class="ai-lesson-eyebrow">${t('A little time. A new skill.', 'Немного времени. Новый навык.', 'Аз уақыт. Жаңа дағды.')}</p><h1>${t('What will we learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</h1>${mentorView('mino', busy === 'plan' ? 'thinking' : 'welcome', `<p>${t('Tell me your goal. We’ll learn one idea, see an example, then try it together.', 'Расскажи о своей цели. Разберём идею, посмотрим пример и попробуем вместе.', 'Мақсатыңды айт. Бір ойды түсініп, мысалды қарап, бірге орындап көреміз.')}</p>`)}</header>`}
+    ${onRoadmap ? '' : saved ? `<details class="ai-lesson-settings ai-lesson-details"${busy === 'plan' || error ? ' open' : ''}><summary>${t('Course options', 'Настройки курса', 'Курс баптаулары')}</summary><div class="ai-lesson-settings-body"><p lang="${esc(saved.plan.language)}">${esc(saved.plan.outcome)}</p>${goalForm(screen)}</div></details>` : `<section class="game-card simple-panel">${goalForm(screen)}</section>`}
   </div>`;
 }
