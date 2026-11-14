@@ -126,6 +126,8 @@ The merged backend already provides profile, account-owned learning course and b
 
 ## Delivery
 
-Work is isolated on `design/orange-mentors`. The checkpoint is `9c21927`; the template/UI foundation is `63e8bf6`. The final integration includes upstream `bbb508e` (account saving and updated AI behavior). Relative to that upstream, changes remain in `ui/`; backend/core functionality is retained. Deploy the design project `mindora-design`, leaving the team's main production project under its existing release workflow.
+Work is isolated on `design/orange-mentors`. The original checkpoint is `9c21927`; the template/UI foundation is `63e8bf6`. The animated mentor update is `daad57a`, using the new supplied Design Pack. Integration includes upstream `5dfb8be`, retaining the team's account, course synchronization and updated lesson-image behavior. Relative to upstream, changes remain in `ui/`. Deploy the design project `mindora-design`, leaving the team's main production project under its existing release workflow.
+
+The mentor update was verified at 320 / 390 / 1440 px: all ten studio templates, hint reveal/hide, focus/highlight, wrong/correct pose changes, draft refresh, and all three reading pages plus quiz UI for both built-in courses. The built-in views were rendered as fixtures because the local auth service is unavailable. No horizontal overflow or browser JavaScript errors were observed. Reduced motion and offscreen rendering requested no GIFs; GIF failure fell back to PNG, and reconnect recovered from complete media failure. Build and syntax checks passed; the full test invocation passed 205 tests (including the copied UI tests in build output).
 
 At delivery, `mindora-design` has no auth/AI environment configured. The frontend and template studio can be previewed, but real registration, synchronized courses and AI generation require the backend environment above. Do not report these external services as live based only on UI tests.
