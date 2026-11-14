@@ -1,17 +1,17 @@
 /** Mindora's bounded sample curriculum and transparent, code-based checks. */
 export const COURSES = {
   design: {
-    title: 'Design your first poster',
-    category: 'Visual design',
+    title: 'Дизайн постера',
+    category: 'Дизайн',
     short: 'Give your idea a little presence.',
-    outcome: 'An original poster you can save as an SVG.',
+    outcome: 'Свой постер, который можно скачать в SVG.',
     accent: '#D9E7FF',
     minutes: 10,
     steps: [
-      { title: 'Make one thing stand out', description: 'Discover how hierarchy, contrast, and a clear next step guide the eye.', type: 'learn' },
-      { title: 'Train your design eye', description: 'Make three small decisions about a readable poster.', type: 'quiz' },
-      { title: 'Make it yours', description: 'Create a poster with guided layout checks.', type: 'practice' },
-      { title: 'Try a fresh brief', description: 'Apply the same principles to a different event, without hints.', type: 'challenge' },
+      { title: 'Make one thing stand out', description: 'Разберись, как размер, контраст и призыв к действию помогают читать постер.', type: 'learn' },
+      { title: 'Train your design eye', description: 'Ответь на три вопроса о читаемости постера.', type: 'quiz' },
+      { title: 'Make it yours', description: 'Собери постер и проверь его по подсказкам.', type: 'practice' },
+      { title: 'Try a fresh brief', description: 'Сделай постер для другого события без подсказок.', type: 'challenge' },
     ],
     sources: [
       { title: 'Canva: Graphic Design Essentials', url: 'https://www.canva.com/design-school/courses/graphic-design-essentials/' },
@@ -19,17 +19,17 @@ export const COURSES = {
     ],
   },
   budget: {
-    title: 'Build a budget tracker',
-    category: 'Everyday spreadsheets',
+    title: 'Таблица расходов',
+    category: 'Электронные таблицы',
     short: 'Make your numbers make sense.',
-    outcome: 'A simple expense table you can save as a CSV.',
+    outcome: 'Таблица расходов, которую можно скачать в CSV.',
     accent: '#DDF0DF',
     minutes: 10,
     steps: [
-      { title: 'Meet your first formula', description: 'Learn how cells, ranges, and SUM turn a list into a useful total.', type: 'learn' },
-      { title: 'Think in cells', description: 'Choose the right range and understand what a formula does.', type: 'quiz' },
-      { title: 'Build your own tracker', description: 'Enter three expenses and calculate their total.', type: 'practice' },
-      { title: 'A new set of numbers', description: 'Use your formula on fresh expenses, without hints.', type: 'challenge' },
+      { title: 'Meet your first formula', description: 'Разберись, как ячейки, диапазоны и формула SUM помогают подсчитать расходы.', type: 'learn' },
+      { title: 'Think in cells', description: 'Выбери нужный диапазон и проверь, как работает формула.', type: 'quiz' },
+      { title: 'Build your own tracker', description: 'Введи три расхода и посчитай их сумму.', type: 'practice' },
+      { title: 'A new set of numbers', description: 'Примени формулу к новым расходам без подсказок.', type: 'challenge' },
     ],
     sources: [
       { title: 'Google Sheets: Get started', url: 'https://support.google.com/a/users/answer/9282959?hl=en' },
@@ -40,43 +40,43 @@ export const COURSES = {
 
 export const DESIGN_QUIZ = [
   {
-    question: 'What should someone notice first on your event poster?',
-    choices: ['Every detail at the same size', 'The main message or event name', 'The smallest footer text'],
+    question: 'Что читатель должен первым заметить на постере?',
+    choices: ['Все детали одинакового размера', 'Главную мысль или название события', 'Мелкий текст внизу'],
     correctIndex: 1,
-    explanation: 'A clear hierarchy gives the main message the most visual emphasis. Details support it.',
+    explanation: 'Заголовок притягивает внимание к главному. Остальные детали его дополняют.',
   },
   {
-    question: 'Which combination is easiest to read?',
-    choices: ['Pale yellow text on white', 'Dark text on a light background', 'Light gray text on slightly lighter gray'],
+    question: 'Какое сочетание легче читать?',
+    choices: ['Бледно-жёлтый текст на белом', 'Тёмный текст на светлом фоне', 'Светло-серый текст на чуть более светлом сером'],
     correctIndex: 1,
-    explanation: 'Strong contrast separates the text from its background. Our layout check uses a 4.5:1 contrast target.',
+    explanation: 'Чем сильнее контраст, тем проще отличить текст от фона. В упражнении нужен контраст не ниже 4,5:1.',
   },
   {
-    question: 'Which line gives your reader a clear next step?',
-    choices: ['Lots of exciting possibilities', 'Something good is coming', 'Visit us Saturday, 10–4'],
+    question: 'Какая фраза подсказывает читателю, что делать?',
+    choices: ['Много интересных возможностей', 'Скоро будет что-то хорошее', 'Заходи в субботу с 10 до 16 часов'],
     correctIndex: 2,
-    explanation: 'A specific action and useful detail tell the reader what to do after seeing the poster.',
+    explanation: 'Конкретное действие и время визита помогают читателю понять, что делать дальше.',
   },
 ];
 
 export const BUDGET_QUIZ = [
   {
-    question: 'What does the cell name B2 mean?',
-    choices: ['Column B, row 2', 'Row B, column 2', 'The second spreadsheet'],
+    question: 'Что означает адрес B2?',
+    choices: ['Столбец B, строка 2', 'Строка B, столбец 2', 'Вторая таблица'],
     correctIndex: 0,
-    explanation: 'Column letters come first, followed by row numbers. B2 is where column B meets row 2.',
+    explanation: 'Сначала идёт буква столбца, затем номер строки. B2 — пересечение столбца B и второй строки.',
   },
   {
-    question: 'Which formula adds all three expenses in B2, B3, and B4?',
+    question: 'Какая формула складывает расходы в B2, B3 и B4?',
     choices: ['=SUM(B2:B3)', '=SUM(B2:B4)', '=SUM(B4:B5)'],
     correctIndex: 1,
-    explanation: 'The colon includes every cell from B2 through B4, including both ends.',
+    explanation: 'Двоеточие задаёт диапазон от B2 до B4 включительно.',
   },
   {
-    question: 'You change an expense in B3. What should the total do?',
-    choices: ['Stay the same forever', 'Ask you to rewrite the formula', 'Recalculate using the new value'],
+    question: 'Что произойдёт с итогом, если изменить расход в B3?',
+    choices: ['Останется прежним', 'Потребует переписать формулу', 'Пересчитается с новым значением'],
     correctIndex: 2,
-    explanation: 'A formula refers to cells. Updating a referenced cell updates the result, which is why it is useful.',
+    explanation: 'Формула ссылается на ячейки. Когда значение одной из них меняется, итог обновляется автоматически.',
   },
 ];
 
@@ -122,10 +122,10 @@ export function evaluatePoster(poster = {}) {
   const clearHierarchy = Number.isFinite(titleSize) && Number.isFinite(subtitleSize)
     && subtitleSize > 0 && titleSize >= subtitleSize * 1.5;
   const checks = [
-    { label: 'A clear message', passed: Boolean(title && subtitle), detail: title && subtitle ? 'Your headline and supporting detail are both present.' : 'Add a headline and a supporting line.' },
-    { label: 'Visual hierarchy', passed: clearHierarchy, detail: clearHierarchy ? 'Your headline is at least 1.5 times the supporting text size.' : 'Make the headline at least 1.5 times the supporting text size.' },
-    { label: 'Readable contrast', passed: ratio >= 4.5, detail: ratio ? `Text contrast is ${ratio.toFixed(2)}:1. The target is at least 4.5:1.` : 'Choose valid text and background colors.' },
-    { label: 'A next step', passed: Boolean(cta), detail: cta ? 'A call to action is present. Check that it tells your reader what to do.' : 'Add a clear next step for your reader.' },
+    { label: 'Заголовок и детали', passed: Boolean(title && subtitle), detail: title && subtitle ? 'Заголовок и поясняющий текст добавлены.' : 'Добавь заголовок и короткое пояснение.' },
+    { label: 'Размер заголовка', passed: clearHierarchy, detail: clearHierarchy ? 'Заголовок как минимум в 1,5 раза крупнее текста.' : 'Увеличь заголовок хотя бы в 1,5 раза относительно текста.' },
+    { label: 'Контраст текста', passed: ratio >= 4.5, detail: ratio ? `Контраст текста — ${ratio.toFixed(2)}:1. Нужно не ниже 4,5:1.` : 'Выбери допустимые цвета текста и фона.' },
+    { label: 'Призыв к действию', passed: Boolean(cta), detail: cta ? 'Призыв добавлен. Проверь, понятно ли читателю, что делать.' : 'Добавь понятный призыв к действию.' },
   ];
   return { passed: checks.every(check => check.passed), checks };
 }
@@ -141,9 +141,9 @@ export function evaluateBudget(submission = {}, values = []) {
   const total = numbersValid ? values.reduce((sum, value) => sum + value, 0) : NaN;
   const totalValid = numbersValid && Number.isFinite(answer) && Math.abs(answer - total) <= 0.0100000001;
   const checks = [
-    { label: 'Three usable expenses', passed: numbersValid, detail: numbersValid ? 'All three expense cells contain non-negative numbers.' : 'Enter a valid, non-negative number in each of the three expense cells.' },
-    { label: 'The complete range', passed: formulaValid, detail: formulaValid ? 'Your SUM formula includes B2, B3, and B4.' : 'Use SUM with the full B2:B4 range. This prototype supports this formula only.' },
-    { label: 'The correct total', passed: totalValid, detail: totalValid ? 'Your answer matches the three expenses.' : 'Add all three expenses and check your answer, including decimals.' },
+    { label: 'Три расхода', passed: numbersValid, detail: numbersValid ? 'Во всех трёх ячейках указаны неотрицательные числа.' : 'Введи неотрицательное число в каждую ячейку расходов.' },
+    { label: 'Диапазон', passed: formulaValid, detail: formulaValid ? 'Формула SUM включает B2, B3 и B4.' : 'Примени SUM ко всему диапазону B2:B4.' },
+    { label: 'Сумма', passed: totalValid, detail: totalValid ? 'Ответ совпадает с суммой трёх расходов.' : 'Сложи все три расхода и проверь ответ с учётом копеек.' },
   ];
   return { passed: checks.every(check => check.passed), checks };
 }

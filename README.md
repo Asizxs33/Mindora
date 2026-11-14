@@ -8,6 +8,8 @@ This repository contains a working **interactive product prototype**, not a univ
 
 ## Try it
 
+[Open Mindora on Vercel](https://mindora-livid-eta.vercel.app/).
+
 No registration, API keys, build step, or external JavaScript dependencies are needed.
 
 ```sh
@@ -27,6 +29,7 @@ Open the printed local URL, normally `http://127.0.0.1:4173`.
 - A fresh independent challenge and variations of unlocked exercises.
 - Device-local progress, saved creations, learning notes, and SVG / CSV downloads.
 - Responsive layout, keyboard focus indicators, labelled controls, and reduced-motion support.
+- A Russian interface with an illustrated learning map, local XP, achievements, and a daily activity streak.
 
 ## Product vision and limits
 
@@ -36,7 +39,10 @@ Browser storage is local to a device and origin. Clearing site data removes prog
 
 ## Files
 
-- `index.html`, `styles.css`: application shell and responsive visual design.
+- `index.html`, `styles.css`, `adventure.css`: application shell and responsive visual design.
+- `dashboard.js`: dashboard, course catalog, practice, achievements, and guest profile.
+- `icons.js`: locally bundled [Lucide](https://lucide.dev/icons/) icons. See `assets/LUCIDE-LICENSE.txt`.
+- `assets/`: ImageGen illustrations based on the supplied references: a capybara with glasses and a backpack in a landscape, a trail leading to a castle, and transparent studying and cheering capybara poses.
 - `app.js`: navigation, lessons, workspaces, progress, and export.
 - `engine.js`: sample curricula, quizzes, goal matching, and deterministic checks.
 - `engine.test.js`: meaningful validation tests; no browser or network needed.
@@ -55,4 +61,4 @@ Checks cover unsupported goals, contrast, incomplete and malformed work, strict 
 
 Import this repository into Vercel with Framework Preset **Other**, no build or install command, and the project root as the output directory. The production branch is `main`.
 
-Google Fonts supplies Manrope when available; a system-font fallback is provided. No analytics or tracking scripts are included.
+Google Fonts supplies Nunito when available; a system-font fallback is provided. No analytics or tracking scripts are included.
