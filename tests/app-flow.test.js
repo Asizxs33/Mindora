@@ -265,7 +265,7 @@ test('guests can start a built-in course without opening an account', () => {
   assert.equal(run.current.state.active, 'budget');
 });
 
-test('a first visit asks one thing at a time, then opens the selected built-in course path before the lesson', async () => {
+test('a first visit asks one thing at a time, then clarifies the selected goal before creating a course', async () => {
   const run = app(seed({ active: null }), { account: { user: null, profile: null } });
   assert.equal(run.current.view, 'discover');
   assert.equal(run.current.html.kind, 'guided-start');
@@ -284,15 +284,16 @@ test('a first visit asks one thing at a time, then opens the selected built-in c
   run.click({ introAction: 'start' });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.accountOpens, 0);
-  assert.equal(run.current.view, 'builtin-path', 'onboarding ends at the course path, not inside a lesson');
-  assert.equal(run.current.html.kind, 'quiet-home');
-  assert.equal(run.current.state.active, 'design');
+  assert.equal(run.current.view, 'roadmap', 'welcome choices start personalized course setup');
+  assert.equal(run.current.html.kind, 'roadmap');
+  assert.equal(run.current.html.args[0].wizard.originalGoal, 'Design a clear poster');
+  assert.equal(run.current.html.args[0].wizard.minutes, 5);
+  assert.equal(run.current.html.args[0].wizard.directionConfirmed, false);
   assert.equal(run.current.state.minutes, 5);
-  assert.equal(run.current.state.lastLearningType, 'builtin');
+  assert.deepEqual(run.clarificationRequests, [{ action: 'clarify', goal: 'Design a clear poster', minutes: 5, language: 'en' }]);
+  assert.deepEqual(run.roadmapRequests, [], 'the course waits for purpose and experience answers');
+  assert.deepEqual(run.copiedCourses, [], 'welcome does not silently substitute a short ready course');
   assert.deepEqual(run.generations, []);
-  run.click({ action: 'resume-course', id: 'design' });
-  assert.equal(run.current.view, 'lesson');
-  assert.equal(run.lesson.step, 0);
 });
 
 test('a ready mini-course creates one account copy and opens its path without AI generation', async () => {
@@ -585,7 +586,7 @@ test('changing the chosen focus clears an answer to the old diagnostic', async (
   assert.match(run.current.html.args[0].wizard.diagnosticQuestion, /100/);
 });
 
-test('a guest introduction opens the chosen built-in course without signup', async () => {
+test('a guest introduction clarifies a spreadsheet learning goal without signup', async () => {
   const run = app(seed({ active: null }), { account: { user: null, profile: null } });
   run.click({ introAction: 'next' });
   run.input('intro-name', 'Aida');
@@ -596,12 +597,16 @@ test('a guest introduction opens the chosen built-in course without signup', asy
   run.click({ introAction: 'start' });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.accountOpens, 0);
-  assert.equal(run.current.view, 'builtin-path');
-  assert.equal(run.current.state.active, 'budget');
+  assert.equal(run.current.view, 'roadmap');
+  assert.equal(run.current.html.args[0].wizard.originalGoal, 'Track everyday expenses in a spreadsheet');
+  assert.equal(run.current.html.args[0].wizard.minutes, 20);
+  assert.equal(run.clarificationRequests[0].goal, 'Track everyday expenses in a spreadsheet');
+  assert.deepEqual(run.generations, []);
+  assert.deepEqual(run.roadmapRequests, []);
   assert.equal(run.current.state.minutes, 20);
 });
 
-test('English introduction opens the ready course while a custom topic explicitly starts roadmap setup', async () => {
+test('English and custom welcome choices both clarify a personal goal before building a full course', async () => {
   for (const topic of ['english', 'custom']) {
     const run = app(seed({ active: null }), { realPlans: true });
     run.click({ introAction: 'new' });
@@ -611,17 +616,15 @@ test('English introduction opens the ready course while a custom topic explicitl
     run.click({ introMinutes: '20' });
     run.click({ introAction: 'start' });
     await new Promise(resolve => setImmediate(resolve));
-    assert.deepEqual(run.roadmapRequests, [], 'neither choice automatically requests a generated roadmap');
-    if (topic === 'english') {
-      assert.equal(run.current.view, 'course-path');
-      assert.equal(run.current.html.kind, 'quiet-home');
-      assert.deepEqual(run.copiedCourses, [getStarterCourse('everyday-english', 'en', 20)]);
-    } else {
-      assert.equal(run.current.view, 'roadmap');
-      assert.equal(run.current.html.args[0].wizard.goal, 'Learn to draw a landscape');
-      assert.equal(run.current.html.args[0].wizard.minutes, 20);
-      assert.deepEqual(run.copiedCourses, []);
-    }
+    const goal = topic === 'english' ? 'Practise everyday English conversations' : 'Learn to draw a landscape';
+    assert.equal(run.current.view, 'roadmap');
+    assert.equal(run.current.html.args[0].wizard.originalGoal, goal);
+    assert.equal(run.current.html.args[0].wizard.minutes, 20);
+    assert.equal(run.current.html.args[0].wizard.directionConfirmed, false);
+    assert.deepEqual(run.clarificationRequests, [{ action: 'clarify', goal, minutes: 20, language: 'en' }]);
+    assert.deepEqual(run.roadmapRequests, [], 'the level diagnostic precedes full course generation');
+    assert.deepEqual(run.copiedCourses, []);
+    assert.deepEqual(run.generations, []);
   }
 });
 
@@ -688,6 +691,61 @@ test('the next generated stage receives only prior completed stage objectives', 
   assert.equal(run.generations[0].context.roadmapStage.title, roadmap.stages[1].title);
   assert.equal(run.generations[0].context.roadmapStage.originalGoal, 'Python');
   assert.equal(run.saved().learningRoadmap.originalGoal, 'Python');
+});
+
+test('a large course lazily generates a later module lesson and reopens each saved lesson independently', async () => {
+  for (const index of [4, 11]) {
+    const previousId = stage => `20000000-0000-4000-8000-${String(stage + 1).padStart(12, '0')}`;
+    const roadmap = roadmapModel.restoreRoadmap({
+      ...savedRoadmap(), curriculumVersion: 2, originalGoal: 'Python',
+      modules: Array.from({ length: 6 }, (_, module) => ({ title: `Module ${module + 1}`, outcome: `Apply skill group ${module + 1}.`, startIndex: module * 4, count: 4 })),
+      stages: Array.from({ length: 24 }, (_, stage) => ({ title: `Python skill ${stage + 1}`, objective: `Produce and verify result ${stage + 1}.` })),
+      sourceStatus: 'unavailable', sources: [],
+      progress: Array.from({ length: 24 }, (_, stage) => ({ courseId: stage < index ? previousId(stage) : null, completed: stage < index })),
+    });
+    assert.ok(roadmap);
+    const run = app(seed({ learningRoadmap: roadmap, lastLearningType: 'roadmap' }));
+    await new Promise(resolve => setImmediate(resolve));
+    run.click({ view: 'my-path' });
+    assert.deepEqual(run.generations, [], 'opening a syllabus does not generate all its lessons');
+    for (const blocked of [String(index + 1), '24', '99', '-1', '04']) run.click({ roadmapAction: 'start', roadmapStage: blocked });
+    assert.deepEqual(run.generations, [], 'locked or invalid stage indices cannot generate a lesson');
+    run.click({ roadmapAction: 'start', roadmapStage: String(index) });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(run.generations.length, 1);
+    const context = run.generations[0].context.roadmapStage;
+    assert.equal(context.title, roadmap.stages[index].title);
+    assert.equal(context.originalGoal, 'Python');
+    assert.deepEqual(context.previousStages, roadmap.stages.slice(index - 3, index), 'only the last three completed lessons enter the new lesson context');
+    const savedPath = run.saved().learningRoadmap;
+    const courseId = savedPath.progress[index].courseId;
+    assert.ok(courseId);
+    assert.deepEqual(savedPath.progress.slice(0, index), roadmap.progress.slice(0, index));
+    assert.ok(savedPath.progress.slice(index + 1).every(stage => stage.courseId === null), 'later lessons remain ungenerated');
+
+    const currentSaved = savedAiCourse();
+    currentSaved.answers[1] = `Draft for lesson ${index + 1}`;
+    const priorSaved = savedAiCourse();
+    priorSaved.answers[1] = 'Independent draft from an earlier module';
+    const libraryCourses = [
+      { id: courseId, revision: 1, saved: currentSaved, updatedAt: new Date(NOW).toISOString() },
+      { id: previousId(2), revision: 2, saved: priorSaved, updatedAt: new Date(NOW).toISOString() },
+    ];
+    const reopened = app(null, { storage: run.storage, realPlans: true, libraryCourses });
+    await new Promise(resolve => setImmediate(resolve));
+    reopened.click({ view: 'my-path' });
+    reopened.click({ roadmapAction: 'start', roadmapStage: String(index) });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(reopened.current.view, 'learning-plan');
+    assert.equal(reopened.current.state.learningPlan.answers[1], currentSaved.answers[1]);
+    reopened.click({ view: 'my-path' });
+    reopened.click({ roadmapAction: 'start', roadmapStage: '2' });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(reopened.current.state.learningPlan.answers[1], priorSaved.answers[1]);
+    assert.deepEqual(reopened.loadedCourses, [courseId, previousId(2)]);
+    assert.deepEqual(reopened.generations, [], 'reopening either saved lesson must not generate a replacement');
+    assert.equal(reopened.saved().learningRoadmap.progress[index].courseId, courseId);
+  }
 });
 
 test('opening an archived roadmap preserves the other path and reloads the selected path', () => {

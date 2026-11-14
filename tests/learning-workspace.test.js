@@ -112,6 +112,68 @@ test('workspace API rejects missing sessions, foreign origins and invalid bodies
   assert.equal(calls, 0);
 });
 
+test('streamed workspaces preserve multiple long verified courses beyond 98KiB and reject a 1MiB overflow before storage', async () => {
+  const id = number => `30000000-0000-4000-8000-${String(number).padStart(12, '0')}`;
+  const roadmaps = Array.from({ length: 8 }, (_, course) => ({
+    id: id(course + 1), goal: `Learn Python through practical project ${course + 1}`, originalGoal: 'Python',
+    minutes: [5, 10, 20][course % 3], language: 'en', curriculumVersion: 2,
+    title: `Python project course ${course + 1}`, outcome: 'Build and explain a useful program independently.',
+    level: 'beginner', levelReason: 'The learner is starting from lists and simple arithmetic.',
+    modules: Array.from({ length: 8 }, (_, module) => ({ title: `Module ${module + 1}: applied Python`,
+      outcome: 'Combine the concepts practiced in this module into a small working program.', startIndex: module * 6, count: 6 })),
+    sourceStatus: 'verified', sources: [{ title: 'The Python Tutorial', url: 'https://docs.python.org/3/tutorial/' }],
+    stages: Array.from({ length: 48 }, (_, stage) => ({ title: `Lesson ${stage + 1}: practice a new Python operation`,
+      objective: `Task ${stage + 1}: write a small program using literal data, explain how each operation changes the result, compare the printed output with your expected values, and revise one input to demonstrate that the solution generalizes.` })),
+    progress: Array.from({ length: 48 }, (_, stage) => ({ courseId: stage < 12 ? id(1000 + course * 100 + stage) : null, completed: stage < 12 })),
+  }));
+  const data = { ...workspace(), learningRoadmap: roadmaps[0], learningRoadmaps: roadmaps.slice(1) };
+  assert.deepEqual(validateBuiltinWorkspace(data), data, 'all course metadata and saved stage IDs are valid');
+  const encoded = new TextEncoder().encode(JSON.stringify({ data, revision: null }));
+  assert.ok(encoded.byteLength > 98_304, `fixture must exceed the previous shared body limit: ${encoded.byteLength}`);
+  assert.ok(encoded.byteLength < WORKSPACE_MAX_BYTES);
+  assert.equal(WORKSPACE_MAX_BYTES, 1_048_576);
+  function streamedRequest(bytes) {
+    const stats = { offset: 0, cancelled: false };
+    const stream = new ReadableStream({ pull(controller) {
+      if (stats.offset === bytes.length) return controller.close();
+      const end = Math.min(stats.offset + 16_384, bytes.length);
+      controller.enqueue(bytes.subarray(stats.offset, end));
+      stats.offset = end;
+    }, cancel() { stats.cancelled = true; } });
+    return { stats, request: new Request('https://mindora.test/api/learning-workspace', {
+      method: 'PUT', body: stream, duplex: 'half',
+      headers: { origin: 'https://mindora.test', 'content-type': 'application/json', 'X-Mindora-Account': 'account-a' },
+    }) };
+  }
+  let saved = null, writes = 0;
+  const store = { read: async owner => {
+    assert.equal(owner, 'account-a'); return structuredClone(saved);
+  }, write: async (owner, value, revision) => {
+    assert.equal(owner, 'account-a'); assert.equal(revision, null); writes++;
+    saved = { data: structuredClone(value), revision: 1, updatedAt: date };
+    return structuredClone(saved);
+  } };
+  const dependencies = { settings, session: async () => ({ user: { id: 'account-a' }, cookies: [] }), store: () => store };
+  const upload = streamedRequest(encoded);
+  const response = await learningWorkspaceApi(upload.request, dependencies);
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).workspace.data, data);
+  assert.equal(upload.stats.cancelled, false);
+  const reopened = await learningWorkspaceApi(request(), dependencies);
+  assert.equal(reopened.status, 200);
+  assert.deepEqual((await reopened.json()).workspace, { data, revision: 1, updatedAt: date });
+
+  const oversized = new TextEncoder().encode(JSON.stringify({ data, revision: 1, padding: 'x'.repeat(WORKSPACE_MAX_BYTES) }));
+  const overflow = streamedRequest(oversized);
+  const rejected = await learningWorkspaceApi(overflow.request, dependencies);
+  assert.equal(rejected.status, 400);
+  assert.equal((await rejected.json()).code, 'INVALID_WORKSPACE');
+  assert.equal(overflow.stats.cancelled, true, 'the reader stops an oversized stream early');
+  assert.ok(overflow.stats.offset < oversized.length, 'the reader does not consume the entire oversized request');
+  assert.equal(writes, 1, 'an oversized payload never reaches storage');
+  assert.deepEqual(saved.data, data, 'the valid saved courses remain intact');
+});
+
 test('missing built-in workspace table is created with RLS and public privileges revoked', async () => {
   let calls = 0, statements;
   const sql = parts => {

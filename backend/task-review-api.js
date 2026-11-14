@@ -13,34 +13,69 @@ const instructions = [
   'Верни JSON с двумя непустыми строками: observation и nextAction. До 320 символов на поле.',
 ].join('\n');
 
-export async function reviewWithDeepSeek(input, apiKey, fetcher = fetch) {
-  const response = await fetcher('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    redirect: 'error',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    signal: AbortSignal.timeout(25000),
-    body: JSON.stringify({
-      model: 'deepseek-flash',
-      thinking: { type: 'enabled' },
-      reasoning_effort: 'low',
-      response_format: { type: 'json_object' },
-      max_tokens: 1800,
-      messages: [
-        { role: 'system', content: `${instructions}\nWrite the feedback in ${LANGUAGES[languageCode(input.language, 'ru')]}.` },
-        { role: 'user', content: JSON.stringify(input) },
-      ],
-    }),
-  });
-  if (!response.ok) throw Object.assign(new Error('DeepSeek review failed'), { providerStatus: response.status });
-
-  const data = await response.json();
-  const choice = data.choices?.[0];
-  if (choice?.finish_reason !== 'stop' || typeof choice.message?.content !== 'string') {
-    throw new Error('Incomplete DeepSeek review');
+function reviewContent(data) {
+  const choice = data?.choices?.[0];
+  if (/filter|content|safety|risk/i.test(String(choice?.finish_reason))) {
+    throw Object.assign(new Error('DeepSeek review unavailable'), { name: 'ReviewContentFiltered' });
   }
-  const review = normalizeTaskReview(JSON.parse(choice.message.content));
-  if (!review) throw new Error('Invalid DeepSeek review');
+  if (choice?.finish_reason !== 'stop' || typeof choice.message?.content !== 'string') {
+    throw Object.assign(new Error('Incomplete DeepSeek review'), {
+      name: choice?.finish_reason === 'length' ? 'ReviewOutputLimit' : 'ReviewIncompleteOutput',
+    });
+  }
+  let content;
+  try {
+    const output = choice.message.content.trim().replace(/^\x60\x60\x60(?:json)?\s*|\s*\x60\x60\x60$/gi, '');
+    content = JSON.parse(output);
+  } catch {
+    throw Object.assign(new Error('Invalid DeepSeek review JSON'), { name: 'ReviewInvalidJson' });
+  }
+  const review = normalizeTaskReview(content);
+  if (!review) throw Object.assign(new Error('Invalid DeepSeek review'), { name: 'ReviewContentInvalid' });
   return review;
+}
+
+export async function reviewWithDeepSeek(input, apiKey, fetcher = fetch) {
+  const signal = AbortSignal.timeout(25000);
+  const messages = [
+    { role: 'system', content: `${instructions}\nWrite the feedback in ${LANGUAGES[languageCode(input.language, 'ru')]}.` },
+    { role: 'user', content: JSON.stringify(input) },
+  ];
+  const correction = { role: 'user', content: 'Regenerate the feedback for the original submission as one complete JSON object with exactly two nonempty string fields: observation and nextAction. Keep each field under 240 characters (the hard limit is 320). Make the feedback concise, specific to the original task and answer, and consistent with the requested language. Output only JSON, without prose or Markdown. Escape quotes and newlines inside strings.' };
+  const retryable = new Set(['ReviewOutputLimit', 'ReviewIncompleteOutput', 'ReviewInvalidJson', 'ReviewContentInvalid', 'ReviewProviderInvalidJson']);
+  // Both attempts share the existing deadline. Never replay a failed response.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    signal.throwIfAborted();
+    const response = await fetcher('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      redirect: 'error',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      signal,
+      body: JSON.stringify({
+        model: 'deepseek-flash',
+        thinking: { type: 'enabled' },
+        reasoning_effort: 'low',
+        response_format: { type: 'json_object' },
+        max_tokens: 1800,
+        messages: attempt === 0 ? messages : [...messages, correction],
+      }),
+    });
+    if (!response.ok) throw Object.assign(new Error('DeepSeek review failed'), { name: 'ReviewProviderRequest', providerStatus: response.status });
+    try {
+      let data;
+      try { data = await response.json(); }
+      catch (error) {
+        if (signal.aborted) throw signal.reason;
+        if (error.name === 'AbortError' || error.name === 'TimeoutError') throw error;
+        throw Object.assign(new Error('Invalid review provider response'), { name: 'ReviewProviderInvalidJson' });
+      }
+      return reviewContent(data);
+    } catch (error) {
+      if (signal.aborted) throw signal.reason;
+      if (attempt > 0 || !retryable.has(error.name)) throw error;
+      console.warn('Mindora retrying task review', { reason: error.name });
+    }
+  }
 }
 
 export async function taskReviewApi(request, {
