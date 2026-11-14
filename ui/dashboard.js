@@ -104,14 +104,14 @@ export function pageBanner(title, description, mood = 'study') {
 
 export function achievementsCard(state, stats, icon, full = false) {
   const awards = [
-    ['flame', 'A little every day', 'Learn on 5 days in a row', stats.streak >= 5],
-    ['book', 'Curious mind', 'Complete 4 learning steps', stats.total >= 4],
-    ['star', 'Made by you', 'Finish 2 independent projects', Object.values(state.works).filter(work => work.challenge).length >= 2],
+    ['flame', t("A little every day", "Каждый день понемногу", "Күн сайын аздап"), t("Learn on 5 days in a row", "Учись 5 дней подряд", "5 күн қатарынан оқы"), stats.streak >= 5],
+    ['book', t("Curious mind", "Любознательный ученик", "Ізденімпаз оқушы"), t("Complete 4 learning steps", "Пройди 4 этапа", "4 кезеңді аяқта"), stats.total >= 4],
+    ['star', t("Made by you", "Своя работа", "Өз жұмысың"), t("Finish 2 independent projects", "Заверши 2 самостоятельные работы", "2 өздік жұмысты аяқта"), Object.values(state.works).filter(work => work.challenge).length >= 2],
   ];
   return `<section class="game-card game-achievements">
     ${full ? '' : `<div class="game-card-top"><h2>Your little milestones</h2><button class="text-link" data-action="achievements">See all ${icon('arrow', 16)}</button></div>`}
     <div class="level-row"><div class="level-chip"><span class="level-medal">${icon('spark', 26)}</span><div><strong>Level ${stats.level}</strong><small>A curious explorer</small></div></div><div class="xp-track"><strong>${stats.xp} XP</strong><div class="xp-bar"><i style="width:${(stats.xp % 200) / 2}%"></i></div><small>${200 - stats.xp % 200} XP to level ${stats.level + 1}</small></div></div>
-    <div class="awards">${awards.map(([symbol, title, detail, earned]) => `<div class="award ${earned ? 'earned' : ''}"><span class="award-icon">${icon(symbol, 27)}</span><strong>${title}</strong><small>${earned ? 'You earned this!' : detail}</small></div>`).join('')}</div>
+    <div class="awards">${awards.map(([symbol, title, detail, earned]) => `<div class="award ${earned ? 'earned' : ''}"><span class="award-icon">${icon(symbol, 27)}</span><strong>${title}</strong><small>${earned ? t("You earned this!", "Получено!", "Алдың!") : detail}</small></div>`).join('')}</div>
   </section>`;
 }
 
@@ -121,11 +121,11 @@ export function sidePage(view, state) {
     return `${pageBanner(t("A little practice", "Практика", "Жаттығу"), t("Try an idea. Make something. Learn by doing.", "Попробуй ещё одно практическое задание.", "Тағы бір жаттығу орында."))}
       <div class="course-grid">${Object.keys(COURSES).map(id => {
         const unlocked = state.progress[id] >= 2;
-        return `<section class="game-card practice-tile ${id}"><span class="course-symbol">${icon(id === 'design' ? 'palette' : 'sheet', 26)}</span><h2>${courseNames[id]}</h2><p>${unlocked ? 'A fresh little challenge to make your new skill stick.' : 'Finish the lesson and three questions to unlock this practice.'}</p><button class="${unlocked ? 'primary' : 'secondary'}" ${unlocked ? `data-action="practice" data-id="${id}"` : `data-course="${id}"`}>${unlocked ? 'Let me try' : 'Go to my lessons'} ${icon(unlocked ? 'arrow' : 'lock', 18)}</button></section>`;
+        return `<section class="game-card practice-tile ${id}"><span class="course-symbol">${icon(id === 'design' ? 'palette' : 'sheet', 26)}</span><h2>${courseNames[id]}</h2><p>${unlocked ? t("A fresh little challenge to make your new skill stick.", "Новое задание для закрепления навыка.", "Дағдыны бекітуге арналған жаңа тапсырма.") : t("Finish the lesson and three questions to unlock this practice.", "Пройди урок и тест, чтобы открыть практику.", "Жаттығуды ашу үшін сабақ пен тестті аяқта.")}</p><button class="${unlocked ? 'primary' : 'secondary'}" ${unlocked ? `data-action="practice" data-id="${id}"` : `data-course="${id}"`}>${unlocked ? t("Let me try", "Начать практику", "Жаттығуды бастау") : t("Go to my lessons", "Открыть уроки", "Сабақтарды ашу")} ${icon(unlocked ? 'arrow' : 'lock', 18)}</button></section>`;
       }).join('')}</div>`;
   }
   if (view === 'achievements') return `${pageBanner(t("Look at you grow.", "Твои достижения", "Жетістіктерің"), t("Every small step counts.", "Твой прогресс в обучении.", "Оқу барысың."), 'cheer')}${achievementsCard(state, stats, icon, true)}`;
-  if (view === 'community') return `${pageBanner(t("Learning, together.", "Сообщество", "Қауымдастық"), 'A little space for curious people.')}<section class="game-card community-preview"><span class="course-symbol">${icon('users', 28)}</span><h2>Our community is still growing.</h2><p>Sharing and discussions aren’t available yet. For now, keep your projects in My work.</p><button class="secondary" data-view="work">See my work ${icon('arrow', 18)}</button></section>`;
+  if (view === 'community') return `${pageBanner(t("Learning, together.", "Сообщество", "Қауымдастық"), t("A little space for curious people.", "Место для общения учеников.", "Оқушылардың араласатын орны."))}<section class="game-card community-preview"><span class="course-symbol">${icon('users', 28)}</span><h2>${t("Our community is still growing.", "Сообщество в разработке.", "Қауымдастық әзірленіп жатыр.")}</h2><p>${t("Sharing and discussions aren’t available yet. For now, keep your projects in My work.", "Готовые проекты доступны в разделе «Мои работы».", "Дайын жобалар «Жұмыстарым» бөлімінде.")}</p><button class="secondary" data-view="work">See my work ${icon('arrow', 18)}</button></section>`;
   return `${pageBanner(t('My profile','Мой профиль','Профилім'), t('Learning settings and drafts.','Настройки обучения и черновики.','Оқу баптаулары мен нобайлар.'))}
     <section class="profile-overview"><div class="profile-identity"><span class="profile-avatar">${icon('user', 25)}</span><div><h2>${t("Curious learner", "Ученик", "Оқушы")}</h2><p>${t("Guest profile · Level ", "Гостевой профиль · Уровень ", "Қонақ профилі · Деңгей ")}${stats.level}</p></div></div>
       <div class="profile-stats"><div><strong>${stats.total}</strong><span>${t("Steps learned", "Пройдено этапов", "Аяқталған кезеңдер")}</span></div><div><strong>${Object.keys(state.works).length}</strong><span>${t("Projects made", "Готовых работ", "Дайын жұмыстар")}</span></div><div><strong>${stats.xp}</strong><span>${t("XP earned", "Получено XP", "Жиналған XP")}</span></div></div>
