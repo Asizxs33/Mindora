@@ -1,3 +1,5 @@
+import { reportProgress, checkWeeklyReport } from './weekly-report.js';
+import { weeklyReportView, membershipView } from '../ui/work-skills.js';
 import { COURSES, DESIGN_QUIZ, evaluatePoster } from './engine.js';
 import { budgetCsv, budgetSession, budgetDraftKey, createBudgetDraft, evaluateBudgetSession, normalizeMinutes, readBudgetQuiz, readBudgetResume } from './budget-session.js';
 import { createCloudDrafts } from './cloud-drafts.js';
@@ -13,9 +15,10 @@ import { dayKey, dailyCourse, learningStats } from './progress.js';
 import { posterLayout, posterSvg } from './poster.js';
 import { mountShell, renderShell } from '../ui/shell.js';
 import { phoneCourseNav, phoneCourseLibrary, courseHomeView, readyCoursesView, coursesPage, sidePage, courseNames, lessonNames } from '../ui/dashboard.js';
+import { mentorForTopic } from './subject-mentor.js';
 import { pathView, lesson, result, workView } from '../ui/views.js';
 import { dialogContent, resetWorkCheck, refreshPosterPreview, clearBudgetTotal } from '../ui/feedback.js';
-import { learningPlanView } from '../ui/learning-plan.js';
+import { learningPlanView, taskPreviewView } from '../ui/learning-plan.js';
 import { languageCode } from './language.js';
 import { setLanguage, t } from '../ui/language.js';
 import { message } from '../ui/messages.js';
@@ -75,13 +78,21 @@ let challengeSeed = 0;
 
 let pendingLearning = null;
 let openingStarter = false;
+let previewController;
+const previewState = {};
+let previewIndex;
 let library;
 let builtins;
 let roadmapWizard = null;
 let roadmapOperation = null;
+let reportChecks = null;
+function weeklyWorkspace() {
+  const progress = reportProgress(state.weeklyReport);
+  return { progress, save: () => { state.weeklyReport = progress; save(); } };
+}
 let roadmapError = '';
 let pendingRoadmapPrefill = null;
-const builtinFields = ['minutes', 'active', 'goals', 'progress', 'drafts', 'works', 'notes', 'sessions', 'certificates', 'practiceCount', 'studyDays', 'budgetQuiz', 'budgetActivity', 'learningRoadmap', 'learningRoadmaps', 'learningRewards'];
+const builtinFields = ['minutes', 'active', 'goals', 'progress', 'drafts', 'works', 'notes', 'sessions', 'certificates', 'practiceCount', 'studyDays', 'budgetQuiz', 'budgetActivity', 'learningRoadmap', 'learningRoadmaps', 'learningRewards', 'weeklyReport'];
 const builtinData = source => Object.fromEntries(builtinFields.filter(key => source[key] !== undefined).map(key => [key, source[key]]));
 let builtinSnapshot = JSON.stringify(builtinData(state));
 const plans = createPlanController({ state, save: saveLearning, render, isOpen: () => view === 'learning-plan' && canStudy(),
@@ -286,7 +297,7 @@ function loadLessonState() {
 for (const field of ['sessions', 'certificates']) if (!state[field] || typeof state[field] !== 'object' || Array.isArray(state[field])) state[field] = {};
 
 function rememberPosition(page, touch = true) {
-  if (view !== 'lesson' || !state.active) return;
+  if (view !== 'lesson' || !state.active || step > state.progress[state.active]) return;
   const readingPage = page ?? Number(document.querySelector('[data-learn-deck]')?.dataset.index || 0);
   state.sessions[state.active] = { lastSeen: touch ? Date.now() : state.sessions[state.active]?.lastSeen, cursor: { step, page: readingPage, minutes: state.minutes, quizIndex, quizChoice, quizFeedback } };
   save();
@@ -346,7 +357,7 @@ function reviewLearningPlan() {
     const lastSeen = state.learningVisits?.[key] || Date.parse(state.learningCourse?.updatedAt || '');
     if (!needsReturnReview(lastSeen, learningHasProgress(state.learningPlan))) return false;
     const saved = state.learningPlan;
-    state.returnReview = createReturnReview({ key, title: saved.plan.title,
+    state.returnReview = createReturnReview({ key, title: saved.plan.title, mentor: mentorForTopic(`${saved.plan.goal} ${saved.plan.title}`),
       questions: learningReviewQuestions(saved), reminder: saved.plan.steps[Math.min(saved.completed, saved.plan.steps.length - 1)]?.instruction || saved.plan.outcome });
   }
   go('return-review');
@@ -427,7 +438,9 @@ function modal(type, data) {
   if (!$("#modal").open) $("#modal").showModal();
 }
 function go(next, cursor = null, newCourse = false) {
+  if (next === 'courses' && !accountOwner) ensureLearning();
   if (next === 'my-path') { roadmapWizard = null; return openMyPath(); }
+  if (next === 'new-course' && savedRoadmaps().length) next = 'membership';
   if (next === 'new-course') { roadmapWizard = null; if (!accountOwner) ensureLearning(); }
   if (['path', 'builtin-path', 'course-path', 'lesson', 'learning-plan', 'return-review', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop'].includes(next)
     && !ensureLearning(() => go(next, cursor, newCourse))) return;
@@ -435,6 +448,10 @@ function go(next, cursor = null, newCourse = false) {
   if (['path', 'builtin-path'].includes(next) && !Object.hasOwn(COURSES, state.active)) return go('courses');
   if (next === 'learning-plan' && !newCourse && view !== next && reviewLearningPlan()) return;
   if (view === 'learning-plan' && next !== view && next !== 'return-review') { rememberLearningVisit(); saveLocal(); }
+  if (next === 'weekly-report' || window.location?.hash === '#weekly-report') {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search + (next === 'weekly-report' ? '#weekly-report' : ''));
+    reportChecks = null;
+  }
   view = next;
   if (next !== 'discover') startingNew = false;
   if (next === 'roadmap' && state.learningRoadmap) { state.lastLearningType = 'roadmap'; saveLocal(); }
@@ -475,8 +492,8 @@ function go(next, cursor = null, newCourse = false) {
   $('#main').focus({preventScroll:true});
 }
 function selectCourse(id,goal){if(!COURSES[id]||!ensureLearning(()=>selectCourse(id,goal)))return;state.active=id;state.goals[id]=goal||state.goals[id]||(id==='design'?'Сделать постер для кофейни':'Собрать таблицу ежемесячных расходов');save();go('path');}
-function openStep(index){if(!state.active)return go('discover');if(!Number.isInteger(index)||index<0||index>3||index>state.progress[state.active])return toast('Finish this step to unlock the next one.');resumeCourse(state.active,index);}
-function finishStep(){const id=state.active;const days = new Set(Array.isArray(state.studyDays) ? state.studyDays : []);days.add(dayKey());state.studyDays = [...days];state.progress[id]=Math.max(state.progress[id],step+1);rememberPosition();save();if(step===3){state.practiceCount=(Number(state.practiceCount)||0)+1;certificateData(id);save();go('result');}else{openStep(step+1);}}
+function openStep(index){if(!state.active)return go('discover');if(!Number.isInteger(index)||index<0||index>3)return toast('Finish this step to unlock the next one.');resumeCourse(state.active,index);}
+function finishStep(){const id=state.active;if(step>state.progress[id])return go('builtin-path');const days = new Set(Array.isArray(state.studyDays) ? state.studyDays : []);days.add(dayKey());state.studyDays = [...days];state.progress[id]=Math.max(state.progress[id],step+1);rememberPosition();save();if(step===3){state.practiceCount=(Number(state.practiceCount)||0)+1;certificateData(id);save();go('result');}else{openStep(step+1);}}
 
 function selectedHomeKind() {
   const kind = state.pathKind || (state.lastLearningType === 'ai' ? 'lesson' : state.lastLearningType);
@@ -491,7 +508,7 @@ function currentHomeCourse() {
   const attributes = { resumeAttributes: 'data-action="resume-current"', pathAttributes: 'data-view="my-path"' };
   if (roadmap && (kind === 'roadmap' || (!state.active && !saved))) {
     const completed = roadmap.progress.filter(stage => stage.completed).length;
-    return { ...attributes, title: roadmap.title, subtitle: roadmap.stages[completed]?.title || roadmap.outcome,
+    return { ...attributes, title: roadmap.title, subtitle: roadmap.stages[roadmap.progress.findIndex(stage => !stage.completed)]?.title || roadmap.outcome,
       completed, total: roadmap.stages.length, minutes: roadmap.minutes };
   }
   if (saved && (kind !== 'builtin' || !state.active)) {
@@ -556,6 +573,25 @@ function phonePath(roadmapProps) {
   return roadmapView({ ...roadmapProps, wizard: null, rewards: null });
 }
 
+function exploreTask(index) {
+  const saved = state.learningPlan;
+  if (!canStudy() || !saved?.plan.steps[index] || !Number.isInteger(index)) return;
+  previewIndex = index;
+  previewState.minutes = saved.plan.minutes;
+  previewState.learningPlan = structuredClone(saved);
+  if (!previewController) {
+    previewController = createPlanController({
+      state: previewState, save() {}, isOpen: () => view === 'task-preview',
+      render: () => previewState.learningPlan.completed > previewIndex ? go('course-path') : render(),
+      accountId: () => accountOwner, guestMode: () => !accountOwner,
+    });
+  }
+  previewController.reset();
+  // In this isolated copy the cursor can visit any task without writing course progress.
+  previewState.learningPlan.completed = index;
+  go('task-preview');
+}
+
 function render() {
   const stats = learningStats(state);
   const rewards = canStudy() ? rewardScreen(state.learningRewards) : null;
@@ -568,12 +604,15 @@ function render() {
       if (!canStudy() || startingNew) html = guidedStartView({ ...introduction, signedIn: Boolean(accountOwner) });
       else html = phoneLayout?.matches || selectedHomeKind() ? phonePath(roadmapProps) : homeScreen();
       break;
+    case 'weekly-report': html = weeklyReportView(weeklyWorkspace().progress, reportChecks); break;
+    case 'membership': html = membershipView(); break;
     case 'new-course': html = courseHomeView(state, { composerOnly: true }); break;
     case 'courses':
       html = canStudy()
         ? phoneCourseLibrary(courseLibraryHtml(), readyCoursesView(starterCourses(state.language, state.minutes), state.minutes))
         : homeScreen();
       break;
+    case 'task-preview': html = taskPreviewView(previewController.screen()); break;
     case 'learning-plan': html = canStudy() ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({ ...plans.screen(), accountSaved: Boolean(accountOwner && state.learningCourse), nextStage: followingStage(), onRoadmap: Boolean(pathForLesson(state.learningCourse?.id)), rewards }) : loginRequiredView(); break;
     case 'roadmap': html = roadmapView(roadmapProps); break;
     case 'quests':
@@ -608,7 +647,11 @@ function render() {
       : ['courses', 'new-course'].includes(view) ? view : null;
     if (section) html = phoneCourseNav(section) + html;
   }
+  const previousReader = document.querySelector('.lesson-stream');
+  const previousTop = previousReader?.scrollTop || 0;
   renderShell(view, state, stats, html, rewards);
+  if (view === 'learning-plan') plans.mountReader?.(previousReader, previousTop);
+  if (view === 'task-preview') previewController.mountReader(previousReader, previousTop);
   if (accountOwner && ['discover', 'courses', 'path', 'builtin-path', 'course-path', 'lesson', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop', 'profile'].includes(view)) {
     const main = $('#main');
     if (main.insertAdjacentHTML) main.insertAdjacentHTML(view === 'lesson' ? 'beforeend' : 'afterbegin', `<div data-builtin-sync-panel>${builtinSyncView()}</div>`);
@@ -748,6 +791,7 @@ function changeMinutes(value) {
 
 function beginRoadmap(goal = '', minutes = state.minutes) {
   if (roadmapOperation) return;
+  if (savedRoadmaps().length) return go('membership');
   roadmapWizard = {
     step: goal ? 1 : 0, goal, originalGoal: goal, minutes, experience: '', evidence: '', motivation: '',
     clarification: null, direction: '', customGoal: '', directionConfirmed: false,
@@ -915,6 +959,7 @@ function submitRoadmap(form) {
     }
     if (!isCurrent()) return;
     if (response.status === 401) { expiredSession(); return; }
+    if (response.status === 402) { roadmapWizard = null; go('membership'); return; }
     if (!response.ok) throw new Error(roadmapErrorText('roadmap'));
     const data = await response.json().catch(() => null);
     if (!isCurrent()) return;
@@ -931,9 +976,9 @@ function submitRoadmap(form) {
 
 function startRoadmapStage(index) {
   if (roadmapWizard && view !== 'discover') return;
-  const roadmap = restoreRoadmap(state.learningRoadmap);
+  let roadmap = restoreRoadmap(state.learningRoadmap);
   const selected = roadmap && roadmapStageStatuses(roadmap)[index];
-  if (!selected || selected.status === 'locked') return;
+  if (!selected) return;
   const requestedOwner = learningOwner();
   const requestedView = view;
   const pathKey = path => path && (path.id || JSON.stringify([path.goal, path.title, path.stages]));
@@ -945,6 +990,11 @@ function startRoadmapStage(index) {
       && pathKey(restoreRoadmap(state.learningRoadmap)) === requestedPath) startRoadmapStage(index);
     else render();
   })) return;
+  if (selected.status === 'locked') {
+    roadmap = { ...roadmap, opened: [...new Set([...(roadmap.opened || []), index])] };
+    state.learningRoadmap = roadmap;
+    save();
+  }
   // The saved path also renders as home. Give its async operation the same
   // route/error handling as a path opened from navigation.
   if (view === 'discover') { roadmapWizard = null; go('roadmap'); }
@@ -955,7 +1005,7 @@ function startRoadmapStage(index) {
       const { title, objective, kind } = roadmap.stages[index];
       const { goal, originalGoal, level, levelReason } = roadmap;
       const stageGoal = `${title} — ${goal}`.slice(0, 180);
-      const previousStages = roadmap.stages.slice(Math.max(0, index - 3), index).map(({ title, objective }) => ({ title, objective }));
+      const previousStages = roadmap.stages.slice(Math.max(0, index - 3), index).filter((_, offset) => roadmap.progress[Math.max(0, index - 3) + offset].completed).map(({ title, objective }) => ({ title, objective }));
       const generated = await plans.generate(stageGoal, roadmap.minutes, {
         language: roadmap.language, roadmapStage: { goal, ...(originalGoal ? { originalGoal } : {}), ...(kind ? { kind } : {}), title, objective, level, levelReason, previousStages },
       });
@@ -971,6 +1021,18 @@ function startRoadmapStage(index) {
 }
 
 document.addEventListener('submit', event => {
+  if (event.target.id === 'weekly-report-form') {
+    event.preventDefault();
+    const { progress, save } = weeklyWorkspace();
+    const draft = progress.days[progress.day];
+    for (const [field, value] of new FormData(event.target)) draft[field] = String(value).slice(0, 80);
+    reportChecks = checkWeeklyReport(progress.day, draft);
+    draft.completed = Object.values(reportChecks).every(Boolean);
+    save();
+    render();
+    if (!draft.completed) $('#weekly-report-form [name="' + Object.keys(reportChecks).find(key => !reportChecks[key]) + '"]')?.focus();
+    return;
+  }
   if (event.target.id === 'intro-name-form') { event.preventDefault(); advanceIntroduction(); return; }
   if (event.target.id === 'roadmap-form') {
     event.preventDefault();
@@ -1073,6 +1135,12 @@ function updateBudgetDraft(field, value) {
 
 document.addEventListener('input', event => {
   const input = event.target;
+  if (view === 'weekly-report' && input.form?.id === 'weekly-report-form' && ['formula','total','decision'].includes(input.name)) {
+    const { progress, save } = weeklyWorkspace();
+    progress.days[progress.day][input.name] = input.value.slice(0, 80);
+    save();
+    return;
+  }
   if (input.id === 'goal-input') {
     state.homeGoal = input.value.slice(0, 180);
     saveLocal();
@@ -1127,6 +1195,15 @@ document.addEventListener('change', event => {
 document.addEventListener('click', event => {
   const button = event.target.closest('button,[data-home]');
   if (!button || button.disabled) return;
+  if (button.dataset.reportNext !== undefined) {
+    const { progress, save } = weeklyWorkspace();
+    if (!progress.days[0].completed) return;
+    progress.day = 1;
+    save();
+    go('weekly-report');
+    return;
+  }
+  if (button.dataset.exploreTask !== undefined) return exploreTask(Number(button.dataset.exploreTask));
   if (button.dataset.introAction) {
     const action = button.dataset.introAction;
     if (action === 'next') advanceIntroduction();
@@ -1347,7 +1424,7 @@ window.addEventListener('mindora:account-changed', event => {
     builtinSnapshot = JSON.stringify(builtinData(state));
     for (const field of ['sessions', 'certificates']) if (!state[field] || typeof state[field] !== 'object' || Array.isArray(state[field])) state[field] = {};
     plans.reset();
-    view = 'discover';
+    view = owner && ['courses', 'weekly-report'].includes(view) ? view : 'discover';
     startingNew = false;
     if (!pendingLearning) introduction = { step: owner ? 2 : 0, name: account.profile?.name || '', topic: '', goal: '', minutes: state.minutes };
     checks = null;
@@ -1396,7 +1473,11 @@ mountReturnReview({
 });
 
 $('#modal').addEventListener('click',e=>{if(e.target===$('#modal')){const r=$('#modal').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('#modal').close();}});
-if (view === 'return-review' && !restoreOpenReview()) go('discover');
+if (window.location?.hash === '#weekly-report') go('weekly-report');
+else if (window.location?.hash === '#courses') {
+  window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  go('courses');
+} else if (view === 'return-review' && !restoreOpenReview()) go('discover');
 else if (view === 'learning-plan') go('learning-plan');
 else if (view === 'lesson') resumeCourse(state.active, step);
 else render();

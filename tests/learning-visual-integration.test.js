@@ -96,7 +96,7 @@ test('the real lesson example renders a readable palette and a computed percent 
       assert.ok(figure.querySelector('[data-percent-amount="20"]'), '25 percent of 80 is calculated as 20');
     }
     saved.study[0].page = lessonPages(plan.steps[0]).indexOf('check');
-    assert.equal(exampleScreen(saved).querySelector('[data-lesson-visual]'), null, 'the example does not leak onto the later assessment');
+    assert.equal(exampleScreen(saved).querySelector('[data-lesson-phase="check"] [data-lesson-visual]'), null, 'the visual stays in the preceding example');
   }
 });
 

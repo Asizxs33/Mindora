@@ -8,8 +8,9 @@ export function dialogContent(type, data) {
   if (type === 'about') {
     return `<div class="modal-buddy">${character('mino','explaining')}</div>
       <h2 id="modal-title">${t('About Mindora','О Mindora','Mindora туралы')}</h2>
-      <p>${t('Choose a goal, practise it, and apply what you learned in a new task.','Выбери цель, потренируйся и примени навык в новом задании.','Мақсат таңда, жаттық және үйренгеніңді жаңа тапсырмада қолдан.')}</p>
-      <p>${t('You can also start with a poster or spreadsheet course.','Можно начать с курса по постерам или таблицам.','Постер не кесте курсынан да бастауға болады.')}</p>`;
+      <blockquote class="mindora-quote" lang="en">“Understanding grows when you turn an idea into something you can do.”<cite>— Mindora</cite></blockquote>
+      <p>${t('Choose a goal, learn with a mentor, and turn an idea into code, a drawing, a model or a useful project.','Выбери цель, учись с наставником и превращай идеи в код, рисунки, модели и полезные проекты.','Мақсат таңда, тәлімгермен үйрен және ойыңды кодқа, суретке, модельге не пайдалы жобаға айналдыр.')}</p>
+      <button type="button" class="primary" data-view="courses">${t('Explore courses', 'Открыть курсы', 'Курстарды ашу')} ${icon('arrow', 18)}</button>`;
   }
 
   const content = {

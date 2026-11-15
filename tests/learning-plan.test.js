@@ -288,12 +288,12 @@ test('illustrations bind to retrieved sources and survive reload without crossin
   const rendered = learningPlanView({ goal: plan.goal, minutes: plan.minutes, saved: restored });
   assert.match(rendered, /<img src="https:\/\/docs\.python\.org\/first\.png" alt="First example"/);
   assert.ok(rendered.indexOf(steps[0].instruction) < rendered.indexOf('<figure'));
-  assert.ok(!rendered.includes(steps[0].task), 'practice is revealed after the explanation, on its own screen');
+  assert.ok(rendered.indexOf(steps[0].task) > rendered.indexOf('<figure'), 'practice follows the illustrated explanation');
   assert.match(rendered, /referrerpolicy="no-referrer"/);
   restored.study[0].page = 1;
   const practice = learningPlanView({ goal: plan.goal, minutes: plan.minutes, saved: restored });
   assert.ok(practice.includes(steps[0].task));
-  assert.ok(!practice.includes('<figure'), 'source images stay with the explanation');
+  assert.ok(practice.includes('<figure'), 'the explanation stays available above the practice');
 });
 
 test('the agent selects a discovered illustration by ID and cannot invent its URL', async () => {

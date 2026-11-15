@@ -1,4 +1,5 @@
-export const PRACTICE_TYPES = Object.freeze(['text', 'code', 'palette', 'calculation']);
+import { cleanStrokes, RELATIONS } from './lab-models.js';
+export const PRACTICE_TYPES = Object.freeze(['text', 'code', 'palette', 'calculation', 'drawing']);
 const color = value => typeof value === 'string' && /^#[a-f0-9]{6}$/i.test(value) ? value.toLowerCase() : null;
 const field = (value, max) => typeof value === 'string' ? value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').slice(0, max) : '';
 
@@ -8,16 +9,19 @@ export function normalizePractice(raw) {
   if (raw.type === 'code') {
     if (typeof raw.language !== 'string' || !/^[a-z0-9+# .-]{1,30}$/i.test(raw.language)) return null;
     result.language = raw.language.toLowerCase();
+    if (result.language === 'capy') result.challenge = raw.challenge === 'north' ? 'north' : 'path';
     if (raw.starter !== undefined) {
       if (typeof raw.starter !== 'string' || raw.starter.length > 500) return null;
       result.starter = raw.starter;
     }
   }
+  if (raw.type === 'calculation' && ['logarithm', 'graph'].includes(raw.visual)) result.visual = raw.visual;
   return result;
 }
 
 // Bounded fields keep structured submissions inside the existing answer limit.
 export function practiceAnswer(practice, raw = {}) {
+  if (practice?.type === 'drawing') return { type: 'drawing', strokes: cleanStrokes(raw.strokes), explanation: field(raw.explanation, 150) };
   if (practice?.type === 'code') return {
     type: 'code', code: field(raw.code, 500), output: field(raw.output, 100),
     explanation: field(raw.explanation, 100),
@@ -29,6 +33,7 @@ export function practiceAnswer(practice, raw = {}) {
   };
   if (practice?.type === 'calculation') return {
     type: 'calculation', result: field(raw.result, 100), working: field(raw.working, 450),
+    ...(['logarithm', 'graph'].includes(practice.visual) ? { relation: RELATIONS.includes(raw.relation) ? raw.relation : practice.visual === 'graph' ? 'linear' : 'logarithm', base: Math.max(2, Math.min(5, Math.round(Number(raw.base) || 2))), exponent: Math.max(0, Math.min(3, Math.round(Number(raw.exponent) || 0))) } : {}),
   };
   return null;
 }

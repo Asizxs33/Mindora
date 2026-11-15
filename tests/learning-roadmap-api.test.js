@@ -30,10 +30,23 @@ const create = (body = input, account = 'account-a', origin = 'https://mindora.t
   method: 'POST', headers: { origin, 'content-type': 'application/json', 'X-Mindora-Account': account }, body: JSON.stringify(body),
 });
 
+test('a spreadsheet goal that drifts into Python is regenerated in the requested tool', async () => {
+  const aligned = { ...clarification, directions: clarification.directions.map((item, i) => ({...item, goal: 'Build a spreadsheet report for team ' + (i+1)})) };
+  let calls = 0;
+  const result = await generateDeepSeekClarification({goal:'Make a weekly expense report in a spreadsheet', language:'en',minutes:5},'fixture',async()=>{
+    calls++;
+    const payload = calls === 1 ? { ...aligned, directions: aligned.directions.map(item => ({...item,goal:'Use Python for ' + item.goal})) } : aligned;
+    return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(payload)}}]});
+  });
+  assert.equal(calls,2);
+  assert.deepEqual(result,aligned);
+});
+
+
 test('only a verified matching account with valid answers can invoke roadmap generation', async () => {
   let calls = 0;
   const dependencies = {
-    apiKey: 'test-only', settings, session,
+    quota: () => ({ run: async (_owner, _input, build) => ({ roadmap: await build() }) }), apiKey: 'test-only', settings, session,
     generate: async data => { calls++; assert.deepEqual(data, input); return providerRoadmap; },
   };
   assert.equal((await roadmapApi(create(input, 'account-a', 'https://foreign.test'), dependencies)).status, 403);
@@ -54,7 +67,7 @@ test('only a verified matching account with valid answers can invoke roadmap gen
 test('the roadmap uses onboarding evidence and generates a complete course syllabus', async () => {
   let requests = 0;
   const dependencies = {
-    apiKey: 'test-only', settings, session,
+    quota: () => ({ run: async (_owner, _input, build) => ({ roadmap: await build() }) }), apiKey: 'test-only', settings, session,
     generate: (data, key) => generateDeepSeekRoadmap(data, key, async (url, init) => {
       requests++;
       assert.equal(url, 'https://api.deepseek.com/chat/completions');
@@ -92,7 +105,7 @@ const clarification = {
 test('clarification enforces account identity and validates distinct practical directions', async () => {
   let calls = 0;
   const body = { action: 'clarify', goal: 'Python', minutes: 5, language: 'ru' };
-  const dependencies = { apiKey: 'test-only', settings, session,
+  const dependencies = { quota: () => ({ run: async (_owner, _input, build) => ({ roadmap: await build() }) }), apiKey: 'test-only', settings, session,
     clarify: async data => { calls++; assert.deepEqual(data, { goal: 'Python', minutes: 5, language: 'ru' }); return clarification; },
   };
   assert.equal((await roadmapApi(create(body, 'other-account'), dependencies)).status, 401);
@@ -143,7 +156,7 @@ test('both direction selection and path generation stay within the available pra
       assert.match(prompt, /Other programming languages support writing code, an expected result and an explanation only/);
       assert.match(prompt, /Numeric practice supports a result, calculation steps and units/);
       assert.match(prompt, /exactly three color roles \(background, text, accent\), a headline and a written rationale/);
-      assert.match(prompt, /Do not promise freehand drawing, arbitrary page layouts, image editing, file or screenshot uploads/);
+      assert.match(prompt, /Do not promise arbitrary page layouts, image editing, file or screenshot uploads/);
       assert.match(prompt, /Writing and other subjects use a text response with a concrete deliverable/);
       assert.deepEqual(JSON.parse(messages[1].content), data);
       return Response.json({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(response) } }] });
@@ -158,7 +171,7 @@ test('a diagnostic is a bounded pair; legacy questionnaire inputs remain support
   for (const patch of [{ diagnosticAnswer: '' }, { diagnosticQuestion: undefined }, { diagnosticAnswer: 'x'.repeat(601) }, { originalGoal: '' }]) {
     assert.equal(roadmapInput({ ...answer, ...patch }), null);
   }
-  const response = await roadmapApi(create(answer), { apiKey: 'test-only', settings, session,
+  const response = await roadmapApi(create(answer), { quota: () => ({ run: async (_owner, _input, build) => ({ roadmap: await build() }) }), apiKey: 'test-only', settings, session,
     generate: async data => { assert.deepEqual(data, answer); return providerRoadmap; },
   });
   assert.equal(response.status, 200);

@@ -1,3 +1,4 @@
+import { priceLine, reportEntry, workAudience, workHeadline } from './work-skills.js';
 import { mobileProfileView } from './mobile-profile.js';
 import { COURSES, escapeHtml } from '../core/engine.js';
 import { resumeCursor } from '../core/resume.js';
@@ -32,7 +33,7 @@ export function brandNav(icon, view, place, signedIn = false) {
   const items = mobile ? [courses, profile] : [
     ['discover', 'home', t('Learn','Обучение','Оқу')],
     courses,
-    ['work', 'work', t('My work','Мои работы','Жұмыстарым')],
+    ['work', 'work', t('My projects','Мои проекты','Жобаларым')],
     ...(signedIn ? [['quests', 'gift', t('Rewards','Награды','Марапаттар')]] : []),
     profile,
   ];
@@ -68,6 +69,7 @@ export function phoneCourseLibrary(libraryHtml, readyHtml) {
     <div class="course-library-search"><label class="visually-hidden" for="course-search">${t('Find a course', 'Найти курс', 'Курс іздеу')}</label>${icon('search',20)}<input id="course-search" type="search" data-course-search placeholder="${t('Find a course', 'Найти курс', 'Курс іздеу')}" autocomplete="off"><button type="button" class="icon-button" data-course-search-clear aria-label="${t('Clear search', 'Очистить поиск', 'Іздеуді тазалау')}" hidden>${icon('close',18)}</button></div>
     <p class="course-search-status" role="status" data-course-search-status></p>
     <section class="course-saved-section"><h2 class="course-section-title">${t('Continue learning', 'Продолжить обучение', 'Оқуды жалғастыру')}</h2><div data-course-library>${libraryHtml}</div></section>
+    ${reportEntry()}
     <section class="phone-catalog" aria-labelledby="course-catalog-title"><h2 class="course-section-title" id="course-catalog-title">${t('Explore mini-courses', 'Готовые мини-курсы', 'Дайын шағын курстар')}</h2>${readyHtml}</section>
   </section>`;
 }
@@ -76,30 +78,32 @@ export function courseHomeView(state, { current = null, libraryHtml = '', readyH
   const total = Math.max(1, Number(current?.total) || 1);
   const completed = Math.min(total, Math.max(0, Number(current?.completed) || 0));
   const percent = Math.round(completed / total * 100);
-  return `<section class="course-home" data-language="${currentLanguage()}" aria-labelledby="course-home-title">
+  return `<section class="course-home" data-guest-welcome="${guest}" data-language="${currentLanguage()}" aria-labelledby="course-home-title">
     <header class="course-home-heading" data-mentor-scene>
       <div class="course-home-copy">
         <p class="course-home-greeting" data-mentor-message>${guest ? t('Hi! I’m Mino.', 'Привет! Я Мино.', 'Сәлем! Мен Миномын.') : completed === total ? t('You did it!', 'У тебя получилось!', 'Жарайсың!') : t('Tell me your goal.', 'Расскажи о своей цели.', 'Мақсатыңды айтшы.')}</p>
-        <h1 id="course-home-title"><span class="course-home-mobile-title">${t('What will you learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</span><span class="course-home-desktop-title">${t('What do you want to learn?', 'Чему ты хочешь научиться?', 'Не үйренгің келеді?')}</span></h1>
-        <p class="course-home-desktop-intro">${t('Choose a goal and tell us how much time you have.', 'Выбери цель и укажи, сколько времени у тебя есть.', 'Мақсатыңды таңдап, қанша уақытың барын көрсет.')}</p>
+        <h1 id="course-home-title"><span class="course-home-mobile-title">${t('What will you learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</span><span class="course-home-desktop-title">${guest ? workHeadline() : t('What do you want to learn?', 'Чему ты хочешь научиться?', 'Не үйренгің келеді?')}</span></h1>
+        <p class="course-home-desktop-intro">${guest ? workAudience() : t('Choose a goal and tell us how much time you have.', 'Выбери цель и укажи, сколько времени у тебя есть.', 'Мақсатыңды таңдап, қанша уақытың барын көрсет.')}</p>
       </div>
       ${character('mino', completed === total ? 'trophy' : 'idea', 'course-home-mino')}
     </header>
     <form id="goal-form" class="course-home-composer">
       <label class="visually-hidden" for="goal-input">${t('What do you want to learn?', 'Чему хочешь научиться?', 'Не үйренгің келеді?')}</label>
-      <input id="goal-input" name="goal" value="${escapeHtml(state.homeGoal || '')}" placeholder="${t('For example, make my first video', 'Например, сделать первое видео', 'Мысалы, алғашқы видеомды жасау')}" minlength="3" maxlength="180" required autocomplete="off" enterkeyhint="go">
-      <div class="course-home-form-actions"><label class="course-home-time" for="time-select"><span>${t('Per lesson', 'На занятие', 'Бір сабаққа')}</span><select id="time-select" name="minutes">${[5, 10, 20].map(value => `<option value="${value}"${value === state.minutes ? ' selected' : ''}>${value} ${t('min', 'мин', 'мин')}</option>`).join('')}</select></label><button type="submit" class="primary">${t('Create a path', 'Создать путь', 'Оқу жолын құру')}${icon('arrow', 18)}</button></div>
+      <input id="goal-input" name="goal" value="${escapeHtml(state.homeGoal || '')}" placeholder="${t('For example, use AI to draft a Friday update', 'Например, подготовить отчёт за неделю с ИИ', 'Мысалы, ЖИ көмегімен апталық есеп жазу')}" minlength="3" maxlength="180" required autocomplete="off" enterkeyhint="go">
+      <div class="course-home-form-actions"><label class="course-home-time" for="time-select"><span>${t('Per lesson', 'На занятие', 'Бір сабаққа')}</span><select id="time-select" name="minutes">${[5, 10, 20].map(value => `<option value="${value}"${value === state.minutes ? ' selected' : ''}>${value} ${t('min', 'мин', 'мин')}</option>`).join('')}</select></label><button type="submit" class="primary">${guest ? t('Build my free course','Создать бесплатный курс','Тегін курсымды құру') : t('Create a path', 'Создать путь', 'Оқу жолын құру')}${icon('arrow', 18)}</button></div>
     </form>
+    <p class="course-price-note">${priceLine()}</p>
     <ol class="course-home-method" aria-label="${t('How your lessons work', 'Как устроены занятия', 'Сабақтар қалай өтеді')}">
       <li>${icon('book', 18)}<span>${t('Short explanations', 'Короткие объяснения', 'Қысқа түсіндірмелер')}</span></li>
       <li>${icon('target', 18)}<span>${t('Examples & practice', 'Примеры и практика', 'Мысал мен жаттығу')}</span></li>
       <li>${icon('path', 18)}<span>${t('Resume anytime', 'Продолжай в удобное время', 'Кез келген уақытта жалғастыр')}</span></li>
     </ol>
+    ${composerOnly ? '' : reportEntry()}
     ${composerOnly ? '' : `<div class="course-home-shortcuts topic-shortcuts">
       <button type="button" class="topic-shortcut" data-course="design" data-course-path>${icon('palette', 18)} ${t('Make a poster', 'Сделать постер', 'Постер жасау')}</button>
       <button type="button" class="topic-shortcut" data-course="budget" data-course-path>${icon('sheet', 18)} ${t('Learn spreadsheets', 'Изучить таблицы', 'Кестелерді үйрену')}</button>
     </div>`}
-    ${guest ? `<p class="home-account-link">${t('New here?', 'Впервые здесь?', 'Алғаш рет келдің бе?')} <button type="button" class="text-link" data-account-open="signup">${t('Create account', 'Создать аккаунт', 'Аккаунт ашу')}</button></p>` : ''}
+    ${guest ? `<button type="button" class="secondary" data-view="courses">${icon('book',18)} ${t('Explore courses','Открыть курсы','Курстарды көру')}</button><p class="home-account-link">${t('New here?', 'Впервые здесь?', 'Алғаш рет келдің бе?')} <button type="button" class="text-link" data-account-open="signup">${t('Create account', 'Создать аккаунт', 'Аккаунт ашу')}</button></p>` : ''}
     ${current ? `<section class="course-home-current" aria-labelledby="course-home-current-title"><div class="course-home-current-heading"><span class="course-home-current-icon" aria-hidden="true">${icon('path', 25)}</span><div><span class="course-home-eyebrow">${completed === total ? t('Completed', 'Пройдено', 'Аяқталды') : t('Your next step', 'Твой следующий шаг', 'Келесі қадамың')}</span><h2 id="course-home-current-title">${escapeHtml(current.title)}</h2></div><span class="course-home-percent">${percent}%</span></div>${current.subtitle ? `<p class="course-home-next">${escapeHtml(current.subtitle)}</p>` : ''}<div class="course-home-progress"><progress max="${total}" value="${completed}" aria-label="${t('Course progress', 'Прогресс курса', 'Курс барысы')}"></progress><span>${completed}/${total}</span></div><div class="course-home-current-actions"><button type="button" class="primary course-home-resume" ${current.resumeAttributes || 'data-view="my-path"'}>${completed === total ? t('See result', 'Результат', 'Нәтижені көру') : t('Continue', 'Продолжить', 'Жалғастыру')}${icon('play', 17)}</button><button type="button" class="secondary course-home-path" ${current.pathAttributes || 'data-view="my-path"'}>${icon('path', 18)}${t('Learning path', 'Путь обучения', 'Оқу жолы')}</button></div></section>` : ''}
     ${libraryHtml ? `<details class="course-home-library"><summary>${icon('folder', 20)}<span>${t('Saved courses', 'Сохранённые курсы', 'Сақталған курстар')}</span>${icon('chevron', 18)}</summary><div data-course-library>${libraryHtml}</div></details>` : ''}
     ${readyHtml ? `<div class="course-home-ready">${readyHtml}</div>` : ''}
@@ -246,7 +250,7 @@ export function sidePage(view, state, rewardProfile = '') {
       }).join('')}</div>`;
   }
   if (view === 'achievements') return `${pageBanner(t("Milestones", "Достижения", "Жетістіктер"), t("See what you’ve achieved.", "Посмотри на свои достижения.", "Жетістіктеріңді көр."), 'cheer')}${achievementsCard(state, stats, icon, true)}`;
-  if (view === 'community') return `${pageBanner(t("Learning, together.", "Сообщество", "Қауымдастық"), t("A little space for curious people.", "Место для общения учеников.", "Оқушылардың араласатын орны."))}<section class="game-card community-preview"><span class="course-symbol">${icon('users', 28)}</span><h2>${t("Our community is still growing.", "Сообщество в разработке.", "Қауымдастық әзірленіп жатыр.")}</h2><p>${t("Sharing and discussions aren’t available yet. For now, keep your projects in My work.", "Готовые проекты доступны в разделе «Мои работы».", "Дайын жобалар «Жұмыстарым» бөлімінде.")}</p><button class="secondary" data-view="work">${t("See my work", "Мои работы", "Жұмыстарым")} ${icon('arrow', 18)}</button></section>`;
+  if (view === 'community') return `${pageBanner(t("Learning, together.", "Сообщество", "Қауымдастық"), t("A little space for curious people.", "Место для общения учеников.", "Оқушылардың араласатын орны."))}<section class="game-card community-preview"><span class="course-symbol">${icon('users', 28)}</span><h2>${t("Our community is still growing.", "Сообщество в разработке.", "Қауымдастық әзірленіп жатыр.")}</h2><p>${t("Sharing and discussions aren’t available yet. For now, keep your projects in My projects.", "Готовые проекты доступны в разделе «Мои проекты».", "Дайын жобалар «Жобаларым» бөлімінде.")}</p><button class="secondary" data-view="work">${t("See my projects", "Мои проекты", "Жобаларым")} ${icon('arrow', 18)}</button></section>`;
   if (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 920px)').matches) {
     return mobileProfileView(state, stats);
   }
@@ -255,7 +259,7 @@ export function sidePage(view, state, rewardProfile = '') {
     <section class="profile-overview" aria-label="${t("Your progress", "Твой прогресс", "Оқу барысың")}"><div class="profile-stats"><div><span class="profile-stat-icon">${icon('check', 22)}</span><strong>${stats.total}</strong><span>${t("Steps completed", "Пройдено этапов", "Аяқталған кезеңдер")}</span></div><div><span class="profile-stat-icon">${icon('work', 22)}</span><strong>${Object.keys(state.works).length}</strong><span>${t("Projects saved", "Сохранено работ", "Сақталған жұмыстар")}</span></div></div></section>
     <section class="profile-settings"><span class="profile-link-icon">${icon('clock', 22)}</span><div><h2>${t("Daily learning time", "Время на обучение", "Оқу уақыты")}</h2></div><label class="visually-hidden" for="profile-minutes">${t("Daily learning time", "Время на обучение", "Оқу уақыты")}</label><select class="profile-select" id="profile-minutes">${timeOptions(state.minutes)}</select></section>
     <section class="profile-settings motion-preference"><span class="profile-link-icon">${icon('play', 22)}</span><div><h2>${t("Character motion", "Анимация персонажей", "Кейіпкер анимациясы")}</h2><small data-character-motion-status></small></div><button type="button" class="motion-switch" role="switch" data-character-motion aria-label="${t("Character motion", "Анимация персонажей", "Кейіпкер анимациясы")}"><span data-character-motion-label>${t("Character motion", "Анимация персонажей", "Кейіпкер анимациясы")}</span></button></section>
-    <nav class="profile-links" aria-label="${t("Learning tools", "Инструменты обучения", "Оқу құралдары")}">${[['work', 'work', t('My work', 'Мои работы', 'Жұмыстарым')], ['practice', 'edit', t("Practice", "Практика", "Жаттығу")], ['achievements', 'trophy', t("Milestones", "Достижения", "Жетістіктер")]].map(([target, symbol, title]) => `<button data-view="${target}"><span class="profile-link-icon">${icon(symbol, 23)}</span><span><strong>${title}</strong></span>${icon('arrow', 18)}</button>`).join('')}<button data-action="about"><span class="profile-link-icon">${icon('leaf', 23)}</span><span><strong>${t("About Mindora", "О Mindora", "Mindora туралы")}</strong></span>${icon('arrow', 18)}</button></nav>
+    <nav class="profile-links" aria-label="${t("Learning tools", "Инструменты обучения", "Оқу құралдары")}">${[['work', 'work', t('My projects', 'Мои проекты', 'Жобаларым')], ['practice', 'edit', t("Practice", "Практика", "Жаттығу")], ['achievements', 'trophy', t("Milestones", "Достижения", "Жетістіктер")]].map(([target, symbol, title]) => `<button data-view="${target}"><span class="profile-link-icon">${icon(symbol, 23)}</span><span><strong>${title}</strong></span>${icon('arrow', 18)}</button>`).join('')}<button data-action="about"><span class="profile-link-icon">${icon('leaf', 23)}</span><span><strong>${t("About Mindora", "О Mindora", "Mindora туралы")}</strong></span>${icon('arrow', 18)}</button></nav>
     ${rewardProfile ? `<details class="profile-rewards"><summary>${t('Learning activity', 'Учебная активность', 'Оқу белсенділігі')}${icon('chevron', 18)}</summary>${rewardProfile}</details>` : ''}
     <details class="profile-draft"><summary>${icon('sheet', 20)}<span>${t('Spreadsheet draft', 'Черновик таблицы', 'Кесте нобайы')}</span>${icon('chevron', 18)}</summary><section class="game-card simple-panel" data-cloud-panel="profile"></section></details>
     </div>`;

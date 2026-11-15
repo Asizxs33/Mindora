@@ -1,5 +1,6 @@
 import { languagePicker, t } from './language.js';
 import { icon } from './icons.js';
+import { priceLine, reportEntry, workHeadline } from './work-skills.js';
 
 const media = name => new URL(`./assets/${name}`, import.meta.url).href;
 const brand = new URL('./assets/brand-mark.svg', import.meta.url).href;
@@ -20,7 +21,7 @@ function startButton(text) {
 }
 
 export function landingView() {
-  const start = t('Start learning', 'Начать обучение', 'Оқуды бастау');
+  const start = t('Build my free course', 'Создать бесплатный курс', 'Тегін курсымды құру');
   const courses = t('Mini-courses', 'Мини-курсы', 'Шағын курстар');
   const method = t('How it works', 'Как это работает', 'Қалай жұмыс істейді');
   const signIn = t('I already have an account', 'У меня уже есть аккаунт', 'Менде аккаунт бар');
@@ -41,7 +42,7 @@ export function landingView() {
         <img class="landing-mascot" src="${hero}" width="880" height="880" alt="${t('Mino the capybara holds a map surrounded by coding, drawing, and conversation tools', 'Мино держит карту, вокруг него символы кода, рисования и общения', 'Мино карта ұстап тұр, айналасында код, сурет және әңгіме белгілері бар')}" fetchpriority="high">
       </div>
       <div class="landing-hero-copy">
-        <h1 id="landing-title">${t('Learn a new skill in a few minutes a day.', 'Осваивай новые навыки за несколько минут в день.', 'Күніне бірнеше минутта жаңа дағды үйрен.')}</h1>
+        <h1 id="landing-title">${workHeadline()}</h1>
         <div class="landing-actions">${startButton(start)}<button type="button" class="secondary landing-signin" data-account-open="signin">${signIn}</button></div>
       </div>
     </section>
@@ -70,7 +71,7 @@ export function landingView() {
     </section>
     <section class="landing-finish" aria-labelledby="landing-finish-title"><div class="landing-container landing-finish-inner">
       <img src="${media('landing/mino-ready.webp')}" width="440" height="550" alt="" decoding="async" loading="lazy">
-      <div><h2 id="landing-finish-title">${t('What will you learn first?', 'Чему научишься первым делом?', 'Алдымен нені үйренесің?')}</h2>${startButton(start)}</div>
+      <div><h2 id="landing-finish-title">${t('What will you learn first?', 'Чему научишься первым делом?', 'Алдымен нені үйренесің?')}</h2>${startButton(start)}<p class="course-price-note">${priceLine()}</p>${reportEntry()}</div>
     </div></section>
     <footer class="landing-container landing-footer">
       <a class="brand" href="#discover" data-home aria-label="Mindora"><img src="${brand}" width="32" height="32" alt=""><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>

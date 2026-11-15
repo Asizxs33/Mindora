@@ -1,3 +1,4 @@
+import { mentorForTopic } from '../core/subject-mentor.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -120,7 +121,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
   }
   const screen = kind => (...args) => ({ kind, args: clone(args) });
   const context = vm.createContext({
-    ...engine, ...progress, ...budget, ...learningModel, ...assessments, ...returnReview, ...roadmapModel, ...rewardsModel,
+    mentorForTopic, ...engine, ...progress, ...budget, ...learningModel, ...assessments, ...returnReview, ...roadmapModel, ...rewardsModel,
     createGuestCourseRequest, BROWSER_GUEST, resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, startTopics, getStarterCourse, starterCourses, createPracticeController,
     needsReturnReview: (lastSeen, learned) => returnReview.needsReturnReview(lastSeen, learned, time),
     languageCode: value => value || 'en', setLanguage() {}, message: value => value, t: value => value,
@@ -194,7 +195,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
       if (view === 'certificate') elements.get('#certificate-name').value = html.args[0].name;
     },
     phoneCourseLibrary: screen('course-library'), courseHomeView: screen('course-home'), readyCoursesView: () => '', coursesPage: screen('courses'), sidePage: screen('side'),
-    guidedStartView: screen('guided-start'), quietHomeView: screen('quiet-home'), returnReviewView: screen('return-review'),
+    membershipView: screen('membership'), guidedStartView: screen('guided-start'), quietHomeView: screen('quiet-home'), returnReviewView: screen('return-review'),
     pathView: screen('path'), lesson: screen('lesson'), result: screen('result'), workView: screen('work'),
     recapView: screen('recap'), certificateView: screen('certificate'),
     refreshCertificatePreview() {},
@@ -518,8 +519,6 @@ test('an explicitly requested roadmap builds a personalized path and starts only
   assert.equal(run.current.html.args[0].roadmap.level, 'intermediate');
   assert.equal(run.current.html.args[0].roadmap.originalGoal, 'I want to learn spreadsheet formulas');
   assert.deepEqual(run.current.html.args[0].active.map(stage => stage.status), ['ready', 'locked', 'locked', 'locked']);
-  run.click({ roadmapAction: 'start', roadmapStage: '1' });
-  assert.deepEqual(run.generations, []);
   run.click({ roadmapAction: 'start', roadmapStage: '0' });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.generations[0].context.roadmapStage.level, 'intermediate');
@@ -634,7 +633,8 @@ test('a saved roadmap stays selected on the home path and opens without its setu
   run.click({ view: 'roadmap' });
   assert.equal(run.saved().lastLearningType, 'roadmap');
   run.click({ roadmapAction: 'setup' });
-  assert.ok(run.current.html.args[0].wizard);
+  assert.equal(run.current.view, 'membership');
+  assert.deepEqual(run.roadmapRequests, []);
   run.click({ view: 'discover' });
   assert.equal(run.current.html.kind, 'roadmap');
   assert.equal(run.current.html.args[0].roadmap.title, roadmap.title);
@@ -749,8 +749,8 @@ test('a large course lazily generates a later module lesson and reopens each sav
     await new Promise(resolve => setImmediate(resolve));
     run.click({ view: 'my-path' });
     assert.deepEqual(run.generations, [], 'opening a syllabus does not generate all its lessons');
-    for (const blocked of [String(index + 1), '24', '99', '-1', '04']) run.click({ roadmapAction: 'start', roadmapStage: blocked });
-    assert.deepEqual(run.generations, [], 'locked or invalid stage indices cannot generate a lesson');
+    for (const blocked of ['24', '99', '-1', '04']) run.click({ roadmapAction: 'start', roadmapStage: blocked });
+    assert.deepEqual(run.generations, [], 'invalid stage indices cannot generate a lesson');
     run.click({ roadmapAction: 'start', roadmapStage: String(index) });
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(run.generations.length, 1);
@@ -1112,7 +1112,7 @@ test('resume offers a return review strictly after 24 hours, and skips it when n
   }
 });
 
-test('a selected path node wins over a different saved review position, while locked stages stay closed', () => {
+test('a selected path node wins over a different saved review position, and future stages can be explored without credit', () => {
   const run = app(seed({
     progress: { design: 2, budget: 0 },
     sessions: { design: { lastSeen: NOW - 1000, cursor: { step: 0, page: 2 } } },
@@ -1127,8 +1127,9 @@ test('a selected path node wins over a different saved review position, while lo
   run.click({ step: '0' });
   assert.equal(run.presentation.get('mindora.reading.design.v1'), '2', 'same node retains its saved card');
   run.click({ step: '3' });
-  assert.equal(run.lesson.step, 0, 'locked future node cannot open');
-  assert.match(run.element('#toast').textContent, /unlock the next/);
+  assert.equal(run.lesson.step, 3);
+  run.click({ action: 'finish-learn' });
+  assert.equal(run.current.state.progress.design, 2);
 });
 
 test('a path-node choice survives an overdue recap instead of restoring a different saved stage', () => {
