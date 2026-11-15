@@ -91,8 +91,17 @@
   .course-library .learning-library-heading { justify-content: flex-end; margin-bottom: 10px; }
   .phone-course-nav button { font-size: 13px; gap: 5px; padding-inline: 3px; }
   #main[data-page="new-course"] .course-home-greeting { display: none; }
-  #main[data-page="new-course"] .course-home-heading { grid-template-columns: minmax(0, 1fr) 72px; gap: 10px; }
-  #main[data-page="new-course"] .course-home-heading .course-home-mino { width: 72px; height: 72px; --character-size: 72px; --character-height: 72px; }
+  #main[data-page="new-course"] .course-home-heading {
+    --composer-mascot-size: clamp(78px, 24vw, 96px);
+    grid-template-columns: minmax(0, 1fr) var(--composer-mascot-size);
+    gap: 10px;
+  }
+  #main[data-page="new-course"] .course-home-heading .course-home-mino {
+    --character-size: var(--composer-mascot-size);
+    --character-height: var(--composer-mascot-size);
+    width: var(--composer-mascot-size);
+    height: var(--composer-mascot-size);
+  }
   .roadmap-tutor, .learning-hub-guide { display: none; }
   .phone-course-nav ~ .roadmap-layout .roadmap-stages { --roadmap-node: 66px; padding-top: 34px; }
   .phone-course-nav ~ .roadmap-layout .roadmap-stage { min-height: 132px; padding-bottom: 18px; }

@@ -14,14 +14,15 @@ function humanPoses(name, action, width, height) {
   const gesture = pose(name + '-' + action, width, height);
   return Object.fromEntries(['welcome', 'thinking', 'celebrate', 'explaining', 'encourage', 'incorrect'].map(mood => [mood, gesture]));
 }
-const minoScene = stem => pose(stem, 288, 288, 'characters/mino-scenes');
+const minoScene = (stem, width = 288, height = 288) => pose(stem, width, height, 'characters/mino-scenes');
+const minoIdea = minoScene('02-bright-idea', 288, 512);
 const characters = Object.freeze({
   mino: { name: 'Mino', atlas: 'mino-poses-v3.png', fallback: 'capybara.png', poses: {
     welcome: minoScene('03-learning-map'), thinking: minoScene('01-listening'),
-    explaining: minoScene('02-bright-idea'), celebrate: minoScene('07-applause'),
+    explaining: minoIdea, celebrate: minoScene('07-applause'),
     encourage: minoScene('08-encouragement'), incorrect: minoScene('08-encouragement'),
     listening: minoScene('01-listening'),
-    idea: minoScene('02-bright-idea'),
+    idea: minoIdea,
     map: minoScene('03-learning-map'),
     waiting: minoScene('04-patient-wait'),
     drawing: minoScene('05-draw-a-poster'),
