@@ -4,6 +4,7 @@ import { mentorForTopic } from '../core/subject-mentor.js';
 import { character } from './characters.js';
 import { minoWaitScreen } from './mino-wait.js';
 import { icon } from './icons.js';
+import { courseCertificateButton } from './certificate.js';
 import { courseLanguageField, t } from './language.js';
 
 const TITLE = {
@@ -266,7 +267,7 @@ export function roadmapView({ roadmap, wizard, active = [], busy = false, error 
       </header>
       <div class="roadmap-intro">
         ${character(mentorForTopic(`${roadmap.originalGoal || ''} ${roadmap.goal} ${roadmap.title}`), busy ? 'thinking' : complete ? 'celebrate' : 'explaining', 'roadmap-guide')}
-        ${resumeStage && roadmap.curriculumVersion === 2 ? `<div class="roadmap-resume"><span lang="${escape(roadmap.language)}">${escape(resumeStage.title)}</span><button type="button" class="primary" data-roadmap-action="start" data-roadmap-stage="${resumeIndex}" aria-label="${escape(`${resumeLabel}: ${resumeStage.title}`)}"${busy ? ' disabled' : ''}>${icon('play', 17)} ${resumeLabel}</button></div>` : ''}
+        ${complete ? courseCertificateButton('roadmap') : resumeStage && roadmap.curriculumVersion === 2 ? `<div class="roadmap-resume"><span lang="${escape(roadmap.language)}">${escape(resumeStage.title)}</span><button type="button" class="primary" data-roadmap-action="start" data-roadmap-stage="${resumeIndex}" aria-label="${escape(`${resumeLabel}: ${resumeStage.title}`)}"${busy ? ' disabled' : ''}>${icon('play', 17)} ${resumeLabel}</button></div>` : ''}
       </div>
       <details class="roadmap-about"><summary>${icon('book', 17)} ${t('Course details', 'О курсе', 'Курс туралы')}</summary><div><p lang="${escape(roadmap.language)}">${escape(roadmap.outcome)}</p><p>${levelName(roadmap.level)} · ${roadmap.minutes} ${t('min per lesson','мин на занятие','мин / сабақ')}</p>${syllabusSources(roadmap)}</div></details>
       ${feedback(error, notice)}

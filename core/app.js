@@ -1,5 +1,5 @@
 import { reportProgress, reportReturnDue, submitReport } from './weekly-report.js';
-import { weeklyReportView } from '../ui/work-skills.js';
+import { reportTitle, weeklyReportView } from '../ui/work-skills.js';
 import { plusShopView } from '../ui/shop.js';
 import { checkDemoRound, newDemoRound, validPlan } from './plus-demo.js';
 import { COURSES, DESIGN_QUIZ, evaluatePoster } from './engine.js';
@@ -10,7 +10,7 @@ import { createGuestCourseRequest, BROWSER_GUEST } from './guest-courses.js';
 import { apiRequest, createLearningLibrary } from './learning-library.js';
 import { createBuiltinSync } from './builtin-sync.js';
 import { restorePlan } from './learning-plan.js';
-import { normalizeClarification, normalizeRoadmap, restoreRoadmap, restoreRoadmapArchive, ROADMAP_LIBRARY_LIMIT, roadmapInput, roadmapStageStatuses, updateRoadmapStage } from './roadmap-model.js';
+import { normalizeClarification, normalizeRoadmap, restoreRoadmap, restoreRoadmapArchive, ROADMAP_LIBRARY_LIMIT, roadmapComplete, roadmapInput, roadmapStageStatuses, updateRoadmapStage } from './roadmap-model.js';
 import { buyRewardItem, claimDailyQuest, recordCheckReward, recordLessonReward, rewardScreen } from './roadmap-rewards.js';
 import { createWorkspaceStorage } from './workspace-storage.js';
 import { dayKey, dailyCourse, finishedSteps, nextOpenStep, learningStepIndex, learningStats } from './progress.js';
@@ -73,6 +73,7 @@ const resume = readBudgetResume(state);
 const phoneLayout = window.matchMedia?.('(max-width: 920px)');
 const welcomePath = /^\/welcome\/?$/.test(window.location?.pathname || '');
 let view = 'discover';
+let certificateKind = 'builtin';
 let startingNew = false;
 let introduction = { step: 0, name: '', topic: '', goal: '', minutes: state.minutes };
 let step = resume?.step ?? 0;
@@ -215,6 +216,9 @@ function canImportBuiltin() {
 }
 
 function saveLearning(event) {
+  if (event?.type === 'complete' && !state.learningPlan.certificate && !pathForLesson(state.learningCourse?.id)) {
+    state.learningPlan.certificate = newCertificate(new Date().toISOString());
+  }
   if (event) applyLessonReward(event, state.learningCourse?.id);
   if (view === 'learning-plan') rememberLearningVisit();
   saveLocal();
@@ -227,17 +231,18 @@ function applyLessonReward(event, courseId) {
     state.learningRewards = recordCheckReward(state.learningRewards, courseId, event.index, event.correct);
   } else {
     state.learningRewards = recordLessonReward(state.learningRewards, courseId);
-    reconcileRoadmapCompletion(courseId);
+    reconcileRoadmapCompletion(courseId, new Date().toISOString());
   }
   save();
 }
 
-function reconcileRoadmapCompletion(courseId) {
+function reconcileRoadmapCompletion(courseId, completedAt = null) {
   const ownerPath = pathForLesson(courseId);
   if (!ownerPath) return;
   const index = ownerPath.progress.findIndex(stage => stage.courseId === courseId);
   const next = updateRoadmapStage(ownerPath, index, courseId, true);
   if (next === ownerPath) return;
+  if (roadmapComplete(next)) next.certificate = newCertificate(completedAt);
   if (ownerPath.id === state.learningRoadmap?.id) state.learningRoadmap = next;
   else state.learningRoadmaps = state.learningRoadmaps.map(path => path.id === ownerPath.id ? next : path);
   save();
@@ -411,19 +416,57 @@ function restoreOpenReview() {
   return true;
 }
 
-function certificateData(id) {
-  if (!certificateEligible(state, id)) return null;
-  if (!state.certificates[id]) {
-    const account = getAccountState();
-    state.certificates[id] = { name: account.profile?.name || account.user?.name || '', completedAt: state.works[id].savedAt, certificateId: `MD-${id.toUpperCase()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}` };
-    save();
-  }
-  return { ...state.certificates[id], courseTitle: courseNames[id] };
+function certificateName(value) {
+  return value.replace(/[\u0000\u000b\u000c\u007f]/gu, '').slice(0, 80);
 }
 
-function openCertificate(id = state.active) {
-  if (!certificateData(id)) return toast('Finish the course and final challenge to earn your certificate.');
-  state.active = id; save(); go('certificate');
+function newCertificate(completedAt = null) {
+  const { profile, user } = getAccountState();
+  return { name: certificateName(profile?.name || user?.name || ''), completedAt, certificateId: `MD-${crypto.randomUUID().toUpperCase()}` };
+}
+
+function certificateSource(kind = certificateKind, id = state.active) {
+  if (kind === 'lesson') {
+    const saved = state.learningPlan;
+    if (!saved || saved.completed !== saved.plan.steps.length || pathForLesson(state.learningCourse?.id)) return null;
+    return { record: saved.certificate, courseTitle: saved.plan.title, back: 'course-path',
+      store(record) { saved.certificate = record; saveLearning(); } };
+  }
+  if (kind === 'roadmap') {
+    const path = restoreRoadmap(state.learningRoadmap);
+    if (!roadmapComplete(path)) return null;
+    return { record: path.certificate, courseTitle: path.title, back: 'roadmap',
+      store(record) { state.learningRoadmap = { ...path, certificate: record }; save(); } };
+  }
+  if (kind === 'weekly-report') {
+    const { days } = reportProgress(state.weeklyReport);
+    if (!days.every(day => day.completed)) return null;
+    const completedAt = new Date(days[1].completedAt);
+    return { record: state.certificates[kind], courseTitle: reportTitle(), back: 'weekly-report',
+      completedAt: Number.isFinite(completedAt.getTime()) ? completedAt.toISOString() : null,
+      store(record) { state.certificates[kind] = record; save(); } };
+  }
+  if (kind !== 'builtin' || !certificateEligible(state, id)) return null;
+  return { record: state.certificates[id], courseTitle: courseNames[id], back: 'path', completedAt: state.works[id]?.savedAt,
+    store(record) { state.certificates[id] = record; save(); } };
+}
+
+function openCertificate(id = state.active, kind = 'builtin') {
+  if (!ensureLearning(() => openCertificate(id, kind))) return;
+  if (kind === 'roadmap' && view === 'learning-plan') {
+    const path = pathForLesson(state.learningCourse?.id);
+    if (!roadmapComplete(path)) return;
+    if (path.id !== state.learningRoadmap?.id) openRoadmap(path.id ?? 'current');
+  }
+  const source = certificateSource(kind, id);
+  if (!source) return toast(t('Finish the course to earn your certificate.', 'Заверши курс, чтобы получить сертификат.', 'Сертификат алу үшін курсты аяқта.'));
+  if (kind === 'builtin' && state.active !== id) {
+    state.active = id;
+    save();
+  }
+  if (!source.record) source.store(newCertificate(source.completedAt));
+  certificateKind = kind;
+  go('certificate');
 }
 let saveWarning=false;
 function saveLocal() {
@@ -529,7 +572,8 @@ function finishStep() {
   rememberPosition();
   if (firstCompletion) {
     state.practiceCount = (Number(state.practiceCount) || 0) + 1;
-    certificateData(id);
+    const source = certificateSource('builtin', id);
+    if (source && !source.record) source.store(newCertificate(source.completedAt));
   }
   save();
   if (finished.length === 4) go('result');
@@ -575,7 +619,7 @@ function resumeCurrentCourse() {
     if (index >= 0) startRoadmapStage(index);
   } else if (state.learningPlan && (kind !== 'builtin' || !state.active)) go('learning-plan');
   else if (COURSES[state.active]) {
-    if (state.progress[state.active] === 4) go('certificate');
+    if (state.progress[state.active] === 4) openCertificate(state.active);
     else resumeCourse(state.active);
   } else go('courses');
 }
@@ -611,7 +655,8 @@ function homeScreen() {
 function phonePath(roadmapProps) {
   const kind = selectedHomeKind();
   if (kind === 'builtin' || kind === 'lesson') {
-    return quietHomeView({ ...state, lastLearningType: kind === 'builtin' ? 'builtin' : 'ai' });
+    return quietHomeView({ ...state, lastLearningType: kind === 'builtin' ? 'builtin' : 'ai' },
+      { onRoadmap: kind === 'lesson' && Boolean(pathForLesson(state.learningCourse?.id)) });
   }
   return roadmapView({ ...roadmapProps, wizard: null, rewards: null });
 }
@@ -667,7 +712,14 @@ function render() {
       } else html = homeScreen();
       break;
     case 'task-preview': html = taskPreviewView(previewController.screen()); break;
-    case 'learning-plan': html = canStudy() ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({ ...plans.screen(), accountSaved: Boolean(accountOwner && state.learningCourse), nextStage: followingStage(), onRoadmap: Boolean(pathForLesson(state.learningCourse?.id)), rewards }) : loginRequiredView(); break;
+    case 'learning-plan': {
+      const path = pathForLesson(state.learningCourse?.id);
+      html = canStudy() ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({
+        ...plans.screen(), accountSaved: Boolean(accountOwner && state.learningCourse), nextStage: followingStage(),
+        onRoadmap: Boolean(path), certificateKind: path ? (roadmapComplete(path) ? 'roadmap' : null) : 'lesson', rewards,
+      }) : loginRequiredView();
+      break;
+    }
     case 'roadmap': html = roadmapView(roadmapProps); break;
     case 'quests': html = rewardsView(view, roadmapProps); break;
     case 'shop': html = rewardsView(view, { ...roadmapProps, shopTab,
@@ -675,9 +727,16 @@ function render() {
     case 'profile': html = sidePage(view, state, rewards ? rewardsView('profile', roadmapProps) : ''); break;
     case 'path': html = pathView(state); break;
     case 'builtin-path': html = quietHomeView({ ...state, lastLearningType: 'builtin' }); break;
-    case 'course-path': html = quietHomeView({ ...state, lastLearningType: 'ai' }); break;
+    case 'course-path': html = quietHomeView({ ...state, lastLearningType: 'ai' },
+      { onRoadmap: Boolean(pathForLesson(state.learningCourse?.id)) }); break;
     case 'return-review': html = returnReviewView(state.returnReview); break;
-    case 'certificate': html = certificateView(certificateData(state.active)); break;
+    case 'certificate': {
+      const source = certificateSource();
+      html = source?.record
+        ? certificateView({ ...source.record, courseTitle: source.courseTitle, back: source.back })
+        : `<button class="primary" data-view="courses">${t('My courses', 'Мои курсы', 'Курстарым')}</button>`;
+      break;
+    }
     case 'lesson': {
       const questions = quizQuestions();
       html = lesson(state, {
@@ -709,7 +768,10 @@ function render() {
   if (view === 'task-preview') previewController.mountReader(previousReader, previousTop);
   if (accountOwner && ['discover', 'courses', 'path', 'builtin-path', 'course-path', 'lesson', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop', 'profile'].includes(view)) {
     const main = $('#main');
-    if (main.insertAdjacentHTML) main.insertAdjacentHTML(view === 'lesson' ? 'beforeend' : 'afterbegin', `<div data-builtin-sync-panel>${builtinSyncView()}</div>`);
+    const syncPanel = view === 'certificate' && certificateKind === 'lesson'
+      ? `<div data-learning-sync-panel>${syncView()}</div>`
+      : `<div data-builtin-sync-panel>${builtinSyncView()}</div>`;
+    main.insertAdjacentHTML?.(view === 'lesson' ? 'beforeend' : 'afterbegin', syncPanel);
   }
   if (workspaceStorage.conflicted) showWorkspaceConflict($('#main'));
   cloud.render();
@@ -1422,14 +1484,16 @@ document.addEventListener('click', event => {
   if (dashboardAction(action, id)) return;
   switch (action) {
     case 'resume-course': resumeCourse(id); break;
-    case 'certificate': openCertificate(id); break;
+    case 'certificate': openCertificate(id, button.dataset.certificateKind); break;
     case 'download-certificate': {
-      const data = certificateData(state.active);
-      const name = $('#certificate-name')?.value.trim();
-      if (!data) return;
+      const source = view === 'certificate' ? certificateSource() : null;
+      const name = certificateName($('#certificate-name')?.value || '').trim();
+      if (!source?.record) return;
       if (!name) { $('#certificate-name')?.focus(); return toast('Add your name for your certificate.'); }
-      state.certificates[state.active].name = name.slice(0, 80); save();
-      downloadCertificate(certificateData(state.active)); toast('Your certificate is ready to download.'); break;
+      const record = { ...source.record, name };
+      if (name !== source.record.name) source.store(record);
+      downloadCertificate({ ...record, courseTitle: source.courseTitle, language: state.language });
+      toast(t('Your certificate is ready to download.', 'Сертификат готов к скачиванию.', 'Сертификат жүктеуге дайын.')); break;
     }
     case 'about': modal('about'); break;
     case 'close-modal': $('#modal').close(); break;
@@ -1488,9 +1552,12 @@ document.addEventListener('visibilitychange', () => {
 });
 document.addEventListener('input', event => {
   if (view === 'lesson' && event.target.closest('#main')) rememberPosition();
-  if (view === 'certificate' && event.target.id === 'certificate-name' && certificateEligible(state, state.active)) {
-    state.certificates[state.active].name = event.target.value.slice(0, 80); save();
-    refreshCertificatePreview(certificateData(state.active));
+  if (view === 'certificate' && event.target.id === 'certificate-name') {
+    const source = certificateSource();
+    if (!source?.record) return;
+    const record = { ...source.record, name: certificateName(event.target.value) };
+    source.store(record);
+    refreshCertificatePreview({ ...record, courseTitle: source.courseTitle });
   }
 });
 window.addEventListener('mindora:guest-entry', () => {

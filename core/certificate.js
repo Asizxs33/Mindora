@@ -1,5 +1,14 @@
 /** A self-contained keepsake of a completed Mindora course, not an accreditation. */
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+import { languageCode } from './language.js';
+
+const copy = {
+  en: { locale: 'en-US', title: 'Certificate of completion', awarded: 'Presented to', course: 'for completing the Mindora course',
+    completed: 'Date completed', number: 'Certificate ID', noDate: 'Completion date unavailable', name: 'Your name', courseName: 'Your Mindora course', noId: 'Not assigned' },
+  ru: { locale: 'ru-RU', title: 'Сертификат об окончании', awarded: 'Выдан', course: 'за прохождение курса Mindora',
+    completed: 'Дата окончания', number: 'Номер сертификата', noDate: 'Дата окончания недоступна', name: 'Твоё имя', courseName: 'Твой курс Mindora', noId: 'Не назначен' },
+  kk: { locale: 'kk-KZ', title: 'Курсты аяқтау сертификаты', awarded: 'Марапатталады', course: 'Mindora курсын аяқтағаны үшін',
+    completed: 'Аяқтаған күні', number: 'Сертификат нөмірі', noDate: 'Аяқтаған күні белгісіз', name: 'Есімің', courseName: 'Mindora курсың', noId: 'Тағайындалмаған' },
+};
 
 // SVG is XML: remove forbidden controls/unpaired surrogates before escaping text.
 function safeText(value) {
@@ -27,11 +36,21 @@ function wrapText(value, width) {
   return lines.length ? lines : [''];
 }
 
-export function certificateDate(completedAt) {
-  if (completedAt == null || completedAt === '') return 'Completion date unavailable';
+export function certificateDate(completedAt, language) {
+  const { locale, noDate } = copy[languageCode(language)];
+  if (completedAt == null || completedAt === '') return noDate;
   const date = new Date(completedAt);
-  if (!Number.isFinite(date.getTime())) return 'Completion date unavailable';
-  return `${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
+  if (!Number.isFinite(date.getTime())) return noDate;
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeZone: 'UTC' }).format(date);
+}
+
+export function restoreCertificateRecord(value) {
+  const { name, completedAt, certificateId } = value ?? {};
+  if (typeof name !== 'string' || name.length > 80 || /[\u0000\u000b\u000c\u007f]/u.test(name)
+    || typeof certificateId !== 'string' || !/^[A-Za-z0-9-]{1,80}$/.test(certificateId)) return null;
+  if (completedAt !== null && (typeof completedAt !== 'string' || completedAt.length > 40
+    || !/^\d{4}-\d\d-\d\dT/.test(completedAt) || !Number.isFinite(Date.parse(completedAt)))) return null;
+  return { name, completedAt, certificateId };
 }
 
 // Same original Mino mark as ui/assets/brand-mark.svg, embedded for offline printing.
@@ -48,40 +67,45 @@ const BRAND_MARK = `<g stroke="#422C24" stroke-width="5.5" stroke-linecap="round
 <path d="M43 61V64M56 61V64" stroke="#422C24" stroke-width="3.5" stroke-linecap="round"/>
 <path d="M16 43L22 39M18 49L29 39M62 43L68 39M65 49L76 38" stroke="#FFFCF3" stroke-width="3.8" stroke-linecap="round"/>`;
 
-export function certificateSvg({ name, courseTitle, completedAt, certificateId } = {}) {
-  const learner = safeText(name) || 'Your name';
-  const course = safeText(courseTitle) || 'Your Mindora course';
-  const id = safeText(certificateId) || 'Not assigned';
+export function certificateSvg({ name, courseTitle, completedAt, certificateId, language } = {}) {
+  const lang = languageCode(language);
+  const labels = copy[lang];
+  const learner = safeText(name) || labels.name;
+  const course = safeText(courseTitle) || labels.courseName;
+  const id = safeText(certificateId) || labels.noId;
+  const date = certificateDate(completedAt, lang);
   const nameLines = wrapText(learner, 38);
   const courseLines = wrapText(course, 52);
-  const nameSize = Math.min(58, 100 / nameLines.length);
-  const courseSize = Math.min(36, 82 / courseLines.length);
-  const textLines = (lines, y, size, color, weight = 600) => lines.map((line, index) => `<text x="700" y="${y + index * size * 1.2}" text-anchor="middle" fill="${color}" font-size="${size}" font-weight="${weight}">${escapeXml(line)}</text>`).join('\n');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 1400 990" role="img" aria-label="Mindora certificate of completion">
-<title>Certificate of completion — ${escapeXml(course)}</title>
-<desc>${escapeXml(learner)} completed ${escapeXml(course)}. ${escapeXml(certificateDate(completedAt))}. Certificate ID: ${escapeXml(id)}.</desc>
-<rect width="1400" height="990" fill="#ffffff"/>
-<rect x="23" y="23" width="1354" height="944" rx="28" fill="#ffffff" stroke="#5B4CFF" stroke-width="8"/>
-<rect x="48" y="48" width="1304" height="894" rx="12" fill="none" stroke="#E4DFFF" stroke-width="2"/>
-<path d="M1208 48H1352V191Z" fill="#F1EEFF"/><path d="M48 797V942H193Z" fill="#F1EEFF"/>
+  const maxLine = lines => Math.max(1, ...lines.map(line => [...line].length));
+  const nameSize = Math.min(60, 100 / nameLines.length, 1120 / maxLine(nameLines));
+  const courseSize = Math.min(36, 82 / courseLines.length, 1120 / maxLine(courseLines));
+  const textLines = (lines, y, size, color) => lines.map((line, index) => `<text x="700" y="${y + index * size * 1.2}" text-anchor="middle" fill="${color}" font-size="${size}" font-weight="700">${escapeXml(line)}</text>`).join('\n');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 1400 990" role="img" xml:lang="${lang}" aria-label="${labels.title} · Mindora">
+<title>${labels.title} — ${escapeXml(course)}</title>
+<desc>${escapeXml(learner)} · ${escapeXml(course)} · ${escapeXml(date)} · ${labels.number} ${escapeXml(id)}</desc>
+<rect width="1400" height="990" fill="#fffaf2"/>
+<rect x="24" y="24" width="1352" height="942" rx="24" fill="none" stroke="#865133" stroke-width="3"/>
+<rect x="45" y="45" width="1310" height="900" rx="14" fill="none" stroke="#d9b997" stroke-width="1.5"/>
+<path d="M72 128V72h56m1144 0h56v56m0 734v56h-56m-1144 0H72v-56" fill="none" stroke="#a96837" stroke-width="3"/>
 <g font-family="Arial, Helvetica, sans-serif">
-  <g transform="translate(112 94) scale(.7)">${BRAND_MARK}</g>
-  <text x="198" y="145" fill="#29243F" font-size="44" font-weight="700" letter-spacing="-1.8">mindora<tspan fill="#5B4CFF">.</tspan></text>
-  <text x="1288" y="136" text-anchor="end" fill="#6B647C" font-size="16" letter-spacing="2">SMALL STEPS. REAL PROGRESS.</text>
-  <text x="700" y="248" text-anchor="middle" fill="#5B4CFF" font-size="16" font-weight="700" letter-spacing="5">A MOMENT TO BE PROUD OF</text>
-  <text x="700" y="321" text-anchor="middle" fill="#29243F" font-size="58" font-weight="700" letter-spacing="-2">Certificate of completion</text>
-  <text x="700" y="394" text-anchor="middle" fill="#6B647C" font-size="22">This celebrates</text>
-  ${textLines(nameLines, nameLines.length > 1 ? 464 : 490, nameSize, '#5B4CFF', 700)}
-  <path d="M370 565H1030" stroke="#E4DFFF" stroke-width="2"/>
-  <text x="700" y="618" text-anchor="middle" fill="#6B647C" font-size="22">for completing the Mindora course</text>
-  ${textLines(courseLines, 680, courseSize, '#29243F', 700)}
-  <text x="700" y="782" text-anchor="middle" fill="#6B647C" font-size="20">You learned something new. Now make it your own.</text>
-  <text x="116" y="849" fill="#6B647C" font-size="14" letter-spacing="1.5">COMPLETED</text>
-  <text x="116" y="881" fill="#29243F" font-size="20" font-weight="600">${escapeXml(certificateDate(completedAt))}</text>
-  <text x="1284" y="849" text-anchor="end" fill="#6B647C" font-size="14" letter-spacing="1.5">CERTIFICATE ID</text>
-  <text x="1284" y="881" text-anchor="end" fill="#29243F" font-size="${Math.min(17, 680 / Math.max([...id].length, 1))}" font-family="monospace">${escapeXml(id)}</text>
+  <g transform="translate(580 104) scale(.73)">${BRAND_MARK}</g>
+  <text x="664" y="153" fill="#2d201b" font-size="44" font-weight="700" letter-spacing="-1.7">mindora<tspan fill="#a65122">.</tspan></text>
+  <path d="M622 209h59m38 0h59" stroke="#c49973" stroke-width="1.5"/><path d="m700 203 6 6-6 6-6-6z" fill="#a96837"/>
+  <g font-family="Georgia, 'Times New Roman', serif">
+    <text x="700" y="311" text-anchor="middle" fill="#2d201b" font-size="57" font-weight="700">${labels.title}</text>
+    ${textLines(nameLines, nameLines.length > 1 ? 426 : 472, nameSize, '#92421b')}
+  </g>
+  <text x="700" y="373" text-anchor="middle" fill="#674d3b" font-size="22">${labels.awarded}</text>
+  <path d="M460 557H940" stroke="#d9b997" stroke-width="1.5"/>
+  <text x="700" y="610" text-anchor="middle" fill="#674d3b" font-size="22">${labels.course}</text>
+  ${textLines(courseLines, 670, courseSize, '#2d201b')}
+  <path d="M130 793H1270" stroke="#d9b997" stroke-width="1.5"/>
+  <text x="130" y="838" fill="#674d3b" font-size="16">${labels.completed}</text>
+  <text x="130" y="872" fill="#2d201b" font-size="21" font-weight="600">${escapeXml(date)}</text>
+  <text x="1270" y="838" text-anchor="end" fill="#674d3b" font-size="16">${labels.number}</text>
+  <text x="1270" y="872" text-anchor="end" fill="#2d201b" font-size="${Math.min(17, 680 / Math.max([...id].length, 1))}" font-family="monospace">${escapeXml(id)}</text>
 </g>
-<g transform="translate(700 872)"><circle r="38" fill="#F1EEFF"/><circle r="29" fill="#5B4CFF"/><path d="M-12 0L-3 9L14-10" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(700 855)"><circle r="33" fill="none" stroke="#bc8d62" stroke-width="1.5"/><circle r="27" fill="#f0ddc5"/><path d="M-11 0l7 7 15-15" fill="none" stroke="#8f421d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
 </svg>`;
 }
 

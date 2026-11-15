@@ -2,6 +2,7 @@ import { reportProgress } from '../core/weekly-report.js';
 import { budgetDraftKey, SESSION_MINUTES } from '../core/budget-session.js';
 import { restoreRoadmap, restoreRoadmapArchive } from '../core/roadmap-model.js';
 import { normalizeRewards } from '../core/roadmap-rewards.js';
+import { restoreCertificateRecord } from '../core/certificate.js';
 
 export const WORKSPACE_MAX_BYTES = 1_048_576;
 const courses = ['design', 'budget'];
@@ -92,9 +93,8 @@ export function validateBuiltinWorkspace(input) {
   });
   const notes = map(input.notes ?? {}, courses, value => string(value, 600) ? value : undefined);
   const sessions = map(input.sessions ?? {}, courses, session);
-  const certificates = map(input.certificates ?? {}, courses, value => plain(value) && string(value.name, 80)
-    && timestamp(value.completedAt) && string(value.certificateId, 80) && /^[A-Za-z0-9-]+$/.test(value.certificateId)
-    ? { name: value.name, completedAt: value.completedAt, certificateId: value.certificateId } : undefined);
+  const certificates = map(input.certificates ?? {}, [...courses, 'weekly-report'],
+    value => plain(value) ? restoreCertificateRecord(value) ?? undefined : undefined);
   const budgetQuiz = map(input.budgetQuiz ?? {}, ['5', '10', '20'], (value, mode) => {
     if (!plain(value) || !integer(value.index, { 5: 0, 10: 2, 20: 3 }[mode])
       || !choice(value.choice) || typeof value.feedback !== 'boolean') return undefined;

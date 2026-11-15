@@ -158,7 +158,8 @@ test('the independent task and completion show the actual work without a mastery
   assert.ok(html.includes(saved.reviews[1].observation));
   assert.ok(html.includes(saved.reviews[1].nextAction));
   assert.equal(document.querySelector('.ai-lesson-reader'), null);
-  assert.doesNotMatch(html, /mastered|certificate|100%/i);
+  assert.doesNotMatch(html, /mastered|100%/i);
+  assert.equal(document.querySelector('[data-action="certificate"]'), null);
 });
 
 test('restored detailed and legacy lessons retain completed answers and feedback in collapsed history', () => {

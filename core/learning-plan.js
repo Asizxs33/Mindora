@@ -1,4 +1,5 @@
 import { languageCode } from './language.js';
+import { restoreCertificateRecord } from './certificate.js';
 import { normalizePractice } from './lesson-practice.js';
 import { normalizeLessonVisual } from './lesson-visual.js';
 import { isAssessmentCorrect, isAssessmentReady, normalizeAssessment, normalizeAssessmentResponse } from './lesson-assessment.js';
@@ -190,7 +191,10 @@ export function restorePlan(saved) {
   const finished = Array.isArray(saved.finished)
     ? plan.steps.map((_, i) => i).filter(i => saved.finished.includes(i) && answers[i].trim()) : null;
   const selected = saved.selected;
-  return { plan, answers, reviews, completed: finished?.length ?? completed, study,
+  const count = finished?.length ?? completed;
+  const certificate = count === plan.steps.length ? restoreCertificateRecord(saved.certificate) : null;
+  return { plan, answers, reviews, completed: count, study,
+    ...(certificate ? { certificate } : {}),
     ...(finished ? { finished } : {}),
     ...(Number.isInteger(selected) && selected >= 0 && selected < steps.length ? { selected } : {}) };
 }

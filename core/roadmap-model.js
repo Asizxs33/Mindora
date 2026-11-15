@@ -1,4 +1,5 @@
 import { planInput, sourceUrl } from './learning-plan.js';
+import { restoreCertificateRecord } from './certificate.js';
 
 export const ROADMAP_STAGE_COUNT = 4;
 export const ROADMAP_CURRICULUM_LIMITS = Object.freeze({
@@ -140,7 +141,13 @@ export function restoreRoadmap(raw) {
     if (courseId) ids.add(courseId);
     progress.push({ courseId, completed: entry.completed });
   }
-  return { ...roadmap, ...(id ? { id } : {}), ...(opened.length ? { opened: [...opened] } : {}), progress };
+  const certificate = roadmapComplete({ progress }) ? restoreCertificateRecord(raw.certificate) : null;
+  return { ...roadmap, ...(id ? { id } : {}), ...(opened.length ? { opened: [...opened] } : {}), progress,
+    ...(certificate ? { certificate } : {}) };
+}
+
+export function roadmapComplete(roadmap) {
+  return Boolean(roadmap?.progress?.length && roadmap.progress.every(stage => stage.completed));
 }
 
 export function restoreRoadmapArchive(raw, active) {
