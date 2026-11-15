@@ -1111,7 +1111,7 @@ test('resume offers a return review strictly after 24 hours, and skips it when n
   }
 });
 
-test('a selected path node wins over a different saved review position, while locked stages stay closed', () => {
+test('a selected path node wins over a different saved review position, and future stages can be explored without credit', () => {
   const run = app(seed({
     progress: { design: 2, budget: 0 },
     sessions: { design: { lastSeen: NOW - 1000, cursor: { step: 0, page: 2 } } },
@@ -1126,8 +1126,9 @@ test('a selected path node wins over a different saved review position, while lo
   run.click({ step: '0' });
   assert.equal(run.presentation.get('mindora.reading.design.v1'), '2', 'same node retains its saved card');
   run.click({ step: '3' });
-  assert.equal(run.lesson.step, 0, 'locked future node cannot open');
-  assert.match(run.element('#toast').textContent, /unlock the next/);
+  assert.equal(run.lesson.step, 3);
+  run.click({ action: 'finish-learn' });
+  assert.equal(run.current.state.progress.design, 2);
 });
 
 test('a path-node choice survives an overdue recap instead of restoring a different saved stage', () => {

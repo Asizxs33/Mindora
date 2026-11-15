@@ -43,7 +43,7 @@ export function mountLearningLabs({ document, getPractice }) {
     status.textContent = t('Running your instructions…', 'Выполняем твои команды…', 'Командаларың орындалып жатыр…');
     form.querySelectorAll('.is-visited').forEach(cell => cell.classList.remove('is-visited'));
     for (const state of run.states) {
-      if (operation.cancelled || !form.isConnected || getPractice() !== practice) { cancel(); return; }
+      if (operation.cancelled || !form.isConnected || getPractice() !== practice) { if (active === operation) cancel(); return; }
       form.querySelector('[data-capy-token]').style.transform = `translate(${state.x * 100}%,${state.y * 100}%)`;
       form.querySelector('[data-capy-direction]').textContent = ['→', '↓', '←', '↑'][state.direction];
       form.querySelector(`[data-capy-cell="${state.x},${state.y}"]`).classList.add('is-visited');
@@ -58,12 +58,15 @@ export function mountLearningLabs({ document, getPractice }) {
     const surface = event.target.closest?.('[data-drawing-surface]');
     if (!surface || event.button > 0 || getPractice()?.type !== 'drawing' || surface.hasAttribute('aria-disabled')) return;
     const form = surface.closest('form'), strokes = cleanStrokes(form.querySelector('[data-practice-field="strokes"]').value);
-    if (strokes.length >= 12 || strokes.reduce((n, s) => n + s.points.length, 0) >= 62) {
+    const tool = form.querySelector('[data-drawing-tool]').value;
+    const remaining = 64 - strokes.reduce((n, s) => n + s.points.length, 0);
+    const required = tool === 'circle' ? 21 : tool === 'rectangle' ? 5 : 2;
+    if (strokes.length >= 12 || remaining < required) {
       form.querySelector('[data-drawing-status]').textContent = t('Canvas full. Undo or clear to keep drawing.', 'Холст заполнен. Отмени штрих или очисти его.', 'Кенеп толды. Сызықты қайтар не тазала.'); return;
     }
     const rect = surface.getBoundingClientRect();
     const point = e => [e.clientX - rect.left, e.clientY - rect.top].map((n, i) => Math.round(Math.max(0, Math.min(100, n / (i ? rect.height : rect.width) * 100))));
-    drawing = { surface, form, strokes, point, start: point(event), color: form.querySelector('[data-drawing-color]').value, tool: form.querySelector('[data-drawing-tool]').value, points: [point(event)], pointer: event.pointerId };
+    drawing = { surface, form, strokes, point, start: point(event), color: form.querySelector('[data-drawing-color]').value, tool, remaining, points: [point(event)], pointer: event.pointerId };
     surface.setPointerCapture(event.pointerId); event.preventDefault();
   });
   document.addEventListener('pointermove', event => {
@@ -72,7 +75,7 @@ export function mountLearningLabs({ document, getPractice }) {
     if (d.tool === 'rectangle') d.points = [[x, y], [end[0], y], end, [x, end[1]], [x, y]];
     else if (d.tool === 'circle') d.points = Array.from({ length: 21 }, (_, i) => [Math.round((x + end[0]) / 2 + Math.abs(end[0] - x) / 2 * Math.cos(i / 20 * 2 * Math.PI)), Math.round((y + end[1]) / 2 + Math.abs(end[1] - y) / 2 * Math.sin(i / 20 * 2 * Math.PI))]);
     else if (d.tool === 'line') d.points = [d.start, end];
-    else if (Math.hypot(end[0] - d.points.at(-1)[0], end[1] - d.points.at(-1)[1]) >= 3 && d.points.length < 40) d.points.push(end);
+    else if (Math.hypot(end[0] - d.points.at(-1)[0], end[1] - d.points.at(-1)[1]) >= 3 && d.points.length < Math.min(40, d.remaining)) d.points.push(end);
     const points = d.points.map(p => p.join(',')).join(' ');
     let line = d.surface.querySelector('[data-live-stroke]');
     if (!line) { line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline'); line.setAttribute('data-live-stroke', ''); line.setAttribute('fill', 'none'); line.setAttribute('stroke', d.color); line.setAttribute('stroke-width', '2'); line.setAttribute('stroke-linecap', 'round'); line.setAttribute('stroke-linejoin', 'round'); d.surface.querySelector('svg').append(line); }
@@ -82,7 +85,7 @@ export function mountLearningLabs({ document, getPractice }) {
     if (!drawing || event.pointerId !== drawing.pointer) return;
     const d = drawing; drawing = null;
     if (!d.form.isConnected) return;
-    paint(d.form, [...d.strokes, { color: d.color, width: 2, points: d.points.length === 1 ? [d.start, [d.start[0] + .1, d.start[1]]] : d.points }]); save(d.form);
+    paint(d.form, [...d.strokes, { color: d.color, width: 2, points: d.points.length === 1 ? [d.start, [d.start[0] < 100 ? d.start[0] + 1 : 99, d.start[1]]] : d.points }]); save(d.form);
   };
   document.addEventListener('pointerup', finishDrawing);
   document.addEventListener('pointercancel', finishDrawing);

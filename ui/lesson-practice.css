@@ -58,3 +58,37 @@
 .project-download { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
 @media(max-width:600px) { .capy-lab,.drawing-lab,.log-lab { padding: 13px; } .lab-heading { font-size: 15px; } }
 @media(prefers-reduced-motion:reduce) { .capy-token { transition: none; } }
+
+/* A single scroll surface holds the reading, checkpoint and unlocked practice. */
+body.is-learning #main:has(.lesson-stream) {
+  height: 100dvh;
+  min-height: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: max(6px, env(safe-area-inset-top)) clamp(12px, 4vw, 42px) max(5px, env(safe-area-inset-bottom));
+}
+body.is-learning .ai-lesson.has-course:has(.lesson-stream) {
+  display: flex; flex: 1; min-height: 0; height: auto; width: 100%; max-width: 760px;
+  flex-direction: column; margin: 0 auto;
+}
+.reader-toolbar { display: flex; align-items: center; gap: 16px; min-height: 48px; flex: none; }
+.reader-toolbar .ai-lesson-exit { flex: none; margin: 0; border: 0; background: transparent; box-shadow: none; }
+.reader-progress { width: 100%; height: 6px; border: 0; border-radius: 9px; overflow: hidden; appearance: none; background: #f1e6db; accent-color: #bc4b00; }
+.reader-progress::-webkit-progress-bar { background: #f1e6db; }
+.reader-progress::-webkit-progress-value { background: #bc4b00; border-radius: 9px; }
+.reader-progress::-moz-progress-bar { background: #bc4b00; }
+.ai-lesson.has-course > .ai-lesson-reader.lesson-stream { flex: 1; min-height: 0; display: block; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; }
+.lesson-stream.ai-lesson-reader > article.ai-lesson-page { padding: 0 4px 22px; overflow: visible; min-height: 0; }
+.reader-section { padding: clamp(16px, 3vw, 30px) 0; overflow-wrap: anywhere; }
+.reader-section + .reader-section { border-top: 1px solid #ebdfd3; }
+.reader-section > h2 { margin: 0 0 14px; font-size: clamp(20px, 3vw, 27px); line-height: 1.22; color: #302723; }
+.lesson-stream .reader-section .ai-lesson-instruction { font-size: 16px; line-height: 1.65; }
+.lesson-stream .reader-section .mentor-scene { grid-template-columns: clamp(88px, 24vw, 140px) minmax(0,1fr); align-items: center; }
+.lesson-stream .reader-section .mentor-figure .mindora-character { --character-size: clamp(88px, 24vw, 140px); --character-height: clamp(115px, 31vw, 180px); }
+.lesson-stream .reader-section:not(.is-reading) .mentor-figure { visibility: hidden; }
+.lesson-stream .reader-section .mentor-dialogue h3 { font-size: 17px; }
+.lesson-stream .reader-section .mentor-dialogue p { font-size: 15px; }
+.stream-check { margin-top: 12px; }
+@media (max-width: 600px) { .stream-check { width: 100%; } }

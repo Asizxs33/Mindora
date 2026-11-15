@@ -49,7 +49,7 @@ export function selectLessonPractice(step, input = {}) {
   const task = bounded(step?.task);
   const foreignStage = otherLanguage.test(focus) && !python.test(focus);
   if (/capy|капибар|мино|миноны/i.test(context) && /forward|repeat|команд|басқар|instruction|move|движ/i.test(task)) return { type: 'code', language: 'capy' };
-  if (/\b(draw|sketch|paint|diagram|flowchart)\b|нарис|рисова|сурет.*сал|сызба.*сыз/i.test(task) && !/\b(graph|plot|function)\b|график|функци/i.test(task)) return { type: 'drawing' };
+  if (/\b(draw|sketch|paint|diagram|flowchart)\b|нарис|рисова|сурет.*сал|сызба.*сыз/i.test(task) && !/\bdraw (?:a |the )?(?:conclusions?|inferences?|comparisons?)\b/i.test(task) && !asksForCode(task) && !/\b(graph|plot|function)\b|график|функци/i.test(task)) return { type: 'drawing' };
   if (python.test(context) && !foreignStage && !otherLanguage.test(task) && asksForCode(task)) return { type: 'code', language: 'python' };
   if (!python.test(context) && asksForPalette(task, context)) return { type: 'palette' };
   if (/linear|quadratic|exponential|logarith|линейн|квадрат|логар|сызық/i.test(context) && /plot|graph|график|сыз/i.test(task) && !/area|площад|аудан|integral|интеграл/i.test(task)) return { type: 'calculation', visual: 'graph' };

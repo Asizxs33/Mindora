@@ -154,7 +154,7 @@ try {
   const ready = await context({ saved: { ...saved, sessions: {}, progress: { design: 0, budget: 0 } } });
   const p = ready.page;
   await nav(p, 'courses').click();
-  assert.equal(await p.locator('.ready-course').count(), 6);
+  assert.equal(await p.locator('.ready-course').count(), 9);
   assert.ok(await p.locator('.phone-catalog .ready-course').first().isVisible());
   await p.locator('[data-course-minutes="5"]').click();
   await p.locator('[data-starter-course="python-basics"]').click();
@@ -162,16 +162,12 @@ try {
   await p.locator('.learning-hub-node[aria-current="step"], .learning-hub-actions [data-view="learning-plan"]:visible').click();
   await p.waitForSelector('.ai-lesson-reader');
   await p.screenshot({ path: join(tmpdir(), 'mindora-clean-ready-lesson.png'), fullPage: true });
-  await p.locator('[data-learning-page="next"]:visible').click();
   await p.screenshot({ path: join(tmpdir(), 'mindora-clean-ready-monitor.png'), fullPage: true });
-  await p.locator('[data-learning-page="next"]:visible').click();
   await p.locator('[data-learning-gap]').fill('print');
   await p.locator('[data-learning-page="check"]').click();
-  assert.equal(await p.locator('[data-learning-page="next"]').isDisabled(), true);
+  assert.equal(await p.locator('#learning-step-form').count(), 0);
   await p.locator('[data-learning-gap]').fill('"Hello"');
   await p.locator('[data-learning-page="check"]').click();
-  await p.locator('[data-learning-page="next"]:visible').click();
-  await p.locator('[data-learning-page="next"]:visible').click();
   for (const answer of ['print("Aruzhan")', 'print("Hello")\nprint("Mindora")']) {
     await p.locator('#learning-step-form textarea').fill(answer);
     await p.locator('#learning-step-form button[type="submit"]').click();
@@ -195,16 +191,12 @@ try {
     assert.equal((await state(p)).learningPlan.plan.minutes, minutes);
     assert.equal(await p.locator('.learning-hub-node').count(), minutes === 10 ? 3 : 4);
     await p.locator('.learning-hub-node[aria-current="step"], .learning-hub-actions [data-view="learning-plan"]:visible').click();
-    await p.locator('[data-learning-page="next"]:visible').click();
-    await p.locator('[data-learning-page="next"]:visible').click();
     await p.locator('[data-learning-gap]').fill('"Hello"');
     await p.locator('[data-learning-page="check"]').click();
-    await p.locator('[data-learning-page="next"]:visible').click();
-    await p.locator('[data-learning-page="next"]:visible').click();
     await p.locator('#learning-step-form textarea').fill('print("My first saved task")');
     await p.locator('#learning-step-form button[type="submit"]').click();
     await p.locator('[data-learning-step="continue"]').click();
-    await p.locator('[data-learning-page="next"]:visible').click();
+    await p.locator('[data-lesson-phase="example"] > h2').focus();
     await p.waitForFunction(key => !JSON.parse(localStorage.getItem(key)).learningCourse.dirty, key);
     await p.reload();
     await p.waitForSelector('.learning-hub');
@@ -222,6 +214,59 @@ try {
   await p.waitForSelector('.learning-hub');
   assert.equal((await state(p)).learningPlan.completed, 2);
   assert.equal((await state(p)).learningPlan.plan.minutes, 5);
+  // Explore a locked starter task without changing the course cursor.
+  for (const id of ['capy-code', 'drawing-studio', 'logarithm-lab']) {
+    await nav(p, 'courses').click();
+    await p.locator('[data-course-minutes="5"]').click();
+    await p.locator(`[data-starter-course="${id}"]`).click();
+    await p.locator('[data-explore-task="1"]').click();
+    await p.waitForSelector('#main[data-page="task-preview"]');
+    assert.ok(await p.locator('#learning-step-form').isVisible());
+    await p.locator('.ai-lesson-exit').click();
+    assert.equal((await state(p)).learningPlan.completed, 0);
+    await p.locator('.learning-hub-node[aria-current="step"]').click();
+    for (const width of [320,390,1440]) {
+      await p.setViewportSize({ width, height: 844 });
+      await p.waitForTimeout(100);
+      const size = await p.locator('.lesson-stream').boundingBox();
+      assert.ok(size.height > 630, 'reading occupies most of the viewport: ' + JSON.stringify(size));
+      assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      assert.equal(await p.locator('[data-learning-page="next"]').count(), 0);
+    }
+    await p.setViewportSize({width:390,height:844});
+    await p.locator('[data-learning-choice="0"]').click();
+    await p.locator('[data-learning-page="check"]').click();
+    const form = p.locator('#learning-step-form');
+    await form.waitFor();
+    if (id === 'capy-code') {
+      await form.locator('[data-practice-field="code"]').fill('forward(3)\nleft()\nforward(3)');
+      await form.locator('[data-capy-run]').click();
+      await p.waitForFunction(() => document.querySelector('[data-practice-field="output"]')?.value.startsWith('Goal reached'));
+    } else if (id === 'drawing-studio') {
+      await form.locator('[data-drawing-tool]').selectOption('rectangle');
+      const surface = form.locator('[data-drawing-surface]');
+      await surface.scrollIntoViewIfNeeded();
+      const box = await surface.boundingBox();
+      await p.mouse.move(box.x + 12, box.y + 12);
+      await p.mouse.down();
+      await p.mouse.move(box.x + 82, box.y + 60, {steps:5});
+      await p.mouse.up();
+      assert.equal(JSON.parse(await form.locator('[data-practice-field="strokes"]').inputValue())[0].points.length, 5);
+    } else {
+      await form.locator('[data-log-relation]').selectOption('quadratic');
+      await form.locator('[data-log-base]').fill('3');
+      await form.locator('[data-log-exponent]').fill('2');
+      assert.match(await form.locator('[data-log-equation]').innerText(), /= 12$/);
+    }
+    const draft = (await state(p)).learningPlan.answers[0];
+    assert.ok(draft.length > 6);
+    await p.locator('.ai-lesson-exit').click();
+    await p.locator('.learning-hub-node[aria-current="step"]').click();
+    assert.equal((await state(p)).learningPlan.answers[0], draft);
+    await p.locator('.ai-lesson-exit').click();
+  }
+  await nav(p, 'courses').click();
+  await p.locator('[data-starter-course="python-basics"]').click();
   // Profile logout is directly reachable on the phone and returns to Mino.
   await p.locator('#mobile-navigation [data-view="profile"]').click();
   await p.locator('[data-account-signout]').click();
@@ -234,8 +279,7 @@ try {
   await p.locator('#account-email').fill(user.email);
   await p.locator('#account-password').fill('Browser-fixture-8');
   await p.locator('.account-primary').click();
-  await p.waitForSelector('.account-signout');
-  await p.locator('.account-close').click();
+  await p.waitForSelector('#mindora-account[open]', { state: 'hidden' });
   await p.waitForSelector('.learning-hub');
   assert.equal((await state(p)).learningPlan.completed, 2);
   assert.equal((await state(p)).learningPlan.plan.minutes, 5);
@@ -260,12 +304,8 @@ try {
   assert.equal(await j.locator('.roadmap-stage.is-locked').count(), 3);
   await j.locator('[data-roadmap-stage="0"]').click();
   await j.waitForSelector('.ai-lesson-reader');
-  await j.locator('[data-learning-page="next"]:visible').click();
-  await j.locator('[data-learning-page="next"]:visible').click();
   await j.locator('[data-learning-gap]').fill('"Hello"');
   await j.locator('[data-learning-page="check"]').click();
-  await j.locator('[data-learning-page="next"]:visible').click();
-  await j.locator('[data-learning-page="next"]:visible').click();
   for (const answer of ['print("My lesson")', 'print("Hello")\nprint("Mindora")']) {
     await j.locator('#learning-step-form textarea').fill(answer);
     await j.locator('#learning-step-form button[type="submit"]').click();

@@ -16,7 +16,7 @@ import { phoneCourseNav, phoneCourseLibrary, courseHomeView, readyCoursesView, c
 import { mentorForTopic } from './subject-mentor.js';
 import { pathView, lesson, result, workView } from '../ui/views.js';
 import { dialogContent, resetWorkCheck, refreshPosterPreview, clearBudgetTotal } from '../ui/feedback.js';
-import { learningPlanView } from '../ui/learning-plan.js';
+import { learningPlanView, taskPreviewView } from '../ui/learning-plan.js';
 import { languageCode } from './language.js';
 import { setLanguage, t } from '../ui/language.js';
 import { message } from '../ui/messages.js';
@@ -76,6 +76,9 @@ let challengeSeed = 0;
 
 let pendingLearning = null;
 let openingStarter = false;
+let previewController;
+const previewState = {};
+let previewIndex;
 let library;
 let builtins;
 let roadmapWizard = null;
@@ -287,7 +290,7 @@ function loadLessonState() {
 for (const field of ['sessions', 'certificates']) if (!state[field] || typeof state[field] !== 'object' || Array.isArray(state[field])) state[field] = {};
 
 function rememberPosition(page, touch = true) {
-  if (view !== 'lesson' || !state.active) return;
+  if (view !== 'lesson' || !state.active || step > state.progress[state.active]) return;
   const readingPage = page ?? Number(document.querySelector('[data-learn-deck]')?.dataset.index || 0);
   state.sessions[state.active] = { lastSeen: touch ? Date.now() : state.sessions[state.active]?.lastSeen, cursor: { step, page: readingPage, minutes: state.minutes, quizIndex, quizChoice, quizFeedback } };
   save();
@@ -476,8 +479,8 @@ function go(next, cursor = null, newCourse = false) {
   $('#main').focus({preventScroll:true});
 }
 function selectCourse(id,goal){if(!COURSES[id]||!ensureLearning(()=>selectCourse(id,goal)))return;state.active=id;state.goals[id]=goal||state.goals[id]||(id==='design'?'Сделать постер для кофейни':'Собрать таблицу ежемесячных расходов');save();go('path');}
-function openStep(index){if(!state.active)return go('discover');if(!Number.isInteger(index)||index<0||index>3||index>state.progress[state.active])return toast('Finish this step to unlock the next one.');resumeCourse(state.active,index);}
-function finishStep(){const id=state.active;const days = new Set(Array.isArray(state.studyDays) ? state.studyDays : []);days.add(dayKey());state.studyDays = [...days];state.progress[id]=Math.max(state.progress[id],step+1);rememberPosition();save();if(step===3){state.practiceCount=(Number(state.practiceCount)||0)+1;certificateData(id);save();go('result');}else{openStep(step+1);}}
+function openStep(index){if(!state.active)return go('discover');if(!Number.isInteger(index)||index<0||index>3)return toast('Finish this step to unlock the next one.');resumeCourse(state.active,index);}
+function finishStep(){const id=state.active;if(step>state.progress[id])return go('builtin-path');const days = new Set(Array.isArray(state.studyDays) ? state.studyDays : []);days.add(dayKey());state.studyDays = [...days];state.progress[id]=Math.max(state.progress[id],step+1);rememberPosition();save();if(step===3){state.practiceCount=(Number(state.practiceCount)||0)+1;certificateData(id);save();go('result');}else{openStep(step+1);}}
 
 function selectedHomeKind() {
   const kind = state.pathKind || (state.lastLearningType === 'ai' ? 'lesson' : state.lastLearningType);
@@ -492,7 +495,7 @@ function currentHomeCourse() {
   const attributes = { resumeAttributes: 'data-action="resume-current"', pathAttributes: 'data-view="my-path"' };
   if (roadmap && (kind === 'roadmap' || (!state.active && !saved))) {
     const completed = roadmap.progress.filter(stage => stage.completed).length;
-    return { ...attributes, title: roadmap.title, subtitle: roadmap.stages[completed]?.title || roadmap.outcome,
+    return { ...attributes, title: roadmap.title, subtitle: roadmap.stages[roadmap.progress.findIndex(stage => !stage.completed)]?.title || roadmap.outcome,
       completed, total: roadmap.stages.length, minutes: roadmap.minutes };
   }
   if (saved && (kind !== 'builtin' || !state.active)) {
@@ -557,6 +560,25 @@ function phonePath(roadmapProps) {
   return roadmapView({ ...roadmapProps, wizard: null, rewards: null });
 }
 
+function exploreTask(index) {
+  const saved = state.learningPlan;
+  if (!canStudy() || !saved?.plan.steps[index] || !Number.isInteger(index)) return;
+  previewIndex = index;
+  previewState.minutes = saved.plan.minutes;
+  previewState.learningPlan = structuredClone(saved);
+  if (!previewController) {
+    previewController = createPlanController({
+      state: previewState, save() {}, isOpen: () => view === 'task-preview',
+      render: () => previewState.learningPlan.completed > previewIndex ? go('course-path') : render(),
+      accountId: () => accountOwner, guestMode: () => !accountOwner,
+    });
+  }
+  previewController.reset();
+  // In this isolated copy the cursor can visit any task without writing course progress.
+  previewState.learningPlan.completed = index;
+  go('task-preview');
+}
+
 function render() {
   const stats = learningStats(state);
   const rewards = canStudy() ? rewardScreen(state.learningRewards) : null;
@@ -575,6 +597,7 @@ function render() {
         ? phoneCourseLibrary(courseLibraryHtml(), readyCoursesView(starterCourses(state.language, state.minutes), state.minutes))
         : homeScreen();
       break;
+    case 'task-preview': html = taskPreviewView(previewController.screen()); break;
     case 'learning-plan': html = canStudy() ? `<div data-learning-sync-panel>${syncView()}</div>` + learningPlanView({ ...plans.screen(), accountSaved: Boolean(accountOwner && state.learningCourse), nextStage: followingStage(), onRoadmap: Boolean(pathForLesson(state.learningCourse?.id)), rewards }) : loginRequiredView(); break;
     case 'roadmap': html = roadmapView(roadmapProps); break;
     case 'quests':
@@ -609,7 +632,11 @@ function render() {
       : ['courses', 'new-course'].includes(view) ? view : null;
     if (section) html = phoneCourseNav(section) + html;
   }
+  const previousReader = document.querySelector('.lesson-stream');
+  const previousTop = previousReader?.scrollTop || 0;
   renderShell(view, state, stats, html, rewards);
+  if (view === 'learning-plan') plans.mountReader?.(previousReader, previousTop);
+  if (view === 'task-preview') previewController.mountReader(previousReader, previousTop);
   if (accountOwner && ['discover', 'courses', 'path', 'builtin-path', 'course-path', 'lesson', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop', 'profile'].includes(view)) {
     const main = $('#main');
     if (main.insertAdjacentHTML) main.insertAdjacentHTML(view === 'lesson' ? 'beforeend' : 'afterbegin', `<div data-builtin-sync-panel>${builtinSyncView()}</div>`);
@@ -1133,6 +1160,7 @@ document.addEventListener('change', event => {
 document.addEventListener('click', event => {
   const button = event.target.closest('button,[data-home]');
   if (!button || button.disabled) return;
+  if (button.dataset.exploreTask !== undefined) return exploreTask(Number(button.dataset.exploreTask));
   if (button.dataset.introAction) {
     const action = button.dataset.introAction;
     if (action === 'next') advanceIntroduction();

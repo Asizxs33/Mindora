@@ -31,7 +31,7 @@ function view(saved = savedAt(), options = {}) {
   return { html, document: parseHTML(`<html><body>${html}</body></html>`).document };
 }
 
-test('the first screen teaches one task, keeps the source image, and collapses goal settings', () => {
+test('the first screen teaches one task, keeps the source image and exposes the example and checkpoint in reading order', () => {
   const { html, document } = view();
   assert.equal(document.querySelectorAll('.ai-lesson-page').length, 1);
   assert.equal(document.querySelector('#learning-page-title').textContent, plan.steps[0].title);
@@ -40,31 +40,27 @@ test('the first screen teaches one task, keeps the source image, and collapses g
   assert.ok(html.includes(teaching.why));
   assert.ok(!html.includes(plan.steps[0].task));
   assert.ok(!html.includes(plan.steps[1].title));
-  assert.ok(!html.includes(teaching.example.output));
+  assert.ok(html.includes(teaching.example.output));
   assert.ok(!html.includes(teaching.checkpoint.explanation));
-  assert.equal(document.querySelector('img').getAttribute('src'), plan.steps[0].resource.images[0].url);
+  assert.equal(document.querySelector('.lesson-source-figure img').getAttribute('src'), plan.steps[0].resource.images[0].url);
   assert.equal(document.querySelector('img').getAttribute('alt'), 'An example request');
   assert.equal(document.querySelector('img').getAttribute('referrerpolicy'), 'no-referrer');
   assert.equal(document.querySelector('figcaption'), null);
   assert.ok(!html.includes('Foreign source title'));
-  assert.equal(document.querySelector('.ai-lesson-settings').hasAttribute('open'), false);
-  assert.equal(document.querySelector('#learning-plan-form [name="goal"]').getAttribute('value'), plan.goal);
-  assert.ok(document.querySelector('#learning-plan-form [name="minutes"]'));
-  assert.equal(document.querySelector('[data-learning-page="back"]').hasAttribute('disabled'), true);
-  assert.equal(document.querySelector('[data-learning-page="next"]').hasAttribute('disabled'), false);
-  assert.equal(document.querySelector('.ai-lesson-stages [aria-current="step"]').textContent.trim(), '1Understand');
+  assert.equal(document.querySelector('.ai-lesson-settings, .ai-lesson-stages, [data-learning-page="next"]'), null);
+  assert.deepEqual([...document.querySelectorAll('[data-lesson-phase]')].map(n => n.dataset.lessonPhase), ['explain', 'example', 'check']);
+  assert.equal(document.querySelectorAll('progress').length, 1);
 });
 
-test('the example is a separate screen with input, worked output, and an explanation', () => {
+test('the next reading section includes the example with input, worked output, and an explanation', () => {
   const { html, document } = view(savedAt(1));
   assert.ok(html.includes(teaching.example.input));
   assert.ok(html.includes(teaching.example.output));
   assert.ok(html.includes(teaching.example.explanation));
-  assert.ok(!html.includes(plan.steps[0].instruction));
+  assert.ok(html.includes(plan.steps[0].instruction));
   assert.ok(!html.includes(plan.steps[0].task));
   assert.equal(document.querySelector('#learning-step-form'), null);
-  assert.equal(document.querySelector('[data-learning-page="back"]').hasAttribute('disabled'), false);
-  assert.match(document.querySelector('.ai-lesson-page-count').textContent, /Screen 2 of 4/);
+  assert.equal(document.querySelector('.lesson-stream').dataset.readerCursor, '1');
 });
 
 test('checkpoint feedback is hidden until checked and only a correct checked answer opens practice', () => {
@@ -72,28 +68,28 @@ test('checkpoint feedback is hidden until checked and only a correct checked ans
   let screen = view(saved);
   assert.equal(screen.document.querySelectorAll('[data-learning-choice]').length, 3);
   assert.equal(screen.document.querySelector('[data-learning-page="check"]').hasAttribute('disabled'), true);
-  assert.equal(screen.document.querySelector('[data-learning-page="next"]').hasAttribute('disabled'), true);
+  assert.equal(screen.document.querySelector('#learning-step-form'), null);
   assert.ok(!screen.html.includes(teaching.checkpoint.explanation));
   saved.study[0].choice = 1;
   screen = view(saved);
   assert.equal(screen.document.querySelector('[data-learning-page="check"]').hasAttribute('disabled'), false);
-  assert.equal(screen.document.querySelector('[data-learning-page="next"]').hasAttribute('disabled'), true);
+  assert.equal(screen.document.querySelector('#learning-step-form'), null);
   assert.equal(screen.document.querySelector('[data-learning-choice="1"]').getAttribute('aria-pressed'), 'true');
   assert.ok(!screen.html.includes(teaching.checkpoint.explanation));
   saved.study[0].checked = true;
   saved.study[0].choice = 0;
   screen = view(saved);
   assert.ok(screen.html.includes(teaching.checkpoint.explanation));
-  assert.equal(screen.document.querySelector('[data-learning-page="next"]').hasAttribute('disabled'), true);
+  assert.equal(screen.document.querySelector('#learning-step-form'), null);
   assert.equal(screen.document.querySelector('[data-learning-choice="1"]').hasAttribute('disabled'), false);
   saved.study[0].choice = 1;
   screen = view(saved);
-  assert.equal(screen.document.querySelector('[data-learning-page="next"]').hasAttribute('disabled'), false);
+  assert.ok(screen.document.querySelector('#learning-step-form'));
   assert.equal(screen.document.querySelector('[data-learning-page="check"]'), null);
   assert.ok(screen.document.querySelector('.ai-lesson-check-feedback.is-correct'));
 });
 
-test('practice preserves the real answer and review hooks without leaking earlier screen content', () => {
+test('practice preserves the real answer and review hooks and leaves the earlier example available above it', () => {
   const saved = savedAt(3);
   saved.study[0] = { page: 3, choice: 1, checked: true };
   saved.answers[0] = '<script>user draft</script>';
@@ -102,7 +98,7 @@ test('practice preserves the real answer and review hooks without leaking earlie
   assert.ok(html.includes('&lt;script&gt;user draft&lt;/script&gt;'));
   assert.ok(html.includes(plan.steps[0].task));
   assert.ok(html.includes(teaching.takeaway));
-  assert.ok(!html.includes(teaching.example.output));
+  assert.ok(html.includes(teaching.example.output));
   assert.equal(document.querySelector('script'), null);
   assert.equal(document.querySelector('[data-learning-page="next"]'), null);
   saved.reviews[0] = { observation: 'You named a source.', nextAction: 'Now specify a format.' };
@@ -120,13 +116,13 @@ test('busy and failed reviews preserve disabled controls and the existing recove
   let { document } = view(saved, { busy: 'review' });
   assert.equal(document.querySelector('textarea').hasAttribute('disabled'), true);
   assert.equal(document.querySelector('#learning-step-form button').hasAttribute('disabled'), true);
-  assert.equal(document.querySelector('[data-learning-page="back"]').hasAttribute('disabled'), true);
+  assert.equal(document.querySelector('[data-learning-page="back"]'), null);
   ({ document } = view(saved, { reviewError: 'review-unavailable' }));
   assert.ok(document.querySelector('[data-learning-step="continue"]'));
   assert.ok(document.querySelector('#learning-step-form'));
   ({ document } = view(savedAt(2), { busy: 'plan' }));
   assert.ok([...document.querySelectorAll('[data-learning-choice], [data-learning-page]')].every(button => button.hasAttribute('disabled')));
-  assert.equal(document.querySelector('.ai-lesson-settings').hasAttribute('open'), true);
+  assert.equal(document.querySelector('.ai-lesson-settings'), null);
 });
 
 test('legacy saved lessons retain their images and use explanation followed by practice', () => {
@@ -135,9 +131,9 @@ test('legacy saved lessons retain their images and use explanation followed by p
   delete saved.plan.steps[0].teaching;
   delete saved.study;
   let { document } = view(saved);
-  assert.equal(document.querySelectorAll('.ai-lesson-stages > li').length, 2);
+  assert.equal(document.querySelectorAll('[data-reader-section]').length, 2);
   assert.equal(document.querySelector('img').getAttribute('src'), plan.steps[0].resource.images[0].url);
-  assert.equal(document.querySelector('#learning-step-form'), null);
+  assert.ok(document.querySelector('#learning-step-form'));
   saved.study = [{ page: 1, choice: null, checked: false }];
   ({ document } = view(saved));
   assert.ok(document.querySelector('#learning-step-form'));
@@ -149,7 +145,7 @@ test('the independent task and completion show the actual work without a mastery
   saved.completed = 1;
   saved.answers = ['First attempt', 'My final request'];
   let { html, document } = view(saved);
-  assert.equal(document.querySelectorAll('.ai-lesson-stages > li').length, 1);
+  assert.equal(document.querySelectorAll('[data-reader-section]').length, 1);
   assert.ok(html.includes(plan.steps[1].task));
   assert.ok(!html.includes(plan.steps[0].instruction));
   assert.ok(!html.includes(teaching.takeaway));
@@ -240,13 +236,12 @@ test('lesson navigation and headings follow the selected English, Russian, or Ka
   const previousDocument = globalThis.document;
   globalThis.document = { documentElement: {} };
   try {
-    for (const [language, title, back, next, historyLabel, answerLabel] of [['en', 'See an example', 'Back', 'Next', 'Completed work', 'Your answer'], ['ru', 'Посмотри пример', 'Назад', 'Дальше', 'Выполненные задания', 'Твой ответ'], ['kk', 'Мысалды қарау', 'Артқа', 'Әрі қарай', 'Орындалған тапсырмалар', 'Жауабың']]) {
+    for (const [language, title, historyLabel, answerLabel] of [['en', 'See an example', 'Completed work', 'Your answer'], ['ru', 'Посмотри пример', 'Выполненные задания', 'Твой ответ'], ['kk', 'Мысалды қарау', 'Орындалған тапсырмалар', 'Жауабың']]) {
       setLanguage(language);
       const { document } = view(savedAt(1));
       assert.equal(document.querySelector('#learning-page-title').textContent, title);
       assert.equal(document.querySelector('#learning-page-title').getAttribute('lang'), language);
-      assert.ok(document.querySelector('[data-learning-page="back"]').textContent.includes(back));
-      assert.ok(document.querySelector('[data-learning-page="next"]').textContent.includes(next));
+      assert.ok(document.querySelector('.reader-progress').getAttribute('aria-label'));
       const saved = savedAt();
       saved.completed = 1;
       saved.answers[0] = 'My completed answer';
@@ -301,17 +296,17 @@ test('live lessons use every template, preserving answer hooks and unlock behavi
     assert.ok(waiting.querySelector(`[data-lesson-template="${assessment.type}"]`));
     assert.ok(waiting.querySelector(draft), assessment.type);
     assert.equal(waiting.querySelector('[data-learning-page="check"]').hasAttribute('disabled'), false);
-    assert.equal(waiting.querySelector('[data-learning-page="next"]').hasAttribute('hidden'), true);
+    assert.equal(waiting.querySelector('#learning-step-form'), null);
     assert.equal(waiting.querySelector('#learning-check-feedback'), null);
     const passed = view(v3Saved(assessment, 3, response, true)).document;
     assert.ok(passed.querySelector('#learning-check-feedback.is-correct'));
-    assert.equal(passed.querySelector('[data-learning-page="next"]').hasAttribute('disabled'), false);
+    assert.ok(passed.querySelector('#learning-step-form'));
   }
   const { assessment, response } = exercises[0];
   for (const [page, type] of [[0, 'theory'], [1, 'illustration'], [2, 'comparison'], [4, 'recap'], [5, 'practice']]) {
     const { document } = view(v3Saved(assessment, page, response, true));
     assert.ok(document.querySelector(`[data-lesson-template="${type}"]`), type);
-    assert.equal(Boolean(document.querySelector('.lesson-source-figure img')), type === 'illustration');
-    assert.equal(Boolean(document.querySelector('#learning-step-form textarea')), type === 'practice');
+    assert.equal(Boolean(document.querySelector('.lesson-source-figure img')), true);
+    assert.equal(Boolean(document.querySelector('#learning-step-form textarea')), true);
   }
 });

@@ -101,10 +101,14 @@ try {
  await p.locator('#roadmap-form button[type="submit"]').click();
  await p.waitForSelector('.roadmap-layout');
  await p.screenshot({path:join(tmpdir(),'mindora-compact-path.png'),fullPage:true});
+ await p.locator('[data-roadmap-stage="3"][data-unlock]').click();
+ await p.waitForSelector('.lesson-stream');
+ assert.deepEqual((await guestState(p)).learningRoadmap.opened, [3]);
+ assert.equal((await guestState(p)).learningRoadmap.progress.filter(stage => stage.completed).length, 0);
+ await p.locator('.ai-lesson-exit').click();
  await p.locator('[data-roadmap-stage="0"]').click();
  await p.waitForSelector('.ai-lesson-reader');
- await p.locator('[data-learning-page="next"]:visible').click();
- await p.locator('[data-learning-page="next"]:visible').click();
+ await p.locator('[data-learning-gap]').focus();
  const before=await guestState(p);const requests=lessonRequests.length;
  await p.locator('.ai-lesson-exit').click();
  await p.close();
@@ -116,8 +120,7 @@ try {
  assert.equal(lessonRequests.length,requests);
  await r.locator('[data-learning-gap]').fill('"Hello"');
  await r.locator('[data-learning-page="check"]').click();
- await r.locator('[data-learning-page="next"]:visible').click();
- await r.locator('[data-learning-page="next"]:visible').click();
+ await r.locator('#learning-step-form').waitFor();
  for(const answer of ['print("My lesson")','print("Hello")\nprint("Mindora")']){
   await r.locator('#learning-step-form textarea').fill(answer);
   await r.locator('#learning-step-form button[type="submit"]').click();
@@ -127,7 +130,7 @@ try {
  assert.equal((await guestState(r)).learningRoadmap.progress[0].completed,true);
  await r.locator('[data-action="next-path-lesson"]').click();
  await r.waitForSelector('.ai-lesson-reader');
- assert.equal((await guestState(r)).guestCourses.length,2);
+ assert.equal((await guestState(r)).guestCourses.length,3);
  assert.equal(calls.filter(r=>r.path==='/api/account'&&r.method==='POST').length,0);
  assert.ok(calls.some(r=>r.path==='/api/learning-plan'&&r.guest==='1'));
  assert.deepEqual(errors,[]);

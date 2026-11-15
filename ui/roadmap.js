@@ -185,7 +185,7 @@ function stageRows(roadmap, active, busy) {
     completed: t('View result', 'Результат', 'Нәтиже'),
     active: t('Continue lesson', 'Продолжить', 'Жалғастыру'),
     ready: t('Start lesson', 'Начать', 'Бастау'),
-    locked: t('Locked', 'Закрыто', 'Құлыптаулы'),
+    locked: t('Tap to open', 'Нажми, чтобы открыть', 'Басып аш'),
   };
   const milestones = new Map(roadmap.curriculumVersion === 2
     ? roadmap.modules.map((module, index) => [module.startIndex, { ...module, index }]) : []);
@@ -211,7 +211,7 @@ function stageRows(roadmap, active, busy) {
       ${index < roadmap.stages.length - 1 ? `<svg class="roadmap-stage-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${index % 2 ? 'M75 0 H38 Q25 0 25 18 V100' : 'M25 0 H62 Q75 0 75 18 V100'}"/></svg>` : ''}
       <div class="roadmap-stage-stop">
         ${current ? `<span class="roadmap-start-bubble" aria-hidden="true">${status === 'active' ? t('Continue', 'Продолжить', 'Жалғастыру') : t('Start here', 'Начать', 'Бастау')}</span>` : ''}
-        <button type="button" class="roadmap-stage-marker roadmap-stage-node" data-roadmap-action="start" data-roadmap-stage="${index}" aria-label="${escape(`${kindLabels[kind]}. ${statusLabels[status]}: ${stage.title}`)}" aria-describedby="roadmap-stage-detail-${index}"${busy ? ' disabled' : ''}><span class="roadmap-stage-kind-icon" aria-hidden="true">${icon(symbol, 34)}</span><span class="roadmap-stage-status" aria-hidden="true">${icon(statusSymbol, 14)}</span></button>
+        <button type="button" class="roadmap-stage-marker roadmap-stage-node" data-roadmap-action="start" ${locked ? 'data-unlock' : ''} data-roadmap-stage="${index}" aria-label="${escape(`${kindLabels[kind]}. ${statusLabels[status]}: ${stage.title}`)}" aria-describedby="roadmap-stage-detail-${index}"${busy ? ' disabled' : ''}><span class="roadmap-stage-kind-icon" aria-hidden="true">${icon(symbol, 34)}</span><span class="roadmap-stage-status" aria-hidden="true">${icon(statusSymbol, 14)}</span></button>
         <div class="roadmap-stage-text"><span class="roadmap-stage-kind-label">${kindLabels[kind]}</span><${titleTag}>${escape(stage.title)}</${titleTag}><p class="${current ? 'roadmap-stage-objective' : 'visually-hidden'}" id="roadmap-stage-detail-${index}">${escape(stage.objective)}${locked ? ` — ${statusLabels.locked}` : ''}</p></div>
       </div>
     </li>`;

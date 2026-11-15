@@ -69,7 +69,7 @@ test('every path point retains its type icon while lock, play and completion are
     assert.equal(row.querySelector('.roadmap-stage-status').getAttribute('aria-hidden'), 'true');
   }
   assert.equal(rows[1].getAttribute('aria-current'), 'step');
-  assert.match(rows[2].querySelector('button').getAttribute('aria-label'), /^Review\. Locked:/);
+  assert.match(rows[2].querySelector('button').getAttribute('aria-label'), /^Review\. Tap to open:/);
   const busy = documentFor(roadmapView({ roadmap: saved, active: roadmapStageStatuses(saved), busy: 'stage' }));
   assert.ok([...busy.querySelectorAll('.roadmap-stage-node')].every(button => button.hasAttribute('disabled')));
 });
