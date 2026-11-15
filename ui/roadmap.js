@@ -211,7 +211,7 @@ function stageRows(roadmap, active, busy) {
       <div class="roadmap-stage-stop">
         ${current ? `<span class="roadmap-start-bubble" aria-hidden="true">${status === 'active' ? t('Continue', 'Продолжить', 'Жалғастыру') : t('Start here', 'Начать', 'Бастау')}</span>` : ''}
         <button type="button" class="roadmap-stage-marker roadmap-stage-node" data-roadmap-action="start" data-roadmap-stage="${index}" aria-label="${escape(`${kindLabels[kind]}. ${statusLabels[status]}: ${stage.title}`)}" aria-describedby="roadmap-stage-detail-${index}"${busy || locked ? ' disabled' : ''}><span class="roadmap-stage-kind-icon" aria-hidden="true">${icon(symbol, 34)}</span><span class="roadmap-stage-status" aria-hidden="true">${icon(statusSymbol, 14)}</span></button>
-        <div class="roadmap-stage-text"><span class="roadmap-stage-kind-label">${kindLabels[kind]}</span><${titleTag}>${escape(stage.title)}</${titleTag}><p class="visually-hidden" id="roadmap-stage-detail-${index}">${escape(stage.objective)}${locked ? ` — ${statusLabels.locked}` : ''}</p></div>
+        <div class="roadmap-stage-text"><span class="roadmap-stage-kind-label">${kindLabels[kind]}</span><${titleTag}>${escape(stage.title)}</${titleTag}><p class="${current ? 'roadmap-stage-objective' : 'visually-hidden'}" id="roadmap-stage-detail-${index}">${escape(stage.objective)}${locked ? ` — ${statusLabels.locked}` : ''}</p></div>
       </div>
     </li>`;
   }).join('');

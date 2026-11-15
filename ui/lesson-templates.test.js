@@ -13,7 +13,7 @@ test('ten topic-independent templates have valid examples, full mentor slots and
     assert.ok(document.querySelector(`[data-lesson-template="${example.type}"]`));
     assert.ok(document.querySelector('[data-character-kind]'));
     assert.equal(document.querySelector('script, [onerror]'), null);
-    assert.ok(document.querySelector('h3').textContent.includes('<script>'));
+    assert.ok(document.querySelector('.mentor-dialogue h3').textContent.includes('<script>'));
   }
 });
 
