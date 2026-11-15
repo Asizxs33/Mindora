@@ -7,6 +7,7 @@ import { mountLessonFlow, syncLessonFlow } from './lesson-flow.js';
 import { mountAccount, getAccountState } from './account.js';
 import { rewardBalance } from './roadmap.js';
 import { desktopStudyView } from './desktop-study.js';
+import { plusBadge } from './shop.js';
 import { mountCourseSearch, captureCourseSearch, syncCourseSearch } from './course-library.js';
 
 const $ = selector => document.querySelector(selector);
@@ -77,7 +78,7 @@ export function mountShell() {
   journeyStyles.href = new URL('./ux-journey.css', import.meta.url).href; document.head.append(journeyStyles);
   document.querySelector('#app').innerHTML = `<a class="skip-link" href="#main">Skip to learning</a>
   <header class="topbar">
-    <a class="brand" data-home href="/welcome" aria-label="Mindora home"><img class="brand-mark" src="/ui/assets/brand-mark.svg" alt="" width="40" height="40"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
+    <a class="brand" data-home href="/welcome" aria-label="Mindora home"><img class="brand-mark" src="/ui/assets/brand-mark.svg" alt="" width="40" height="40"><span class="brand-copy"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span><span id="header-plus" hidden></span></span></a>
     <nav id="top-navigation" aria-label="Main navigation"></nav>
     <div class="top-actions" id="top-actions"></div>
   </header>
@@ -203,7 +204,13 @@ export function renderShell(view, state, stats, html, rewards) {
   $('#mobile-navigation').innerHTML = brandNav(icon, view, 'bottom');
   $('#top-actions').classList.toggle('has-reward-balance', Boolean(rewards));
   $('#top-actions').innerHTML = guided ? '' : `${rewardBalance(rewards)}${languagePicker({ compact: Boolean(rewards) && !desktopLayout.matches })}<button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
-  $('.brand').setAttribute('aria-label', t('Mindora home','Главная Mindora','Mindora басты беті'));
+  const membership = plusBadge(state.demoPlusPlan);
+  const headerPlus = $('#header-plus');
+  headerPlus.innerHTML = membership;
+  headerPlus.hidden = !membership;
+  const homeLabel = t('Mindora home','Главная Mindora','Mindora басты беті');
+  $('.brand').setAttribute('aria-label', membership
+    ? `${homeLabel} · ${t('Plus demo active', 'Демо Plus активно', 'Plus демосы белсенді')}` : homeLabel);
   $('.sidebar').setAttribute('aria-label', t('Main menu','Главное меню','Басты мәзір'));
   for (const nav of document.querySelectorAll('#navigation,#top-navigation,#mobile-navigation')) {
     nav.setAttribute('aria-label', t('Main navigation','Основная навигация','Негізгі навигация'));
@@ -221,6 +228,7 @@ export function renderShell(view, state, stats, html, rewards) {
     main.innerHTML = html;
     openDesktopLibrary();
   }
+  if (membership) main.querySelector('.reader-toolbar, .lesson-progress-head, .return-review-top')?.insertAdjacentHTML('beforeend', membership);
   main.dataset.courseHomeOwner = owner;
   updateAccountLinks();
   syncCourseSearch(main, owner, courseSearchFocus);

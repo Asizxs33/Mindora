@@ -2,6 +2,7 @@ import { icon } from './icons.js';
 import { t } from './language.js';
 import { timeOptions } from './budget-session.js';
 import { profileLearningPanels } from './workspace-pages.js';
+import { plusProfileStatus } from './shop.js';
 
 export function mobileProfileView(state, stats, rewardProfile) {
   const tools = [
@@ -22,6 +23,7 @@ export function mobileProfileView(state, stats, rewardProfile) {
         <button type="button" class="text-link profile-signout" data-account-signout hidden>${icon('logout', 17)}<span>${t('Sign out', 'Выйти', 'Шығу')}</span></button>
       </div>
     </section>
+    ${plusProfileStatus(state.demoPlusPlan)}
     <div class="mobile-profile-stats"><span><strong>${stats.total}</strong> ${t('steps done', 'этапов пройдено', 'кезең аяқталды')}</span><span><strong>${Object.keys(state.works).length}</strong> ${t('works saved', 'работ сохранено', 'жұмыс сақталды')}</span></div>
     <nav class="mobile-profile-tools" aria-label="${t('Learning tools', 'Учебные инструменты', 'Оқу құралдары')}">
       ${tools.map(([view, symbol, title]) => `<button type="button" data-view="${view}">${icon(symbol, 23)}<span>${title}</span></button>`).join('')}
