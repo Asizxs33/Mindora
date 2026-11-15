@@ -737,10 +737,27 @@ export function starterCourses(language = 'en', minutes = 5) {
   if (!STARTER_DURATIONS.includes(minutes)) return [];
   const lang = languageCode(language);
   return [...courses.map(course => ({
-    id: course.id, title: course[lang].title, description: course[lang].description,
+    id: course.id, title: course[lang].title, goal: course[lang].goal, description: course[lang].description,
     minutes, durations: [...STARTER_DURATIONS], stepCount: PLAN_DURATIONS[minutes].length,
     mentor: course.mentor, topic: course.topic, icon: course.icon,
   })), ...labCourseCards(lang, minutes)];
+}
+
+// Account summaries from older releases have no origin ID. Match both authored
+// strings in their original language; the interface language can change later.
+export function splitLibraryCourses(courses, roadmaps, current) {
+  const linked = new Set(roadmaps.flatMap(path => path.progress.map(stage => stage.courseId).filter(Boolean)));
+  const entries = current ? [current, ...courses.filter(item => item.id !== current.id)] : courses;
+  const personal = [], minis = [], catalogs = new Map();
+  for (const course of entries) {
+    if (linked.has(course.id)) continue;
+    const key = course.language + '/' + course.minutes;
+    if (!catalogs.has(key)) catalogs.set(key, starterCourses(course.language, course.minutes));
+    const template = catalogs.get(key).find(item => item.title === course.title && item.goal === course.goal);
+    if (template) minis.push({ ...template, ...course, templateId: template.id });
+    else personal.push(course);
+  }
+  return { personal, minis };
 }
 
 export function getStarterCourse(id, language = 'en', minutes = 5) {

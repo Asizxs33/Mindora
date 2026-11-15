@@ -188,8 +188,14 @@ try {
   await p.locator('.ai-lesson-exit').click();
   await nav(p, 'courses').click();
   await openSamples(p);
+  const finishedPythonId = (await state(p)).learningCourse.id;
+  const personal = p.locator('.course-saved-section');
+  assert.equal(await personal.getByText('Your first Python line', { exact: true }).count(), 0);
+  const enrolledPython = p.locator(`.mini-enrollments [data-learning-open="${finishedPythonId}"]`);
+  assert.equal(await enrolledPython.count(), 1);
+  assert.match(await enrolledPython.innerText(), /2\/2/);
   assert.ok(await p.locator('.phone-catalog .ready-course').first().isVisible());
-  await p.locator('[data-starter-course="python-basics"]').click();
+  await enrolledPython.click();
   await p.waitForSelector('.learning-hub');
   assert.equal((await state(p)).learningPlan.completed, 2);
   for (const minutes of [10, 20]) {
@@ -231,7 +237,7 @@ try {
   await openSamples(p);
   await p.locator('[data-course-minutes="5"]').click();
   await openSamples(p);
-  await p.locator('[data-starter-course="python-basics"]').click();
+  await enrolledPython.click();
   await p.waitForSelector('.learning-hub');
   assert.equal((await state(p)).learningPlan.completed, 2);
   assert.equal((await state(p)).learningPlan.plan.minutes, 5);
@@ -291,7 +297,7 @@ try {
   }
   await nav(p, 'courses').click();
   await openSamples(p);
-  await p.locator('[data-starter-course="python-basics"]').click();
+  await enrolledPython.click();
   // Profile logout is directly reachable on the phone and returns to Mino.
   await p.locator('#mobile-navigation [data-view="profile"]').click();
   await p.locator('[data-account-signout]').click();
@@ -359,8 +365,18 @@ try {
   await j.locator('.phone-course-nav [data-view="new-course"]').click();
   await j.getByRole('heading', { name: 'Mindora Plus' }).waitFor();
   assert.match(await j.locator('#main').innerText(), /\$9\.99/);
-  await j.locator('.report-page [data-view="courses"]').click();
+  await j.locator('.mindora-shop .shop-return').click();
   assert.equal(await j.locator('[data-learning-roadmap]').count(), 1);
+  for (const width of [320, 390, 1440]) {
+    await j.setViewportSize({ width, height: 900 });
+    const personalCourse = j.locator('.course-saved-section .learning-library-card').first();
+    assert.ok(await personalCourse.locator('[data-learning-roadmap]').isVisible());
+    assert.equal(await j.locator('.course-saved-section [data-course="budget"]').count(), 0);
+    const cover = await personalCourse.locator('.learning-library-course-icon').boundingBox();
+    assert.ok(cover && cover.width >= 60 && cover.height >= 60);
+    assert.equal((await size(j)).width, width);
+  }
+  await j.setViewportSize({ width: 390, height: 844 });
   await j.locator(`[data-learning-roadmap="${firstPath.id}"]`).click();
   await j.waitForSelector('.roadmap-layout');
   assert.equal((await state(j)).learningRoadmap.progress[0].completed, true);

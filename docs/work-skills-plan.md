@@ -23,11 +23,21 @@ Retrieval and spaced practice inform the design. Testing whether busy adults act
 
 ## Offer and economics
 
-Public examples are open for the jury. One personal AI course is free, including its lessons and saved progress. Further personal courses require the planned $9.99 monthly Plus subscription. Paid enrollment is closed until billing is connected.
+One personal AI course is free, including its lessons and saved progress. Public examples remain open to reviewers. The planned Plus price for additional personal courses is **$9.99 a month or $99.99 a year**. Twelve monthly payments total $119.88. Paying annually saves $19.89 (16.6%) and works out to $8.33 per month. Paid enrollment awaits a billing provider.
 
-The team reports a maximum observed token cost of $1.78 in its ten-course test. At that usage, subtracting token costs from $9.99 leaves $8.21 (82.2%) before other costs. A 70% contribution target leaves about $1.22 per subscriber-month for other variable costs beyond that token spend. Costs of free learners, retries, fees, infrastructure and support need measurement across cohorts. The observed batch is not a usage cap.
+The team reported a maximum observed token bill of **$1.78 for one ten-course batch**. The model below assumes one paying subscriber generates ten courses every month at that same total token cost, including under the annual plan. Actual monthly usage and the cost of later lessons still need measurement.
 
-At the stated monthly price, $100M ARR would require about 834,168 paying subscribers for a full year before discounts. Model LTV using measured contribution and subscription lifetime, and CAC using acquisition spend per new payer. Both are unknown before a paid cohort.
+| USD per subscriber | One monthly payment | One year paid annually |
+| --- | ---: | ---: |
+| Subscription revenue at list price | $9.99 | $99.99 |
+| Modelled token spend | $1.78 | $21.36 |
+| Revenue left after tokens | $8.21 | $78.63 |
+| Net profit required for a 63% net margin | $6.29 | $62.99 |
+| Budget left for **all other costs** at that margin | $1.92 | $15.64 |
+
+The 63% figure is a planning scenario. At that target, the annual plan allows about $1.30 per month for all costs beyond tokens. The calculation uses unrounded prices and rounds the displayed results to cents. Check the model against recognized revenue after discounts and refunds, payment fees, free-course usage, retries, hosting, support, acquisition, allocated operating expenses and applicable taxes. Verified net profit requires actual revenue and expenses.
+
+At list prices, annual recurring revenue is $119.88 per active monthly subscriber and $99.99 per active annual subscriber. A $100M ARR scenario therefore needs about 834,168 paying subscribers on monthly plans, 1,000,101 on annual plans or 909,629 with an even split by subscriber count. These figures describe the scale required. Measure acquisition spend per new payer (CAC), contribution after servicing costs and paid customer lifetime by billing plan before claiming LTV exceeds CAC.
 
 ## What to measure next
 

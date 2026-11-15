@@ -37,6 +37,56 @@ test('roadmap input retains prior work to inform placement; saved maps retain on
   assert.equal(normalizeRoadmap({ ...provider, stages: [...provider.stages.slice(0, 3), provider.stages[0]] }, input), null);
 });
 
+test('gem shop top-up preserves the current recharge and never overspends', () => {
+  const now = date(14), inTenMinutes = now + 600000;
+  const oneLost = recordCheckReward(undefined, id(1), 0, false, now);
+  const twoLost = recordCheckReward(oneLost, id(1), 0, false, now);
+  const purchase = buyRewardItem(twoLost, 'one-heart', inTenMinutes);
+  assert.equal(purchase.hearts, 4);
+  assert.equal(purchase.gems, 16);
+  assert.equal(purchase.heartAt, now);
+  assert.equal(rewardScreen(purchase, date(14,13)).hearts, 5);
+  for (const item of ['hearts','one-heart','freeze','mistake-shield','lesson-bonus','unknown']) {
+    const poor = { ...twoLost, gems:0 };
+    assert.deepEqual(buyRewardItem(poor, item, now), poor);
+  }
+  const top = buyRewardItem(purchase,'one-heart', now);
+  assert.equal(top.heartAt,0);
+  assert.deepEqual(buyRewardItem(top,'one-heart', now),top);
+});
+
+test('a second chance survives sync and protects one mistake on a scored lesson', () => {
+  const now = date(14);
+  const purchase = buyRewardItem(undefined, 'mistake-shield', now);
+  assert.deepEqual([purchase.gems,purchase.shields],[16,1]);
+  assert.deepEqual(buyRewardItem(purchase,'mistake-shield',now), purchase);
+  const saved = validateBuiltinWorkspace({learningRewards:purchase}).learningRewards;
+  assert.deepEqual(saved,purchase);
+  const protectedCheck = recordCheckReward(saved,id(1),0,false,now);
+  assert.deepEqual([protectedCheck.hearts,protectedCheck.shields],[5,0]);
+  const missed = recordCheckReward(protectedCheck,id(1),0,false,now);
+  assert.deepEqual([missed.hearts,missed.heartAt],[4,now]);
+  assert.equal(rewardScreen(missed,now).items.find(it=>it.id==='mistake-shield').available,true);
+});
+
+test('lesson bonus rewards exactly three distinct completions and legacy records have no active items', () => {
+  const now = date(14);
+  let state = buyRewardItem(undefined,'lesson-bonus',now);
+  assert.deepEqual([state.gems,state.bonusLessons],[12,3]);
+  assert.deepEqual(buyRewardItem(state,'lesson-bonus',now),state);
+  for (let i=1;i<=4;i++) {
+    state=recordLessonReward(state,id(i),now);
+    assert.equal(state.bonusLessons,Math.max(0,3-i));
+    assert.deepEqual(recordLessonReward(state,id(i),now),state);
+    state=validateBuiltinWorkspace({learningRewards:state}).learningRewards;
+  }
+  assert.equal(state.gems,44);
+  assert.equal(rewardScreen(state,now).items.find(it=>it.id==='lesson-bonus').available,true);
+  const {shields,bonusLessons,...legacy}=state;
+  const migrated=validateBuiltinWorkspace({learningRewards:legacy}).learningRewards;
+  assert.deepEqual([migrated.gems,migrated.shields,migrated.bonusLessons],[44,0,0]);
+});
+
 test('roadmap supports studying stages in any order and restores linked courses through workspace storage', () => {
   const fresh = restoreRoadmap(normalizeRoadmap(provider, input));
   assert.deepEqual(roadmapStageStatuses(fresh).map(stage => stage.status), ['ready', 'available', 'available', 'available']);

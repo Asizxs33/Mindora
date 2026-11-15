@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateBuiltinWorkspace, WORKSPACE_MAX_BYTES } from '../backend/builtin-workspace.js';
 import { learningWorkspaceStore } from '../backend/learning-workspace-store.js';
+import { buyRewardItem } from '../core/roadmap-rewards.js';
 import { learningWorkspaceApi } from '../backend/learning-workspace-api.js';
 
 const settings = { databaseUrl: 'test-only', baseUrl: 'https://auth.example.org', cookieSecret: 'test-only' };
@@ -88,7 +89,9 @@ test('workspace API and real SQL store isolate accounts and enforce insert/updat
   const initialRetry = await learningWorkspaceApi(request('PUT', { data, revision: null }), a);
   assert.equal(initialRetry.status, 200, 'retrying a committed initial insert returns its existing revision');
   assert.equal((await initialRetry.json()).workspace.revision, 1);
-  const changed = { ...data, notes: { budget: 'Updated note' } };
+  const shield = buyRewardItem(undefined,'mistake-shield',Date.parse(date));
+  const purchases = buyRewardItem(shield,'lesson-bonus',Date.parse(date));
+  const changed = { ...data, notes: { budget: 'Updated note' }, learningRewards:purchases };
   assert.equal((await learningWorkspaceApi(request('PUT', { data: changed, revision: null }), a)).status, 409);
   assert.equal((await learningWorkspaceApi(request('PUT', { data: changed, revision: 1 }), a)).status, 200);
   const updateRetry = await learningWorkspaceApi(request('PUT', { data: changed, revision: 1 }), a);
@@ -96,6 +99,9 @@ test('workspace API and real SQL store isolate accounts and enforce insert/updat
   assert.deepEqual((await updateRetry.json()).workspace, { data: changed, revision: 2, updatedAt: date });
   assert.equal((await learningWorkspaceApi(request('PUT', { data, revision: 1 }), a)).status, 409);
   assert.equal((await learningWorkspaceApi(request('PUT', { data, revision: 2 }, 'account-b'), b)).status, 409);
+  const reloaded = (await (await learningWorkspaceApi(request('GET'), a)).json()).workspace;
+  assert.deepEqual(reloaded.data.learningRewards, purchases);
+  assert.deepEqual([reloaded.data.learningRewards.gems,reloaded.data.learningRewards.shields,reloaded.data.learningRewards.bonusLessons], [8,1,3]);
   assert.deepEqual((await store.read('account-a')).data, changed);
   assert.equal((await store.read('account-a')).revision, 2);
 });

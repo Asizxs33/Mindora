@@ -9,7 +9,7 @@ import { courseLanguageField, t } from './language.js';
 const TITLE = {
   roadmap: () => t('My learning path', 'Мой путь обучения', 'Оқу жолым'),
   quests: () => t('Daily quests', 'Задания дня', 'Күндік тапсырмалар'),
-  shop: () => t('Gem shop', 'Магазин алмазов', 'Алмас дүкені'),
+  shop: () => t('Shop', 'Магазин', 'Дүкен'),
 };
 const experienceOptions = () => [
   ['new', 'leaf', t('I’m starting from scratch', 'Начинаю с нуля', 'Нөлден бастаймын')],
@@ -284,17 +284,19 @@ export function roadmapView({ roadmap, wizard, active = [], busy = false, error 
 }
 
 function shopDefinition(id) {
+  if (id === 'one-heart') return ['heart', t('One extra life','Одна жизнь','Бір қосымша өмір'), t('Restore one missing heart.', 'Верни одно потерянное сердце.', 'Жоғалған бір жүректі қайтар.')];
+  if (id === 'mistake-shield') return ['shield', t('Second chance','Вторая попытка','Екінші мүмкіндік'), t('Keep your heart on the next incorrect lesson check.', 'Следующая ошибка в задании не заберёт сердце.', 'Келесі тексерісте қателессең, жүрегің сақталады.')];
+  if (id === 'lesson-bonus') return ['trophy', t('Three-lesson bonus','Бонус за три урока','Үш сабаққа бонус'), t('Earn 4 extra gems for each of your next three completed lessons.', 'Получи по 4 дополнительных алмаза за три следующих завершённых урока.', 'Келесі үш сабақты аяқтаған сайын 4 қосымша алмас ал.')];
   if (id === 'hearts') return ['heart', t('Refill lives', 'Восстановить жизни', 'Өмірді қалпына келтіру'), t('Restore all five lives now. One life returns each hour.', 'Верни все пять жизней сразу. Одна жизнь восстанавливается каждый час.', 'Бес өмірді бірден қалпына келтір. Сағат сайын бір өмір қайтады.')];
   return ['shield', t('Streak freeze', 'Заморозка серии', 'Серияны қатыру'), t('Protect your streak for one missed day. You can keep one freeze.', 'Защищает серию за один пропущенный день. Можно хранить одну заморозку.', 'Бір күн өткізіп алсаң, серияң сақталады. Бір қатыруды сақтай аласың.')];
 }
 
 function shopRow(item, rewards) {
   const [symbol, title, detail] = shopDefinition(item.id);
-  const unavailable = item.id === 'hearts' && rewards.hearts >= rewards.maxHearts
-    ? t('Lives are full', 'Жизни полные', 'Өмір толы')
-    : item.id === 'freeze' && rewards.freezes > 0
-      ? t('Already owned', 'Уже есть', 'Бар')
-      : t('Not enough gems', 'Не хватает алмазов', 'Алмас жеткіліксіз');
+  const unavailable = item.reason === 'full' ? t('Lives are full', 'Жизни полные', 'Өмір толы')
+    : item.reason === 'owned' && item.id === 'lesson-bonus' ? t(`Bonus lessons left: ${rewards.bonusLessons}`, `Уроков с бонусом: ${rewards.bonusLessons}`, `Бонусты сабақ қалды: ${rewards.bonusLessons}`)
+    : item.reason === 'owned' ? t('Ready to use', 'Уже действует', 'Қолдануға дайын')
+    : t('Not enough gems', 'Не хватает алмазов', 'Алмас жеткіліксіз');
   return `<article class="roadmap-shop-item">
     <span class="roadmap-symbol roadmap-${symbol}">${icon(symbol, 27)}</span>
     <div><h2>${title}</h2><p>${detail}</p></div>
@@ -303,7 +305,7 @@ function shopRow(item, rewards) {
   </article>`;
 }
 
-export function rewardsView(section, { rewards, quests = rewards?.quests ?? [], items = rewards?.items ?? [], error = '', notice = '' } = {}) {
+export function rewardsView(section, { rewards, quests = rewards?.quests ?? [], items = rewards?.items ?? [], error = '', notice = '', shopTab = 'gems', plusHtml = '' } = {}) {
   if (section === 'profile') {
     if (!rewards) return '';
     return `<section class="roadmap-profile" aria-label="${t('Learning activity', 'Учебная активность', 'Оқу белсенділігі')}">
@@ -318,21 +320,33 @@ export function rewardsView(section, { rewards, quests = rewards?.quests ?? [], 
         <button type="button" class="text-link" data-view="shop">${icon('store', 18)} ${TITLE.shop()}</button></div>
     </section>`;
   }
+  if (section === 'shop' && rewards) {
+    const plus = shopTab === 'plus';
+    return `<section class="roadmap-rewards mindora-shop" aria-labelledby="shop-heading">
+      <header class="shop-heading"><h1 id="shop-heading">${TITLE.shop()}</h1>
+        <button type="button" class="text-link" data-view="quests">${icon('flag',16)} ${TITLE.quests()}</button></header>
+      <nav class="reward-tabs shop-sections" aria-labelledby="shop-heading">
+        <button type="button" data-view="shop" ${plus ? '' : 'aria-current="page"'}>${icon('gem',18)} ${t('Spend gems','За алмазы','Алмасқа алу')}</button>
+        <button type="button" data-view="membership" ${plus ? 'aria-current="page"' : ''}>${icon('layers',18)} Mindora Plus</button></nav>
+      ${feedback(error, notice)}
+      ${plus ? plusHtml : `<h2 class="shop-wallet">${t('Your balance','Твой баланс','Балансың')} <span>${icon('gem',20)} ${rewards.gems}</span></h2>
+        <div class="roadmap-rewards-list">${items.map(item => shopRow(item, rewards)).join('')}</div>`}
+      <button type="button" class="text-link shop-return" data-view="courses">${icon('back',16)} ${t('My courses','Мои курсы','Курстарым')}</button>
+    </section>`;
+  }
   const heading = t('Rewards', 'Награды', 'Марапаттар');
   const rewardTabs = `<nav class="reward-tabs" aria-label="${heading}">${[
     ['quests', 'flag', TITLE.quests()], ['shop', 'store', TITLE.shop()],
   ].map(([view, symbol, label]) => `<button type="button" data-view="${view}"${section === view ? ' aria-current="page"' : ''}>${icon(symbol, 19)}<span>${label}</span></button>`).join('')}</nav>`;
   if (!rewards) return `<section class="roadmap-empty"><h1>${heading}</h1><p>${t('Sign in to keep your activity and rewards.', 'Войди, чтобы сохранять прогресс и награды.', 'Барысың мен марапаттарыңды сақтау үшін кір.')}</p><button type="button" class="primary" data-account-open="signin">${t('Sign in', 'Войти', 'Кіру')}</button></section>`;
   return `<section class="roadmap-rewards" aria-labelledby="roadmap-rewards-title">
-    <header class="roadmap-rewards-heading"><div><h1 id="roadmap-rewards-title">${heading}</h1><p>${section === 'shop'
-      ? t('Earn gems in lessons and quests, then use them here.', 'Зарабатывай алмазы в занятиях и заданиях и трать их здесь.', 'Сабақтар мен тапсырмалардан алмас жинап, осында жұмса.')
-      : t('Complete these while you study to earn extra gems.', 'Выполняй задания во время учёбы и получай алмазы.', 'Оқу кезінде тапсырмаларды орындап, алмас ал.')}</p></div>
+    <header class="roadmap-rewards-heading"><div><h1 id="roadmap-rewards-title">${heading}</h1><p>${t('Complete these while you study to earn extra gems.', 'Выполняй задания во время учёбы и получай алмазы.', 'Оқу кезінде тапсырмаларды орындап, алмас ал.')}</p></div>
       <span class="rewards-emblem" aria-hidden="true">${icon('gift', 34)}</span>
     </header>
     ${rewardMetrics(rewards)}
     ${rewardTabs}
     ${feedback(error, notice)}
-    <div class="roadmap-rewards-list">${section === 'shop' ? items.map(item => shopRow(item, rewards)).join('') : quests.map(questRow).join('')}</div>
+    <div class="roadmap-rewards-list">${quests.map(questRow).join('')}</div>
     <button type="button" class="text-link" data-view="roadmap">${icon('back', 17)} ${t('Back to my path', 'Вернуться к пути', 'Оқу жолына қайту')}</button>
   </section>`;
 }

@@ -14,9 +14,9 @@ export function filterCourses(root, value) {
     if (!card.hidden) visible++;
   }
   const hasSaved = cards.some(card => !card.matches('.ready-course,.report-entry') && !card.hidden);
-  const hasReady = cards.some(card => card.matches('.ready-course') && !card.hidden);
+  const hasReady = cards.some(card => card.matches('.ready-course,.report-entry') && !card.hidden);
   const saved = root.querySelector('.course-saved-section');
-  if (saved) saved.hidden = !hasSaved && !root.querySelector('.learning-library[aria-busy="true"],.learning-library-status.is-error,.learning-library-import');
+  if (saved) saved.hidden = Boolean(terms.length) && !hasSaved && !root.querySelector('.learning-library[aria-busy="true"],.learning-library-status.is-error,.learning-library-import');
   const catalog = root.querySelector('.phone-catalog');
   if (catalog) {
     catalog.hidden = Boolean(terms.length && !hasReady);

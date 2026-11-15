@@ -58,7 +58,7 @@ const languages = { en: 0, ru: 1, kk: 2 };
 
 export function labCourseCards(language, minutes) {
   const lang = languages[languageCode(language)];
-  return [...Object.entries(definitions), [sqlCard.id, sqlCard]].map(([id, d]) => ({ id, title: d.title[lang], description: d.description[lang], minutes, durations: [5, 10, 20], stepCount: PLAN_DURATIONS[minutes].length, mentor: d.mentor, topic: d.topic, icon: d.icon }));
+  return [...Object.entries(definitions), [sqlCard.id, sqlCard]].map(([id, d]) => ({ id, title: d.title[lang], goal: d.title[lang], description: d.description[lang], minutes, durations: [5, 10, 20], stepCount: PLAN_DURATIONS[minutes].length, mentor: d.mentor, topic: d.topic, icon: d.icon }));
 }
 
 export function getLabCourse(id, language, minutes) {

@@ -87,3 +87,18 @@ body.quiet-shell #main .quiet-mentor { --character-size:var(--mentor-feature); -
   }
   .sidebar .nav-symbol { width:36px; height:36px; }
 }
+.course-library .learning-library-course-icon {
+  width:clamp(60px,8vw,80px); height:clamp(60px,8vw,80px); border-radius:16px; overflow:hidden;
+}
+.course-glyph { display:grid; place-items:center; width:100%; height:100%; border-radius:inherit; background:#fff1df; color:#a34a14; }
+.course-glyph.glyph-database { background:#dcf1ea; color:#286c5e; }
+.course-glyph.glyph-chart { background:#eee9fa; color:#77549a; }
+.course-glyph.glyph-code { background:#e6edfc; color:#415a98; }
+.course-library .learning-library-course-icon .course-glyph svg { width:52%; height:52%; }
+.mini-enrollments { margin:12px 0 20px; }
+.mini-enrollments > h3 { font:800 17px/1.35 var(--font-display); margin-bottom:10px; }
+.course-library .ready-course.has-progress { border-color:#e5c9b3; }
+@media (max-width:600px) {
+  .course-library .ready-course { grid-template-columns:56px minmax(0,1fr); }
+  .course-library .ready-course-symbol { width:56px; height:56px; }
+}

@@ -14,8 +14,8 @@ const key = 'mindora.workspace.v1.browser-qa';
 const errors = [];
 const lessonRequests = [];
 let signupPayload;
-async function context({ signedIn = true, saved = null } = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+async function context({ signedIn = true, saved = null, width = 390, phone = false, hash = '' } = {}) {
+  const ctx = await browser.newContext({ viewport: { width, height: 844 }, isMobile: phone, hasTouch: phone });
   let identity = signedIn, revision = 0;
   const courses = new Map();
   await ctx.route('**/api/**', async route => {
@@ -66,13 +66,102 @@ async function context({ signedIn = true, saved = null } = {}) {
   const page = await ctx.newPage();
   page.setDefaultTimeout(10000);
   page.on('pageerror', error => errors.push(error.message));
-  await page.goto(base);
+  await page.goto(base + hash);
   await page.waitForTimeout(250);
   return { ctx, page };
 }
 
 const guestState=page=>page.evaluate(()=>JSON.parse(localStorage.getItem('mindora.workspace.v1.guest')));
+async function verifyPlusDemo(width) {
+  const phone = width < 921;
+  const { ctx, page } = await context({ signedIn: false, width, phone, hash: '#plus' });
+  const shop = page.locator('.plus-shop');
+  const plan = name => shop.locator('[data-demo-select="' + name + '"]');
+  const action = name => shop.locator('[data-demo-action="' + name + '"]');
+  const use = control => phone ? control.tap() : control.click();
+  const fits = async () => {
+    assert.ok(await page.evaluate(() => {
+      const width = document.documentElement.clientWidth;
+      return document.documentElement.scrollWidth <= width &&
+        [...document.querySelectorAll('.mindora-shop button, .mindora-shop input')].every(el => {
+          const box = el.getBoundingClientRect();
+          return !box.width || (box.left >= -1 && box.right <= width + 1);
+        });
+    }), 'Shop controls must fit a ' + width + 'px viewport');
+  };
+  try {
+    // Each size starts in a fresh guest profile. The previous guest's demo must not leak.
+    await plan('annual').waitFor();
+    assert.ok(await plan('annual').isEnabled() && await plan('monthly').isEnabled());
+    assert.match(await plan('annual').innerText(), /\$99\.99/);
+    assert.match(await plan('monthly').innerText(), /\$9\.99/);
+    await fits();
+    await use(plan('annual'));
+    const prices = shop.locator('.checkout-lines dd');
+    assert.match(await prices.first().textContent(), /\$99\.99/);
+    assert.equal(await prices.last().textContent(), '$0.00');
+    await fits();
+    await use(action('confirm'));
+    await page.reload();
+    await action('practice').waitFor();
+    assert.equal(new URL(page.url()).hash, '#plus');
+    await use(action('practice'));
+    const displayed = await shop.locator('.checkout-lines dd').allTextContents();
+    const [quantity, unitPrice, discount] = displayed.map(value => Number(value.replace(/[^\d.]/g, '')));
+    const total = quantity * unitPrice - discount;
+    assert.ok(Number.isInteger(total) && total > 0);
+    const input = shop.locator('#invoice-total');
+    const check = shop.locator('#demo-invoice button');
+    await fits();
+    await input.fill('0');
+    await use(check);
+    assert.equal(await input.getAttribute('aria-invalid'), 'true');
+    assert.deepEqual(await shop.locator('.checkout-lines dd').allTextContents(), displayed);
+    await input.fill(String(total));
+    await use(check);
+    const checked = shop.locator('[role="status"]');
+    assert.ok((await checked.innerText()).includes('$' + total.toFixed(2)));
+    await use(action('practice'));
+    assert.equal(await input.inputValue(), '');
+    await use(action('back'));
+    await use(action('choose'));
+    assert.ok(await plan('annual').isDisabled());
+    await use(plan('monthly'));
+    assert.match(await prices.first().textContent(), /\$9\.99/);
+    await use(action('confirm'));
+    await use(page.locator('.shop-sections [data-view="shop"]'));
+    assert.equal(new URL(page.url()).hash, '#shop');
+    await page.reload();
+    await page.locator('.shop-wallet').waitFor();
+    await fits();
+    assert.equal(await shop.count(), 0);
+    await use(page.locator('.shop-sections [data-view="membership"]'));
+    assert.equal(new URL(page.url()).hash, '#plus');
+    await use(action('choose'));
+    assert.ok(await plan('monthly').isDisabled() && await plan('annual').isEnabled());
+  } finally {
+    await ctx.close();
+  }
+}
+
 try {
+ for (const width of [320, 390, 1440]) await verifyPlusDemo(width);
+ console.log('PASS Plus demo checkout, plan switch, invoice correction, saved guest choice and shop routes at 320/390/1440.');
+ for (const width of [320, 390]) {
+  const { ctx, page } = await context({ signedIn: false, width, phone: true });
+  try {
+   await page.locator('#mindora-account[open] #account-name').waitFor();
+   await page.locator('[data-account-action="guest"]').tap();
+   await page.locator('#goal-input').waitFor();
+   assert.ok(await page.evaluate(() =>
+    document.documentElement.scrollWidth <= document.documentElement.clientWidth
+   ), `Creator exceeds the ${width}px phone viewport`);
+   await page.locator('#mobile-navigation [data-view="courses"]').tap();
+   await page.locator('.phone-catalog').waitFor();
+  } finally {
+   await ctx.close();
+  }
+ }
  const first=await context({signedIn:false}),p=first.page;
  const calls=[];p.on('request',r=>{if(new URL(r.url()).pathname.startsWith('/api/'))calls.push({path:new URL(r.url()).pathname,method:r.method(),guest:r.headers()['x-mindora-guest']});});
  for(const width of [320,390,1440]){

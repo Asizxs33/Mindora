@@ -166,7 +166,7 @@ body.quiet-shell.has-course-home:not(.is-guided) #main { max-width: 800px; paddi
 .sidebar .nav-symbol { display:grid; place-items:center; flex:none; width:36px; height:36px; border-radius:11px; background:#f6f3ef; color:#6f6255; }
 .sidebar .nav-item.active { background:#fff1e4; color:#9a410d; }
 .sidebar .nav-item.active .nav-symbol { background:#ffe2c5; color:#a74300; }
-.sidebar .nav-symbol-gift { color:#946421; background:#fbf1db; }
+.sidebar .nav-symbol-store { color:#946421; background:#fbf1db; }
 .sidebar .nav-symbol-work { color:#3e7468; background:#edf5ef; }
 .nav-item .nav-symbol>svg { display:block; }
 .top-actions .header-account { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 14px; border:1px solid #e5dbd2; border-radius:12px; background:#fff; color:#5e4938; font:inherit; font-size:14px; font-weight:650; }

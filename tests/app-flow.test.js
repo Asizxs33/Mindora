@@ -17,7 +17,7 @@ import { createWorkspaceStorage } from '../core/workspace-storage.js';
 import { resumeCursor, needsRecap, certificateEligible, RECAP_AFTER_MS } from '../core/resume.js';
 import { recapQuestion, builtinReviewContent } from '../ui/recap.js';
 import { startTopics } from '../ui/guided-start.js';
-import { getStarterCourse, starterCourses } from '../core/starter-courses.js';
+import { getStarterCourse, splitLibraryCourses, starterCourses } from '../core/starter-courses.js';
 import { createPracticeController } from '../core/practice-controller.js';
 
 // Run the real controller and its registered event handlers. Only DOM/rendering,
@@ -104,7 +104,8 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
     querySelector(selector) { return selector === '[data-learn-deck]' ? deck : elements.get(selector) || null; },
     getElementById(id) { return elements.get(`#${id}`) || null; },
   };
-  const window = { ...emitter(), scrollTo() {}, location: { reload() { reloads++; } } };
+  const window = { ...emitter(), scrollTo() {}, location: { pathname: '/', search: '', hash: '', reload() { reloads++; } },
+    history: { replaceState(_data, _title, url) { window.location.hash = new URL(url, 'https://example.test').hash; } } };
   const downloads = [];
   const generations = [];
   const copiedCourses = [], loadedCourses = [], roadmapRequests = [], clarificationRequests = [];
@@ -123,7 +124,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
   const screen = kind => (...args) => ({ kind, args: clone(args) });
   const context = vm.createContext({
     mentorForTopic, ...engine, ...progress, ...budget, ...learningModel, ...assessments, ...returnReview, ...roadmapModel, ...rewardsModel,
-    createGuestCourseRequest, BROWSER_GUEST, resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, startTopics, getStarterCourse, starterCourses, createPracticeController,
+    createGuestCourseRequest, BROWSER_GUEST, resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, startTopics, getStarterCourse, splitLibraryCourses, starterCourses, createPracticeController,
     needsReturnReview: (lastSeen, learned) => returnReview.needsReturnReview(lastSeen, learned, time),
     languageCode, setLanguage() {}, message: value => value, t: value => value,
     createCloudDrafts: () => ({ render() {}, async init() {} }),
@@ -196,7 +197,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
       if (view === 'certificate') elements.get('#certificate-name').value = html.args[0].name;
     },
     phoneCourseLibrary: screen('course-library'), courseHomeView: screen('course-home'), readyCoursesView: () => '', coursesPage: screen('courses'), sidePage: screen('side'),
-    membershipView: screen('membership'), guidedStartView: screen('guided-start'), quietHomeView: screen('quiet-home'), returnReviewView: screen('return-review'),
+    plusShopView: screen('plus-shop'), guidedStartView: screen('guided-start'), quietHomeView: screen('quiet-home'), returnReviewView: screen('return-review'),
     pathView: screen('path'), lesson: screen('lesson'), result: screen('result'), workView: screen('work'),
     recapView: screen('recap'), certificateView: screen('certificate'),
     refreshCertificatePreview() {},
@@ -636,7 +637,7 @@ test('a saved roadmap stays selected on the home path and opens without its setu
   run.click({ view: 'roadmap' });
   assert.equal(run.saved().lastLearningType, 'roadmap');
   run.click({ roadmapAction: 'setup' });
-  assert.equal(run.current.view, 'membership');
+  assert.equal(run.current.view, 'shop');
   assert.deepEqual(run.roadmapRequests, []);
   run.click({ view: 'discover' });
   assert.equal(run.current.html.kind, 'roadmap');

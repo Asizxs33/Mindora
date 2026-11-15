@@ -11,7 +11,6 @@
   background: #fdf8f2;
 }
 .ai-lesson .ai-lesson-life-count { color:#9b423b; }
-.ai-lesson .ai-lesson-life-count .heart-outline { fill:#f4bdb7; stroke:#9b423b; }
 body.is-learning .learning-sync:not(.needs-attention) { padding:0;margin:0 0 8px;background:none;font-size:12px;color:#6c7867; }
 body.is-learning .learning-sync:not(.needs-attention) > p { justify-content:flex-end;align-items:center; }
 body.is-learning .learning-sync:not(.needs-attention) svg { width:14px;height:14px;margin-top:0; }

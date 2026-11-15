@@ -7,7 +7,7 @@ export function mobileProfileView(state, stats) {
     ['work', 'work', t('My projects', 'Мои проекты', 'Жобаларым')],
     ['practice', 'edit', t('Practice', 'Практика', 'Жаттығу')],
     ['achievements', 'trophy', t('Milestones', 'Достижения', 'Жетістіктер')],
-    ['quests', 'gift', t('Rewards', 'Награды', 'Марапаттар')],
+    ['shop', 'store', t('Shop', 'Магазин', 'Дүкен')],
   ];
   return `<section class="simple-profile mobile-profile" aria-labelledby="mobile-profile-title">
     <header class="simple-profile-heading"><h1 id="mobile-profile-title">${t('Profile', 'Профиль', 'Профиль')}</h1></header>
