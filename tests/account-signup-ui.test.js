@@ -64,7 +64,8 @@ async function accountDialog(hash, responses) {
     submit();
     await drain();
   }
-  return { accountEvents, dialog, document, location, signup, submit, fillCredentials, field, requests };
+  const openProfile = () => vm.runInContext("openAccount('profile')", context);
+  return { accountEvents, dialog, document, location, signup, submit, fillCredentials, field, requests, openProfile };
 }
 
 test('a confirmed signup closes the account dialog and signals home navigation', async () => {
@@ -126,7 +127,7 @@ test('signup keeps the draft available until its failed profile write can be ret
   assert.equal(run.accountEvents.at(-1).detail.reason, 'signup-complete');
 });
 
-test('returning sign-in and a successful ordinary profile retry stay on the profile', async () => {
+test('returning sign-in closes the form and profile confirmations appear above the form', async () => {
   const run = await accountDialog('#signin', [
     { user, profile },
     Response.json({ error: 'Profile temporarily unavailable' }, { status: 503 }),
@@ -137,8 +138,12 @@ test('returning sign-in and a successful ordinary profile retry stay on the prof
   await drain();
   assert.equal(run.requests.at(-1).body.action, 'signin');
   assert.equal(run.accountEvents.at(-1).detail.user.id, user.id);
-  assert.equal(run.dialog.open, true);
+  assert.equal(run.dialog.open, false);
+  assert.equal(run.location.hash, '#discover');
+  assert.match(run.document.querySelector('.account-confirmation-page').textContent, /signed in/);
   assert.notEqual(run.accountEvents.at(-1).detail.reason, 'signup-complete');
+  run.openProfile();
+  assert.equal(run.dialog.open, true);
   run.submit();
   await drain();
   assert.match(run.dialog.querySelector('#account-error').textContent, /temporarily unavailable/);
@@ -146,5 +151,7 @@ test('returning sign-in and a successful ordinary profile retry stay on the prof
   await drain();
   assert.equal(run.requests.at(-1).method, 'PUT');
   assert.equal(run.dialog.open, true);
+  assert.equal(run.dialog.querySelector('#account-notice').textContent, '');
+  assert.match(run.dialog.querySelector('.account-confirmation[role="status"]').textContent, /profile is saved/);
   assert.notEqual(run.accountEvents.at(-1).detail.reason, 'signup-complete');
 });
