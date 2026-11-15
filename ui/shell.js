@@ -193,7 +193,10 @@ export function renderShell(view, state, stats, html, rewards) {
   const guided = html.includes('data-guided-step=');
   const studyLayout = Boolean(desktopLayout.matches && rewards && /class="(?:quiet-home|learning-path course-path|roadmap-layout)/.test(html));
   main.classList.toggle('has-desktop-study', studyLayout);
-  if (studyLayout) html = desktopStudyView(html, { rewards, minutes: state.minutes, signedIn });
+  if (studyLayout) html = desktopStudyView(html, {
+    rewards, minutes: state.minutes, signedIn,
+    studyDays: state.studyDays, lastLessonDay: state.learningRewards?.lastDay,
+  });
   $('#navigation').innerHTML = brandNav(icon, view, 'side', signedIn);
   $('#top-navigation').innerHTML = brandNav(icon, view, 'top', signedIn);
   $('#mobile-navigation').classList.remove('has-roadmap');
