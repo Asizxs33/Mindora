@@ -30,6 +30,19 @@ const create = (body = input, account = 'account-a', origin = 'https://mindora.t
   method: 'POST', headers: { origin, 'content-type': 'application/json', 'X-Mindora-Account': account }, body: JSON.stringify(body),
 });
 
+test('a spreadsheet goal that drifts into Python is regenerated in the requested tool', async () => {
+  const aligned = { ...clarification, directions: clarification.directions.map((item, i) => ({...item, goal: 'Build a spreadsheet report for team ' + (i+1)})) };
+  let calls = 0;
+  const result = await generateDeepSeekClarification({goal:'Make a weekly expense report in a spreadsheet', language:'en',minutes:5},'fixture',async()=>{
+    calls++;
+    const payload = calls === 1 ? { ...aligned, directions: aligned.directions.map(item => ({...item,goal:'Use Python for ' + item.goal})) } : aligned;
+    return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(payload)}}]});
+  });
+  assert.equal(calls,2);
+  assert.deepEqual(result,aligned);
+});
+
+
 test('only a verified matching account with valid answers can invoke roadmap generation', async () => {
   let calls = 0;
   const dependencies = {
