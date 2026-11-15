@@ -122,6 +122,7 @@ export async function accountApi(request, dependencies = {}) {
       const current = await readSession(request, settings);
       cookies = current.cookies;
       if (!current.user) return json({ error: messages.unauthorized, code: 'UNAUTHORIZED' }, 401, cookies);
+      if (!matchesLearningAccount(request, current.user)) return json({ error: 'Аккаунт изменился. Войди снова.', code: 'ACCOUNT_CHANGED' }, 401, cookies);
       const profile = validateProfile(await readBody(request));
       if (!profile) return json({ error: 'Проверь имя, возраст и интересы в профиле.', code: 'INVALID_PROFILE' }, 400, cookies);
       const saved = await store().write(current.user.id, profile);

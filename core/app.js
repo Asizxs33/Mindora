@@ -1,4 +1,4 @@
-import { reportProgress, reportReturnDue, submitReport } from './weekly-report.js';
+import { completedReport, reportProgress, reportReturnDue, submitReport, weeklyReportCsv } from './weekly-report.js';
 import { reportTitle, weeklyReportView } from '../ui/work-skills.js';
 import { plusShopView } from '../ui/shop.js';
 import { checkDemoRound, newDemoRound, validPlan } from './plus-demo.js';
@@ -439,8 +439,9 @@ function certificateSource(kind = certificateKind, id = state.active) {
       store(record) { state.learningRoadmap = { ...path, certificate: record }; save(); } };
   }
   if (kind === 'weekly-report') {
-    const { days } = reportProgress(state.weeklyReport);
-    if (!days.every(day => day.completed)) return null;
+    const report = completedReport(state.weeklyReport);
+    if (!report) return null;
+    const { days } = report;
     const completedAt = new Date(days[1].completedAt);
     return { record: state.certificates[kind], courseTitle: reportTitle(), back: 'weekly-report',
       completedAt: Number.isFinite(completedAt.getTime()) ? completedAt.toISOString() : null,
@@ -843,15 +844,16 @@ function mixPractice() {
   toast('Открыт новый вариант задания.');
 }
 function download(id) {
+  const report = id === 'weekly-report' ? completedReport(state.weeklyReport) : null;
   const work = state.works[id];
-  if (!work) return toast('Заверши этап практики, чтобы сохранить первую работу.');
+  if (!work && !report) return toast('Заверши этап практики, чтобы сохранить первую работу.');
   const isPoster = id === 'design';
-  const content = isPoster ? posterSvg(work.data) : budgetCsv(work.data);
+  const content = report ? weeklyReportCsv(report) : isPoster ? posterSvg(work.data) : budgetCsv(work.data);
   const type = isPoster ? 'image/svg+xml' : 'text/csv;charset=utf-8';
   const url = URL.createObjectURL(new Blob([content], { type }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = isPoster ? 'mindora-poster.svg' : 'mindora-expenses.csv';
+  link.download = report ? 'mindora-weekly-expense-report.csv' : isPoster ? 'mindora-poster.svg' : 'mindora-expenses.csv';
   document.body.append(link);
   link.click();
   link.remove();
@@ -1275,6 +1277,12 @@ document.addEventListener('input', event => {
     return;
   }
   if (input.dataset.note) {
+    if (input.dataset.note === 'weekly-report') {
+      const { progress, save } = weeklyWorkspace();
+      progress.note = input.value.slice(0, 600);
+      save();
+      return;
+    }
     state.notes[input.dataset.note] = input.value;
     save();
     return;

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { readFile } from 'node:fs/promises';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
@@ -12,11 +13,10 @@ try {
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.goto(url, {waitUntil:'domcontentloaded'});
-    await page.locator('[data-view="weekly-report"]:visible').first().waitFor();
-    assert.match(await page.locator('h1:visible').first().innerText(), /work skill/i);
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),false);
-    await page.locator('[data-view="weekly-report"]:visible').first().click();
+    await page.goto(url.replace(/\/$/, '') + '/#weekly-report', {waitUntil:'domcontentloaded'});
+    await page.locator('#weekly-report-form').waitFor();
+    assert.equal(await page.locator('#mindora-account[open]').count(), 0);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     const form = page.locator('#weekly-report-form');
     const formula = form.locator('[name="formula"]');
     const total = form.locator('[name="total"]');
@@ -40,8 +40,32 @@ try {
     await page.reload({waitUntil:'domcontentloaded'});
     assert.match(await page.locator('.report-outcome').innerText(), /\$103.*\$3 over budget/);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),false);
+    await page.locator('.result-actions [data-view="work"]').click();
+    const note = page.locator('[data-note="weekly-report"]');
+    await note.fill('Include the fourth expense. <script>plain text</script>');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.goto(url.replace(/\/$/, '') + '/#weekly-report', { waitUntil: 'domcontentloaded' });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.locator('.result-actions [data-view="work"]').click();
+    assert.equal(await note.inputValue(), 'Include the fourth expense. <script>plain text</script>');
+    const csvReady = page.waitForEvent('download');
+    await page.locator('[data-action="download"][data-id="weekly-report"]').click();
+    const csvDownload = await csvReady;
+    const csv = await readFile(await csvDownload.path(), 'utf8');
+    assert.match(csv, /Total,80,103/);
+    assert.match(csv, /Remaining,20,-3/);
+    assert.match(csv, /Checks used,1,2/);
+    assert.match(csv, /Include the fourth expense/);
+    await page.locator('#main [data-view="weekly-report"]').click();
+    await page.locator('[data-action="certificate"]').click();
+    await page.locator('#certificate-name').fill('Guest Learner');
+    const downloadReady = page.waitForEvent('download');
+    await page.locator('[data-action="download-certificate"]').click();
+    const download = await downloadReady;
+    assert.match(download.suggestedFilename(), /\.svg$/);
+    assert.equal(await download.failure(), null);
     assert.deepEqual(errors, []);
-    console.log('PASS', width, 'px · real browser · two reports, incorrect range, draft and completed result after reload');
+    console.log('PASS', width, 'px · real browser · two reports, incorrect range, draft, project note, CSV and certificate after reload');
     await context.close();
   }
 } finally { await browser.close(); }

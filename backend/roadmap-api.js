@@ -76,7 +76,11 @@ export async function generateDeepSeekRoadmap(input, apiKey, fetcher = fetch, { 
     const raw = await completeJson(attempt ? [...messages, { role: 'user', content: 'The previous syllabus did not meet the required structure. Regenerate only the complete JSON object: curriculumVersion 2, exactly 6 contiguous modules of 4 stages and all 24 unique stages. Give each stage its required kind (lesson, practice, review or mini-project), use all four across the course, and make each objective match its kind. Keep every text within its stated limit. Do not omit level, levelReason, title or outcome.' }] : messages, 8000, apiKey, fetcher, signal);
     const candidate = { ...raw, curriculumVersion: 2, sources, sourceStatus: sources.length ? 'verified' : 'unavailable' };
     const kinds = ['lesson', 'practice', 'review', 'mini-project'];
-    if (normalizeRoadmap(candidate, input) && candidate.stages.every(stage => kinds.includes(stage.kind))
+    // Restoration accepts older course sizes; new generation must honor the
+    // exact curriculum promised in this request before consuming its quota.
+    if (normalizeRoadmap(candidate, input) && candidate.stages.length === 24
+      && candidate.modules.length === 6 && candidate.modules.every(module => module.count === 4)
+      && candidate.stages.every(stage => kinds.includes(stage.kind))
       && kinds.every(kind => candidate.stages.some(stage => stage.kind === kind))
       && candidate.stages[0].kind === 'lesson' && candidate.stages.at(-1).kind === 'mini-project') return candidate;
     signal.throwIfAborted();

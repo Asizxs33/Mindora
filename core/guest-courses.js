@@ -1,6 +1,8 @@
 import { restorePlan } from './learning-plan.js';
 
 export const BROWSER_GUEST = 'browser-guest';
+// A complete curriculum can contain 48 lessons, in addition to saved practice.
+export const GUEST_COURSE_LIMIT = 100;
 
 // Guest courses live only in the existing browser workspace. The account API
 // and its ownership/revision checks remain the network port for signed-in users.
@@ -15,8 +17,8 @@ export function createGuestCourseRequest({ read, write, active, createId = () =>
     const saved = restorePlan(course?.saved);
     if (!saved || !course.id) return false;
     const previous = records();
-    if (!previous.some(item => item.id === course.id) && previous.length >= 40) {
-      throw new Error('This browser already has 40 saved lessons.');
+    if (!previous.some(item => item.id === course.id) && previous.length >= GUEST_COURSE_LIMIT) {
+      throw new Error(`This browser already has ${GUEST_COURSE_LIMIT} saved lessons.`);
     }
     write([{ ...course, saved }, ...previous.filter(item => item.id !== course.id)]);
     return true;

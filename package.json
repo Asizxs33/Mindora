@@ -7,7 +7,8 @@
     "dev": "node server.mjs",
     "start": "node server.mjs",
     "test": "node --test",
-    "check": "node --check core/app.js && node --check core/engine.js && node --check core/budget-session.js && node --check core/progress.js && node --check core/poster.js && node --check ui/dashboard.js && node --check ui/views.js && node --check ui/budget-session.js && node --check ui/shell.js && node --check ui/feedback.js && node --check ui/icons.js && node --check api/account.js && node --check api/budget-draft.js && node --check backend/cloud-api.js && node --check backend/budget-workspace.js && node --check backend/draft-store.js && node --check core/cloud-drafts.js && node --check ui/cloud-drafts.js && node --check server.mjs && node --check scripts/build.mjs && node --check core/resume.js && node --check core/certificate.js && node --check ui/account.js && node --check ui/characters.js && node --check ui/lesson-flow.js && node --check ui/recap.js && node --check ui/certificate.js && node --check backend/profile-store.js"
+    "check": "node scripts/check.mjs",
+    "build": "node scripts/build.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -18,5 +19,13 @@
     "@neondatabase/serverless": "1.2.1",
     "linkedom": "0.18.15",
     "marked": "18.2.0"
+  },
+  "overrides": {
+    "better-auth": "1.7.7",
+    "@better-auth/core": "1.7.7",
+    "@better-auth/oauth-provider": "1.7.7",
+    "@better-auth/passkey": "1.7.7",
+    "zod": "4.6.6",
+    "@better-auth/api-key": "1.7.7"
   }
 }

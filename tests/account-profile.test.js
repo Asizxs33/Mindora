@@ -9,7 +9,7 @@ const profile = { name: 'Alex Learner', age: 29, gender: 'prefer_not_to_say', in
 const account = { id: 'learner-a', name: 'Alex', email: 'alex@example.com' };
 const credentials = { email: account.email, password: 'test-password-123' };
 const request = (method = 'GET', input, headers = {}) => new Request(url, {
-  method, headers: { origin, 'content-type': 'application/json', ...headers },
+  method, headers: { origin, 'content-type': 'application/json', ...(method === 'PUT' ? { 'X-Mindora-Account': account.id } : {}), ...headers },
   ...(input === undefined ? {} : { body: JSON.stringify(input) }),
 });
 
@@ -92,6 +92,24 @@ test('account mutations reject foreign origins, invalid profiles and oversized p
   assert.equal((await h.call(request('PUT', { ...profile, extra: 'x'.repeat(17_000) }))).status, 400);
   assert.equal(h.authCalls.length, 0);
   assert.equal(h.rows.size, 0);
+});
+
+test('a stale profile form cannot overwrite the account signed in through another tab', async () => {
+  const h = harness();
+  const other = { id: 'learner-b', name: 'Other', email: 'other@example.com' };
+  const otherProfile = { ...profile, name: other.name };
+  h.rows.set(other.id, otherProfile);
+  h.user(other);
+  const stale = await h.call(request('PUT', profile));
+  assert.equal(stale.status, 401);
+  assert.equal((await stale.json()).code, 'ACCOUNT_CHANGED');
+  assert.match(stale.headers.get('set-cookie'), /session-cache=fresh/);
+  const missing = request('PUT', profile);
+  missing.headers.delete('X-Mindora-Account');
+  assert.equal((await h.call(missing)).status, 401);
+  assert.deepEqual([...h.rows.entries()], [[other.id, otherProfile]]);
+  const current = await h.call(request('PUT', otherProfile, { 'X-Mindora-Account': other.id }));
+  assert.equal(current.status, 200);
 });
 
 test('signup confirms the new response cookies then persists the profile for that session only', async () => {
