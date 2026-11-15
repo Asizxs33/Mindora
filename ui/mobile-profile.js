@@ -1,8 +1,9 @@
 import { icon } from './icons.js';
 import { t } from './language.js';
 import { timeOptions } from './budget-session.js';
+import { profileLearningPanels } from './workspace-pages.js';
 
-export function mobileProfileView(state, stats) {
+export function mobileProfileView(state, stats, rewardProfile) {
   const tools = [
     ['work', 'work', t('My projects', 'Мои проекты', 'Жобаларым')],
     ['practice', 'edit', t('Practice', 'Практика', 'Жаттығу')],
@@ -33,6 +34,7 @@ export function mobileProfileView(state, stats) {
         <button type="button" class="motion-switch" role="switch" data-character-motion aria-label="${t('Character animations', 'Анимация персонажей', 'Кейіпкерлер анимациясы')}"><span>${t('Animations', 'Анимация', 'Анимация')}</span></button>
       </div>
     </section>
+    ${profileLearningPanels(rewardProfile)}
     <button type="button" class="text-link mobile-profile-about" data-action="about">${icon('leaf', 19)} ${t('About Mindora', 'О Mindora', 'Mindora туралы')} ${icon('arrow', 16)}</button>
   </section>`;
 }

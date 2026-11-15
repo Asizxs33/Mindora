@@ -1,0 +1,125 @@
+.roadmap-rewards { max-width: 960px; margin-inline: auto; }
+.rewards-hero {
+  --page-title: clamp(32px, 4vw, 48px);
+  display: grid;
+  grid-template-columns: minmax(134px, .35fr) minmax(0, 1fr);
+  grid-template-areas: "art copy" "art balance";
+  align-items: center;
+  gap: 16px 26px;
+  padding: 24px 30px 24px 18px;
+  border: 1px solid #ecdfd1;
+  border-radius: 22px;
+  background: #fcf5eb;
+}
+.reward-illustration {
+  display: block;
+  aspect-ratio: 1;
+  background-image: url('./assets/characters/mino-scenes/rewards-shop.webp');
+  background-size: 200% 200%;
+  background-repeat: no-repeat;
+}
+.reward-illustration-trophy { grid-area: art; width: min(100%, 166px); justify-self: center; background-position: 0 0; }
+.reward-illustration-hearts { background-position: 100% 0; }
+.reward-illustration-freeze { background-position: 0 100%; }
+.rewards-hero-copy { grid-area: copy; align-self: end; }
+.rewards-hero-copy p { max-width: 45ch; margin-top: 5px; color: #675649; line-height: 1.45; }
+.rewards-hero .roadmap-metrics { grid-area: balance; align-self: start; margin: 0; gap: 8px; }
+.roadmap-rewards .rewards-hero .roadmap-metrics .roadmap-metric {
+  grid-template-columns: 30px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  justify-items: start;
+  min-height: 64px;
+  padding: 9px 10px;
+  column-gap: 8px;
+  border: 1px solid #eaded0;
+  border-radius: 11px;
+  background: #fffcf8;
+  color: var(--ink);
+  text-align: start;
+}
+.roadmap-rewards .rewards-hero .roadmap-metrics .roadmap-metric > svg { grid-row: 1 / 3; width: 30px; height: 30px; padding: 2px; }
+.roadmap-rewards .rewards-hero .roadmap-metrics .roadmap-metric > strong { font-size: 22px; }
+.roadmap-rewards .rewards-hero .roadmap-metrics .roadmap-metric > span { font-size: 12px; }
+.roadmap-rewards .reward-tabs { margin-top: 16px; }
+.mindora-shop .shop-wallet { margin-block: 14px 10px; font-size: 1.125rem; }
+.reward-shop-card {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 16px 10px 10px;
+  border: 1px solid #eadfd4;
+  border-radius: 15px;
+  background: #fffdfa;
+}
+.reward-shop-art { color: #a34e2a; display: grid; place-items: center; min-height: 74px; border-radius: 10px; background: #f9eee9; }
+.reward-shop-art-freeze, .reward-shop-art-mistake-shield { background: #edf0e7; color: #527052; }
+.reward-shop-art-lesson-bonus { background: #f7eedf; color: #925629; }
+.reward-shop-art .reward-illustration { width: min(100%, 74px); }
+.roadmap-rewards-list .reward-shop-copy h3 { color: var(--ink); font-size: 19px; }
+.roadmap-rewards-list .reward-shop-copy p { margin-top: 3px; color: #675649; font-size: 14px; line-height: 1.45; }
+.reward-shop-state { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 11px; margin-top: 8px; }
+.reward-shop-state small { display: inline-flex; align-items: center; gap: 4px; color: #685447; font-size: 12px; font-weight: 750; }
+.reward-shop-state progress { width: min(100%, 82px); height: 5px; appearance: none; border: 0; border-radius: 10px; background: #ede2d5; }
+.reward-shop-state progress::-webkit-progress-bar { background: #ede2d5; border-radius: 10px; }
+.reward-shop-state progress::-webkit-progress-value { background: #a55d29; border-radius: 10px; }
+.reward-shop-state progress::-moz-progress-bar { background: #a55d29; border-radius: 10px; }
+.reward-shop-card .reward-cost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 76px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid #bc5c27;
+  border-radius: 10px;
+  background: #ad480e;
+  color: #fff;
+  font: 850 18px/1.1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+.reward-shop-card .reward-cost:hover:not(:disabled) { background: #8f3709; }
+.reward-shop-card .reward-cost:disabled { opacity: 1; border-color: #e8dbcc; background: #f6eee4; color: #745a47; }
+.reward-cost:focus-visible, .reward-tabs button:focus-visible { outline: 2px solid #a94410; outline-offset: 3px; }
+.reward-cost svg { flex: none; }
+.reward-cost:not(:disabled) :is(.gem-outline,.gem-facets) { stroke: currentColor; }
+.reward-cost:not(:disabled) .gem-outline { fill: none; }
+.reward-shop-guide {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 17px 19px;
+  border-top: 1px solid #e8ded4;
+  color: #6b5748;
+}
+.reward-shop-guide h2 { color: var(--ink); font-size: 16px; }
+.reward-shop-guide p { margin-top: 3px; font-size: 14px; }
+.reward-shop-guide button { min-height: 44px; }
+.reward-shop-guide > svg { color: #a54d18; }
+@media (max-width: 630px) {
+  .rewards-hero {
+    --page-title: 30px;
+    grid-template-columns: minmax(0, 1fr) 78px;
+    grid-template-areas: "copy art" "balance balance";
+    gap: 10px;
+    padding: 15px 12px;
+    border-radius: 16px;
+  }
+  .rewards-hero-copy p { font-size: 13px; }
+  .roadmap-rewards .reward-tabs button { padding-inline: 4px; min-width: 0; }
+  .roadmap-rewards .reward-tabs button > svg { display: none; }
+  .roadmap-rewards .rewards-hero .roadmap-metrics .roadmap-metric { grid-template-columns: 22px minmax(0, 1fr); min-height: 57px; padding: 6px 4px; column-gap: 3px; }
+  .roadmap-rewards .rewards-hero .roadmap-metrics .roadmap-metric > svg { width: 22px; height: 22px; }
+  .roadmap-rewards .rewards-hero .roadmap-metrics .roadmap-metric > strong { font-size: 17px; }
+  .roadmap-rewards .rewards-hero .roadmap-metrics .roadmap-metric > span { font-size: 10px; overflow-wrap: anywhere; }
+  .reward-shop-card { grid-template-columns: 52px minmax(0, 1fr) auto; gap: 9px; padding: 10px; }
+  .reward-shop-art { min-height: 54px; }
+  .roadmap-rewards-list .reward-shop-copy h3 { font-size: 15px; }
+  .roadmap-rewards-list .reward-shop-copy p { font-size: 12px; }
+  .reward-shop-card .reward-cost { min-width: 55px; padding-inline: 5px; gap: 3px; font-size: 15px; }
+  .reward-shop-card .reward-cost svg { width: 15px; height: 15px; }
+  .reward-shop-guide { grid-template-columns: auto minmax(0, 1fr); padding: 13px 3px; gap: 8px 10px; }
+  .reward-shop-guide button { grid-column: 2; justify-self: start; }
+}

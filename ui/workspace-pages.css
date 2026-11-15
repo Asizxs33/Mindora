@@ -1,0 +1,112 @@
+.learning-workspace-page { max-width: 960px; margin-inline: auto; }
+.workspace-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #eadfd4;
+}
+.workspace-heading h1 { font-size: var(--page-title, clamp(30px, 4vw, 42px)); }
+.workspace-heading p { max-width: 55ch; margin-top: 6px; color: var(--muted); font-size: 16px; line-height: 1.5; }
+.workspace-heading button { flex: none; }
+.projects-heading .projects-character { --character-size: 92px; --character-height: 92px; width: 92px; height: 92px; margin: 0 8px; flex: none; }
+.workspace-section { margin-bottom: 28px; }
+.workspace-section h2 { margin-bottom: 12px; font-size: clamp(18px, 3vw, 22px); }
+.workspace-section-note { margin: -4px 0 14px; color: var(--muted); line-height: 1.5; }
+.workshop-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.workshop-tile {
+  display: grid;
+  grid-template-columns: minmax(76px, .37fr) minmax(0, 1fr);
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid #ecded1;
+  border-radius: 16px;
+  background: #fffdfa;
+}
+.workshop-art { display: grid; place-items: center; padding: 8px; background: #f7ebe2; }
+.workshop-tile-budget .workshop-art { background: #edf0e7; }
+.workshop-art img { width: min(100%, 104px); height: auto; border-radius: 10px; }
+.workshop-copy { display: grid; justify-items: start; gap: 5px; padding: 16px 14px; }
+.workshop-format { color: #755849; font-size: 11px; font-weight: 800; letter-spacing: .07em; }
+.workshop-copy h3 { font-size: 18px; line-height: 1.25; }
+.workshop-copy p { color: var(--muted); font-size: 14px; line-height: 1.45; }
+.workshop-copy button { min-height: 44px; margin-top: 3px; text-align: start; }
+.workshop-labs { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; padding: 0; margin: 0; }
+.workshop-labs li { border-top: 1px solid #ecded1; }
+.workshop-labs button {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 76px;
+  padding: 10px 6px 10px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: start;
+}
+.workshop-labs button:hover { background: #fbf3e9; }
+.workshop-lab-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 9px; background: #f7ecdf; color: #905328; }
+.workshop-labs strong, .workshop-labs small { display: block; }
+.workshop-labs strong { font-size: 15px; }
+.workshop-labs small { margin-top: 3px; color: var(--muted); font-size: 13px; line-height: 1.35; }
+.workshop-labs button > svg { color: #a45120; }
+.learning-workspace-page .lesson-projects { margin-top: 0; }
+.milestones-heading { flex-wrap: nowrap; gap: 8px 20px; }
+.milestones-heading .reward-illustration-trophy { width: clamp(76px, 12vw, 145px); flex: none; }
+.milestones-panel.game-achievements { padding: 17px 20px; border: 1px solid #eddfd1; background: #fffdfa; }
+.milestones-panel .milestone-summary { margin-bottom: 8px; font-weight: 750; }
+.milestones-panel .award {
+  grid-template-columns: 52px minmax(0, 1fr) minmax(160px, .7fr);
+  grid-template-rows: auto auto;
+  align-content: center;
+  padding-block: 13px;
+  border-color: #ecdfd2;
+}
+.milestones-panel .award-icon { width: 50px; height: 50px; border-radius: 14px; background: #faf0df; color: #985a23; }
+.milestones-panel .award-book .award-icon { background: #edf0e7; color: #526a49; }
+.milestones-panel .award-star .award-icon { background: #f6ece6; color: #975b48; }
+.milestones-panel .award small { color: var(--muted); }
+.award-detail { grid-area: 1 / 3 / 3; display: grid; gap: 2px; justify-items: start; }
+.award-progress { display: flex; align-items: center; gap: 8px; width: 100%; font-size: 13px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.award-progress progress { height: 7px; border: 0; border-radius: 10px; background: #eee2d5; flex: 1; min-width: 0; appearance: none; }
+.award-progress progress::-webkit-progress-bar { background: #eee2d5; border-radius: 10px; }
+.award-progress progress::-webkit-progress-value { background: #aa5421; border-radius: 10px; }
+.award-progress progress::-moz-progress-bar { background: #aa5421; border-radius: 10px; }
+.award-detail .text-link { min-height: 44px; text-align: start; }
+.award-completed { display: flex; align-items: center; gap: 5px; min-height: 44px; color: #395939; font-size: 14px; font-weight: 750; }
+.simple-profile .profile-learning-panel { border-color: #ebdfd2; background: #fffdfa; }
+.simple-profile .profile-learning-panel summary { display: flex; justify-content: flex-start; gap: 10px; color: #6b4d37; }
+.profile-learning-panel summary > span { flex: 1; }
+.profile-learning-panel[open] summary > svg:last-child { transform: rotate(180deg); }
+.profile-learning-panel .roadmap-profile { padding-top: 3px; }
+.profile-learning-panel .roadmap-metrics { margin-bottom: 6px; }
+.profile-today { padding-top: 12px; }
+.profile-today-heading { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 0 8px; }
+.profile-today-heading h2 { margin: 0; font-size: 16px; }
+.profile-today-heading button, .profile-continue, .profile-draft-actions button { min-height: 44px; }
+.profile-today ul { margin: 0; padding: 0; list-style: none; }
+.profile-today li + li { border-top: 1px solid #ecded1; }
+.profile-today .roadmap-quest { padding-block: 9px; }
+.profile-today .roadmap-quest .primary { min-height: 44px; }
+.profile-draft-actions { padding: 0 16px 6px; }
+@media (max-width: 620px) {
+  .workspace-heading { padding-bottom: 14px; margin-bottom: 18px; }
+  .workspace-heading p, .workspace-section-note { font-size: 14px; }
+  .projects-heading:has(.projects-character) { flex-wrap: nowrap; }
+  .projects-heading .projects-character { --character-size: 68px; --character-height: 68px; width: 68px; height: 68px; margin: 0; }
+  .workshop-grid, .workshop-labs { grid-template-columns: minmax(0, 1fr); }
+  .workshop-tile { grid-template-columns: 84px minmax(0, 1fr); }
+  .workshop-copy { padding: 13px 12px; }
+  .milestones-panel.game-achievements { padding: 13px 14px; }
+  .milestones-panel .award { grid-template-columns: 43px minmax(0, 1fr); gap: 4px 10px; }
+  .milestones-panel .award-icon { width: 42px; height: 42px; }
+  .award-detail { grid-area: 3 / 2; margin-top: 7px; }
+  .profile-today .roadmap-quest { grid-template-columns: auto minmax(0, 1fr); }
+  .profile-today .roadmap-quest > :last-child:nth-child(3) { grid-column: 2; justify-self: start; }
+}

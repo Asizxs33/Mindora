@@ -1,6 +1,8 @@
 import { reportEntry, workAudience, workHeadline } from './work-skills.js';
 import { mobileProfileView } from './mobile-profile.js';
+import { practiceView, profileLearningPanels } from './workspace-pages.js';
 import { COURSES, escapeHtml } from '../core/engine.js';
+import { rewardScreen } from '../core/roadmap-rewards.js';
 import { resumeCursor } from '../core/resume.js';
 import { learningStats, learningStepIndex } from '../core/progress.js';
 import { icon } from './icons.js';
@@ -251,30 +253,43 @@ export function pageBanner(title, description, mood = 'study') {
 }
 
 export function achievementsCard(state, stats, icon, full = false) {
+  const rewards = rewardScreen(state.learningRewards);
   const awards = [
-    ['flame', t("Keep going", "Продолжай", "Жалғастыр"), t("Learn 5 days in a row", "Учись 5 дней подряд", "5 күн қатарынан оқы"), stats.streak >= 5],
-    ['book', t("Curious mind", "Любознательный ученик", "Ізденімпаз оқушы"), t("Complete 4 learning steps", "Пройди 4 этапа", "4 кезеңді аяқта"), stats.total >= 4],
-    ['star', t("Independent maker", "Самостоятельный автор", "Өздік жұмыс авторы"), t("Finish 2 projects on your own", "Заверши 2 самостоятельные работы", "2 өздік жұмысты аяқта"), Object.values(state.works).filter(work => work.challenge).length >= 2],
+    ['flame', t('Keep going', 'Продолжай', 'Жалғастыр'),
+      t('Learn 5 days in a row', 'Учись 5 дней подряд', '5 күн қатарынан оқы'),
+      Math.max(stats.streak, rewards.streak), 5, 'my-path', t('Open my path', 'Открыть мой путь', 'Оқу жолымды ашу')],
+    ['book', t('Curious mind', 'Любознательный ученик', 'Ізденімпаз оқушы'),
+      t('Complete 4 learning steps', 'Заверши 4 этапа обучения', 'Оқудың 4 кезеңін аяқта'),
+      stats.total + rewards.lessons, 4, 'courses', t('Open my courses', 'Открыть мои курсы', 'Курстарымды ашу')],
+    ['star', t('Independent maker', 'Самостоятельный автор', 'Өздік жұмыс авторы'),
+      t('Finish 2 projects on your own', 'Заверши 2 самостоятельные работы', '2 өздік жұмысты аяқта'),
+      Object.values(state.works).filter(work => work.challenge).length, 2, 'practice', t('Choose a project', 'Выбрать работу', 'Жұмыс таңдау')],
   ];
-  return `<section class="game-card game-achievements">
+  const earnedCount = awards.filter(([, , , count, target]) => count >= target).length;
+  return `<section class="game-card game-achievements${full ? ' milestones-panel' : ''}">
     ${full ? '' : `<div class="game-card-top"><h2>${t("Milestones", "Достижения", "Жетістіктер")}</h2><button class="text-link" data-action="achievements">${t("See all", "Посмотреть все", "Барлығын көру")} ${icon('arrow', 16)}</button></div>`}
-    <p class="milestone-summary">${t(`${awards.filter(([, , , earned]) => earned).length} of ${awards.length} badges earned`, `Получено ${awards.filter(([, , , earned]) => earned).length} из ${awards.length} наград`, `${awards.length} марапаттың ${awards.filter(([, , , earned]) => earned).length} алынды`)}</p>
-    <div class="awards">${awards.map(([symbol, title, detail, earned]) => `<div class="award ${earned ? 'earned' : ''}"><span class="award-icon">${icon(symbol, 27)}</span><strong>${title}</strong><small>${earned ? t("Earned", "Получено", "Алдың") : detail}</small></div>`).join('')}</div>
+    <p class="milestone-summary">${t(`${earnedCount} of ${awards.length} badges earned`, `Получено ${earnedCount} из ${awards.length} наград`, `${awards.length} марапаттың ${earnedCount} алынды`)}</p>
+    <div class="awards">${awards.map(([symbol, title, detail, count, target, next, label]) => {
+      const earned = count >= target;
+      return `<div class="award award-${symbol}${earned ? ' earned' : ''}"><span class="award-icon">${icon(symbol, 27)}</span><strong>${title}</strong>
+        <small>${full || !earned ? detail : t('Earned', 'Получено', 'Алдың')}</small>
+        ${full ? `<div class="award-detail"><div class="award-progress"><progress value="${Math.min(count, target)}" max="${target}" aria-label="${title}"></progress><span>${Math.min(count, target)} / ${target}</span></div>
+          ${earned ? `<span class="award-completed">${icon('check', 17)} ${t('Earned', 'Получено', 'Алдың')}</span>` : `<button type="button" class="text-link" data-view="${next}">${label} ${icon('arrow', 17)}</button>`}</div>` : ''}</div>`;
+    }).join('')}</div>
   </section>`;
 }
 
 export function sidePage(view, state, rewardProfile = '') {
   const stats = learningStats(state);
-  if (view === 'practice') {
-    return `${pageBanner(t("Practice", "Практика", "Жаттығу"), t("Put your new skills to work.", "Примени новые навыки.", "Жаңа дағдыларыңды қолдан."))}
-      <div class="course-grid">${Object.keys(COURSES).map(id => {
-        return `<section class="game-card practice-tile ${id}"><span class="course-symbol">${icon(id === 'design' ? 'palette' : 'sheet', 26)}</span><h2>${courseNames[id]}</h2><button class="primary" data-action="practice" data-id="${id}">${t("Practise", "Начать практику", "Жаттығуды бастау")} ${icon('arrow', 18)}</button></section>`;
-      }).join('')}</div>`;
-  }
-  if (view === 'achievements') return `${pageBanner(t("Milestones", "Достижения", "Жетістіктер"), t("See what you’ve achieved.", "Посмотри на свои достижения.", "Жетістіктеріңді көр."), 'cheer')}${achievementsCard(state, stats, icon, true)}`;
+  if (view === 'practice') return practiceView(state);
+  if (view === 'achievements') return `<div class="learning-workspace-page">
+    <header class="workspace-heading milestones-heading"><div><h1>${t('Milestones', 'Достижения', 'Жетістіктер')}</h1>
+      <p>${t('Track your study streak, finished lessons and independent projects.', 'Следи за серией занятий, пройденными этапами и самостоятельными работами.', 'Оқу сериясын, аяқталған сабақтарды және өздік жұмыстарды бақыла.')}</p></div>
+      <span class="reward-illustration reward-illustration-trophy" aria-hidden="true"></span>
+    </header>${achievementsCard(state, stats, icon, true)}</div>`;
   if (view === 'community') return `${pageBanner(t("Learning, together.", "Сообщество", "Қауымдастық"), t("A little space for curious people.", "Место для общения учеников.", "Оқушылардың араласатын орны."))}<section class="game-card community-preview"><span class="course-symbol">${icon('users', 28)}</span><h2>${t("Our community is still growing.", "Сообщество в разработке.", "Қауымдастық әзірленіп жатыр.")}</h2><p>${t("Sharing and discussions aren’t available yet. For now, keep your projects in My projects.", "Готовые проекты доступны в разделе «Мои проекты».", "Дайын жобалар «Жобаларым» бөлімінде.")}</p><button class="secondary" data-view="work">${t("See my projects", "Мои проекты", "Жобаларым")} ${icon('arrow', 18)}</button></section>`;
   if (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 920px)').matches) {
-    return mobileProfileView(state, stats);
+    return mobileProfileView(state, stats, rewardProfile);
   }
   return `<div class="simple-profile"><header class="simple-profile-heading"><h1>${t('Profile', 'Профиль', 'Профиль')}</h1><span>${t('Your learning, your pace.', 'Учись в своём темпе.', 'Өз қарқыныңмен үйрен.')}</span></header>
     <section class="account-profile-card" data-account-summary><span class="profile-avatar" aria-hidden="true">${icon('user', 25)}</span><h2 data-account-name>${t("Make yourself at home", "Добро пожаловать", "Қош келдің")}</h2><p data-account-description>${t("Create your profile and choose what you enjoy.", "Создай профиль и выбери, что тебе интересно.", "Профиль жасап, қызығушылығыңды таңда.")}</p><button class="secondary" data-account-open="signup">${t("Create account", "Создать аккаунт", "Аккаунт жасау")}</button><button class="text-link" data-account-secondary data-account-open="signin">${t("Already a member? Sign in", "Уже есть аккаунт? Войти", "Аккаунтың бар ма? Кіру")}</button><button type="button" class="secondary profile-signout" data-account-signout hidden>${icon('logout', 18)}<span>${t("Sign out", "Выйти", "Шығу")}</span></button></section>
@@ -282,7 +297,6 @@ export function sidePage(view, state, rewardProfile = '') {
     <section class="profile-settings"><span class="profile-link-icon">${icon('clock', 22)}</span><div><h2>${t("Daily learning time", "Время на обучение", "Оқу уақыты")}</h2></div><label class="visually-hidden" for="profile-minutes">${t("Daily learning time", "Время на обучение", "Оқу уақыты")}</label><select class="profile-select" id="profile-minutes">${timeOptions(state.minutes)}</select></section>
     <section class="profile-settings motion-preference"><span class="profile-link-icon">${icon('play', 22)}</span><div><h2>${t("Character motion", "Анимация персонажей", "Кейіпкер анимациясы")}</h2><small data-character-motion-status></small></div><button type="button" class="motion-switch" role="switch" data-character-motion aria-label="${t("Character motion", "Анимация персонажей", "Кейіпкер анимациясы")}"><span data-character-motion-label>${t("Character motion", "Анимация персонажей", "Кейіпкер анимациясы")}</span></button></section>
     <nav class="profile-links" aria-label="${t("Learning tools", "Инструменты обучения", "Оқу құралдары")}">${[['work', 'work', t('My projects', 'Мои проекты', 'Жобаларым')], ['practice', 'edit', t("Practice", "Практика", "Жаттығу")], ['achievements', 'trophy', t("Milestones", "Достижения", "Жетістіктер")]].map(([target, symbol, title]) => `<button data-view="${target}"><span class="profile-link-icon">${icon(symbol, 23)}</span><span><strong>${title}</strong></span>${icon('arrow', 18)}</button>`).join('')}<button data-action="about"><span class="profile-link-icon">${icon('leaf', 23)}</span><span><strong>${t("About Mindora", "О Mindora", "Mindora туралы")}</strong></span>${icon('arrow', 18)}</button></nav>
-    ${rewardProfile ? `<details class="profile-rewards"><summary>${t('Learning activity', 'Учебная активность', 'Оқу белсенділігі')}${icon('chevron', 18)}</summary>${rewardProfile}</details>` : ''}
-    <details class="profile-draft"><summary>${icon('sheet', 20)}<span>${t('Spreadsheet draft', 'Черновик таблицы', 'Кесте нобайы')}</span>${icon('chevron', 18)}</summary><section class="game-card simple-panel" data-cloud-panel="profile"></section></details>
+    ${profileLearningPanels(rewardProfile)}
     </div>`;
 }
