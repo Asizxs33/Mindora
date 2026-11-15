@@ -1,80 +1,111 @@
+<p align="center">
+  <img src="./ui/assets/brand-mark.svg" width="96" alt="Мино, маскот Mindora">
+</p>
+
 # Mindora
 
-**Learn it. Make it yours.**
+Mindora помогает взрослым, которые совмещают работу, семью и учёбу, осваивать практические навыки короткими занятиями. Выбери готовый курс или опиши свою цель. Выдели **5, 10 или 20 минут на занятие**, выполни упражнение и постепенно собери результат, которым сможешь пользоваться.
 
-Mindora helps busy adults turn a learning goal into a practical result. Choose something to make, work through short explanations and interactive exercises, create your own work, and apply the skill to a fresh challenge.
+Проект создан для трека **Skills** Business Cup 2.0. Основная аудитория — работающие взрослые 25–45 лет в США.
 
-This repository contains a working **interactive product prototype**, not a universal AI learning service. It includes two bounded sample curricula: visual design and everyday spreadsheets.
+[Открыть Mindora](https://mindora-livid-eta.vercel.app/welcome) · [Попробовать практику без входа](https://mindora-livid-eta.vercel.app/#weekly-report) · [Локальный запуск](#локальный-запуск)
 
-## Try it
+<img src="./docs/screenshots/welcome.png" width="950" alt="Главная страница Mindora с маскотом Мино и готовыми мини-курсами">
 
-[Open Mindora on Vercel](https://mindora-livid-eta.vercel.app/).
+## Быстрый старт
 
-Guest lessons run without an account. Install the locked backend dependencies before starting locally.
+### Без регистрации
+
+1. Открой [«Еженедельный отчёт о расходах»](https://mindora-livid-eta.vercel.app/#weekly-report). Форма упражнения открывается сразу.
+2. Посчитай расходы формулой, укажи вывод по бюджету и нажми **«Проверить отчёт»**. Затем выбери **«Открыть неделю 2»** и примени тот же навык на других данных.
+3. После обоих заданий открой **«Сертификат курса»**. Введи имя для сертификата и скачай SVG.
+
+Чтобы выбрать другую тему, открой [главную страницу](https://mindora-livid-eta.vercel.app/welcome), нажми «Создать бесплатный курс» и выбери **«Продолжить без аккаунта»**. Готовые мини-курсы доступны в разделе **«Мои курсы»**.
+
+### Общий тестовый аккаунт
+
+На [главной странице](https://mindora-livid-eta.vercel.app/welcome) нажми **«У меня уже есть аккаунт»**. Используй данные из таблицы.
+
+| Поле | Данные |
+| --- | --- |
+| Почта | `mindora-browser-1794689182140@example.com` |
+| Пароль | `Mino-QA-33b8311e-c218-4d6a-ad3e-23a93637e23a` |
+
+Это общий демонстрационный аккаунт, поэтому в нём могут быть курсы и результаты других участников. Для личного прогресса используй свой аккаунт или гостевой режим.
+
+## Как устроено обучение
+
+1. **Цель и уровень.** В разделе «Мои курсы» выбери готовый мини-курс или нажми **«Создать курс»**. Если цель широкая, Mindora предложит уточнить, чему именно ты хочешь научиться и какой опыт уже есть.
+2. **Карта курса.** Для персональной цели Mindora составляет маршрут из занятий, практик, повторений и мини-проектов. Сначала можно посмотреть весь путь. Конкретное занятие готовится при открытии его этапа.
+3. **Практика в браузере.** Занятие включает объяснение, пример и задание. В SQL можно написать запрос и увидеть строки результата, в курсе по таблицам — проверить формулу, а в дизайне — собрать собственный постер. Для заданий с разбором ИИ Mindora предлагает конкретный следующий шаг.
+4. **Возврат к занятиям.** Маршрут и задания можно снова открыть из **«Моих курсов»**. Гостевой прогресс хранится в браузере. С аккаунтом курсы и поддерживаемый прогресс синхронизируются между устройствами.
+5. **Результат.** Готовые работы доступны в **«Моих проектах»**. После полного курса появляется именной **сертификат Mindora** в SVG. Сертификат можно повторно открыть из сохранённого курса.
+
+<img src="./docs/screenshots/learning-path.png" width="940" alt="Карта мини-курса Mindora с последовательностью этапов, наставником и заданиями дня">
+
+## Что можно попробовать
+
+| Раздел | Что в нём делать |
+| --- | --- |
+| **Мои курсы** | Открыть персональный путь или готовый мини-курс. Есть SQL, Python, английский, дизайн, рабочие таблицы и другие темы. |
+| **Практика** | Сделать первый постер или таблицу расходов, собрать недельный отчёт, попробовать код, рисование или график. |
+| **Мои проекты** | Открыть выполненные работы. Например, постер можно скачать в SVG, таблицу расходов — в CSV. |
+| **Профиль и достижения** | Настроить темп, открыть учебную активность или черновик таблицы и посмотреть прогресс к достижениям. |
+| **Награды** | Выполнить задания дня, получить алмазы и обменять их на бонусы, в том числе жизни и заморозку серии. |
+| **Mindora Plus** | Пройти демо-покупку с итогом **$0**, сменить тариф и увидеть его в профиле. Бейдж **Plus · Демо** остаётся в том же браузере после перезагрузки. |
+
+Интерфейс доступен на **русском, английском и казахском**. У персонального курса можно отдельно выбрать язык обучения. Mindora работает в браузере на компьютере и телефоне.
+
+<p>
+  <img src="./docs/screenshots/rewards-mobile.png" width="285" alt="Мобильный раздел наград с Мино, балансом и магазином">
+  <img src="./docs/screenshots/certificate.png" width="590" alt="Образец сертификата Mindora за SQL с демонстрационным именем">
+</p>
+
+## Как Mindora готовит персональный курс
+
+Сервер использует DeepSeek для уточнения цели, составления карты и разбора ответов. При подготовке занятий Mindora ищет открытые учебные материалы и примеры из GitHub, затем составляет объяснение и отдельные практические задания. Если у источника есть подходящая иллюстрация, она отображается в уроке с указанием источника. Детали поиска и обработки материалов описаны в [документации учебных инструментов](docs/COURSE-TOOLS.md).
+
+В текущей демо-сборке доступен **один персональный путь на аккаунт или гостевой браузер**. Готовые мини-курсы доступны отдельно.
+
+## Локальный запуск
+
+Понадобится **Node.js 22** и npm.
 
 ```sh
+git clone https://github.com/Asizxs33/Mindora.git
+cd Mindora
 npm ci
 npm start
 ```
 
-Open the printed local URL, normally `http://127.0.0.1:4173`.
+Открой [локальную Mindora](http://127.0.0.1:4173/welcome). Встроенные занятия и гостевая практика доступны локально сразу. Для входа, синхронизации и генерации добавь нужные серверные переменные окружения.
 
-## Included
+| Переменная | Назначение |
+| --- | --- |
+| `DATABASE_URL` | Подключение к Neon Postgres для хранения аккаунтов и учебного прогресса. |
+| `NEON_AUTH_BASE_URL` | Адрес Neon Auth. |
+| `NEON_AUTH_COOKIE_SECRET` | Секрет сессии Neon Auth длиной от 32 символов. |
+| `DEEPSEEK_API_KEY` | Серверный ключ для персональных курсов и разбора заданий. |
 
-- Goal input with explicit matching to the two supported sample paths; unsupported goals are explained honestly.
-- A daily time preference and a four-step learning path with prerequisite locks.
-- Short lessons and three-question practice with useful feedback on incorrect answers.
-- A live poster editor with text, typography, paper, and ink controls.
-- Transparent checks for nonempty copy, hierarchy, contrast, and a call to action. These checks do not assess creative quality or semantic accuracy.
-- A spreadsheet exercise with editable expenses, a safe `SUM(B2:B4)` formula check, and a numerical answer check.
-- A fresh independent challenge and variations of unlocked exercises.
-- Device-local progress, saved creations, learning notes, and SVG / CSV downloads.
-- Responsive layout, keyboard focus indicators, labelled controls, and reduced-motion support.
-- A Russian interface with an illustrated learning map, local XP, achievements, and a daily activity streak.
+Для публикации на Vercel выбери preset **Other**, задай переменные в окружении проекта и используй производственную ветку `main`. Команда сборки и каталог `dist` заданы в [vercel.json](vercel.json). Ключи сервисов хранятся в настройках окружения.
 
-## Product vision and limits
+## Структура репозитория
 
-The prototype includes two curated courses, signed-in budget draft sync, and a DeepSeek learning-plan integration that needs a server API key. The budget course and generated lessons adapt to 5, 10 or 20 minutes. Community discussions, payments, and cloud sync for generated plans are outside this slice.
+| Путь | Что внутри |
+| --- | --- |
+| [ui/](ui/) | Экраны, адаптивные стили, Мино, иллюстрации курсов и [лицензия иконок Lucide](ui/assets/LUCIDE-LICENSE.txt). |
+| [core/](core/) | Навигация, учебные сценарии, проверка ответов, прогресс и экспорт файлов. |
+| [api/](api/) и [backend/](backend/) | Вход через Neon Auth, сохранение в Neon Postgres, генерация курсов и обратная связь. |
+| [tests/](tests/) и [scripts/](scripts/) | Модульные проверки, браузерные сценарии и сборка. |
 
-The research agent also reads public articles and GitHub Markdown through Readability, LinkeDOM and Marked, then selects available source illustrations by ID. Generated lessons contain original practice and a separate independent task. See [course tools and limits](docs/COURSE-TOOLS.md) for the integrations, licenses, safety boundaries and evaluated alternatives. These tools need no additional API key.
-
-Browser storage is local to a device and origin. Clearing site data removes progress. Export creations to keep separate copies. A completed path records practice, not an accredited qualification or an expert assessment.
-
-## Files
-
-- `ui/`: page templates, responsive styles, [Lucide](https://lucide.dev/icons/) icons and capybara illustrations. The icon license is in `ui/assets/LUCIDE-LICENSE.txt`.
-- `core/`: navigation and event handling, courses, validation, progress, persistence and export.
-- `api/` and `backend/`: Neon Auth sessions and server-side storage for signed-in budget drafts.
-- `tests/`: validation tests that run without a browser or network.
-- `server.mjs`: local static preview server.
-
-See the [team guide](docs/TEAM.md) and [Codex prompt for design work](docs/CODEX-DESIGN-PROMPT.md).
-
-The [guided learning guide](docs/GUIDED-LEARNING.md) covers the simplified character-led entry, saved-place continuation, first-attempt return review, and reusable lesson scenes, including persistence and backend limits.
-
-## Verification
+### Проверки
 
 ```sh
-npm test
 npm run check
+npm test
+node scripts/build.mjs
 ```
 
-Checks cover unsupported goals, contrast, incomplete and malformed work, strict formula parsing, numerical validation, reproducible challenge variation, HTML/SVG escaping, and curriculum shape.
+Для [браузерного сценария](scripts/verify-public-browser.mjs) нужны Playwright и Chrome. Запусти сайт, укажи его адрес в `MINDORA_URL` и выполни `node scripts/verify-public-browser.mjs`. Если Playwright установлен отдельно, укажи путь к пакету в `PLAYWRIGHT_MODULE`.
 
-## Deploy
-
-Use the **Other** preset. `vercel.json` installs the locked dependencies and builds the browser files into `dist`. Vercel handles the API routes separately. The production branch is `main`.
-
-The draft sync preview uses a Neon Postgres database with Neon Auth. Connect the database to the intended Vercel environment and set a sensitive `NEON_AUTH_COOKIE_SECRET` (at least 32 random characters). The integration sets `DATABASE_URL` and `NEON_AUTH_BASE_URL`. Preview and Production can use separate Neon databases. The first authenticated draft request creates the table. Draft reads and writes are scoped to the verified session ID, and version checks prevent an unnoticed overwrite.
-
-On the site, open **Профиль** to create an account or sign in. In the budget editor click **Сохранить в аккаунте**. On another device, sign in at the same site and click **Открыть из аккаунта** in the profile. This transfers budget drafts and the open stage. Finished projects, poster work and notes remain local.
-
-Account onboarding saves the learner's name and optional age, gender and interests in `public.mindora_profiles`, created on the first authenticated profile request. Reads and updates use the verified Neon session's user ID. A signup that still needs email verification does not claim an active session or saved profile; an authenticated profile-save failure keeps the session and allows a separate retry. Profile storage uses the same server database connection and requires no additional environment variable.
-
-For AI learning plans, add `DEEPSEEK_API_KEY` as a **Sensitive** server environment variable on the intended Vercel environment, then redeploy the branch. For this integrated preview, use the `feat/learning-experience` branch filter if supported. `DATABASE_URL` is required for the shared quota (10 requests per IP and 100 total per UTC day for that database). The first request creates the quota table. Never add the secret to a frontend file. Without a key, the page shows the unavailable state and offers ready-made courses.
-
-From the home page, enter a goal and choose 5, 10, or 20 minutes. DeepSeek Flash plans searches for public materials and GitHub examples. The [Search & Fetch API](https://api-docs.deepseek.com/guides/search/) supplies page content before a separate call creates the lesson and original practice tasks. Mindora only links to search results with readable content. DeepSeek [uses thinking mode](https://api-docs.deepseek.com/guides/thinking_mode/) to review each submission and suggest a follow-up action. The final step uses an independent task and its result screen shows the submitted work and feedback or self-check criterion. Plan generation and reviews share the same quota.
-
-The header language selector offers English, Russian, and Kazakh. New lessons and reviews use the language selected when the lesson starts. Saved lessons and answers stay in their original language. Browser storage keeps the selected language, current route, and feedback.
-
-Google Fonts supplies Nunito when available; a system-font fallback is provided. No analytics or tracking scripts are included.
+Для работы в команде смотри [руководство по веткам и контракту UI](docs/TEAM.md) и [шаблон задачи для Codex-дизайнера](docs/CODEX-DESIGN-PROMPT.md).
