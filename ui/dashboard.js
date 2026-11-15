@@ -90,6 +90,11 @@ export function courseHomeView(state, { current = null, libraryHtml = '', readyH
       <input id="goal-input" name="goal" value="${escapeHtml(state.homeGoal || '')}" placeholder="${t('For example, make my first video', 'Например, сделать первое видео', 'Мысалы, алғашқы видеомды жасау')}" minlength="3" maxlength="180" required autocomplete="off" enterkeyhint="go">
       <div class="course-home-form-actions"><label class="course-home-time" for="time-select"><span>${t('Per lesson', 'На занятие', 'Бір сабаққа')}</span><select id="time-select" name="minutes">${[5, 10, 20].map(value => `<option value="${value}"${value === state.minutes ? ' selected' : ''}>${value} ${t('min', 'мин', 'мин')}</option>`).join('')}</select></label><button type="submit" class="primary">${t('Create a path', 'Создать путь', 'Оқу жолын құру')}${icon('arrow', 18)}</button></div>
     </form>
+    <ol class="course-home-method" aria-label="${t('How your lessons work', 'Как устроены занятия', 'Сабақтар қалай өтеді')}">
+      <li>${icon('book', 18)}<span>${t('Short explanations', 'Короткие объяснения', 'Қысқа түсіндірмелер')}</span></li>
+      <li>${icon('target', 18)}<span>${t('Examples & practice', 'Примеры и практика', 'Мысал мен жаттығу')}</span></li>
+      <li>${icon('path', 18)}<span>${t('Resume anytime', 'Продолжай в удобное время', 'Кез келген уақытта жалғастыр')}</span></li>
+    </ol>
     ${composerOnly ? '' : `<div class="course-home-shortcuts topic-shortcuts">
       <button type="button" class="topic-shortcut" data-course="design" data-course-path>${icon('palette', 18)} ${t('Make a poster', 'Сделать постер', 'Постер жасау')}</button>
       <button type="button" class="topic-shortcut" data-course="budget" data-course-path>${icon('sheet', 18)} ${t('Learn spreadsheets', 'Изучить таблицы', 'Кестелерді үйрену')}</button>

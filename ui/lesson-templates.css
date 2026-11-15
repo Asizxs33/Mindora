@@ -3,7 +3,7 @@
 .lesson-template { min-width: 0; overflow-wrap: anywhere; }
 .lesson-template > .ai-lesson-mentor { margin-top: 0; }
 .template-theory { display: flex; flex-direction: column; }
-.template-theory > .ai-lesson-mentor { order: -1; }
+.template-theory > .ai-lesson-mentor { order: 0; }
 .lesson-template .template-check { width: 100%; margin-top: 24px; }
 .template-explanation { padding: 16px 20px; background: #fff4e9; border-left: 3px solid #bc4b00; border-radius: 0 12px 12px 0; }
 .template-order, .template-recap { list-style: none; padding: 0; margin: 22px 0; display: grid; gap: 12px; }

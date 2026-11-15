@@ -40,6 +40,9 @@ const list = value => Array.isArray(value) ? value : [];
 const text = value => esc(String(value ?? ''));
 const heading = value => value ? `<h3>${text(value)}</h3>` : '';
 const disabled = value => value ? ' disabled' : '';
+// Preserve paragraphs and line breaks without interpreting model text as HTML.
+const readingText = value => String(value ?? '').split(/\n\s*\n/).filter(part => part.trim())
+  .map(part => `<p>${text(part).replace(/\n/g, '<br>')}</p>`).join('');
 
 function sourceFigures(images) {
   return images.map(image => {
@@ -120,13 +123,14 @@ export function renderLessonTemplate(block, state = {}, { external = false, ment
   const hint = state.checked && block.explanation ? block.explanation : hints[type] || '';
   const scene = prompt || block.intro ? mentorScene(speaker, sceneMood ?? mood, `${heading(prompt)}${block.intro ? `<p>${text(block.intro)}</p>` : ''}`, '', { hint, focus: t('Show me', 'Покажи', 'Көрсетші') }) : '';
   let content = '';
-  if (type === 'theory') content = `<div class="ai-lesson-instruction learning-answer">${text(block.body)}</div>${sourceFigures(list(block.images))}`;
+  if (type === 'theory') content = `<div class="ai-lesson-instruction learning-answer">${readingText(block.body)}</div>${sourceFigures(list(block.images))}`;
   if (type === 'illustration') {
     const images = block.image ? [block.image] : list(block.images);
     content = `${images.length ? sourceFigures(images) : renderLearningScene(block.scene)}${block.body ? `<div class="ai-lesson-instruction learning-answer">${text(block.body)}</div>` : ''}`;
   }
   if (type === 'comparison') {
-    const example = `<div class="ai-lesson-example"><section class="ai-lesson-example-input">${heading(block.beforeLabel || t('Starting point', 'Исходные данные', 'Бастапқы деректер'))}<div class="learning-answer">${text(block.before)}</div></section><section class="ai-lesson-example-output">${heading(block.afterLabel || t('Worked result', 'Готовый результат', 'Дайын нәтиже'))}<div class="learning-answer">${text(block.after)}</div></section></div>`;
+    const exampleText = value => block.codeExample ? `<pre class="lesson-example-code"><code>${text(value)}</code></pre>` : `<div class="learning-answer">${text(value)}</div>`;
+    const example = `<div class="ai-lesson-example${block.codeExample ? ' is-code-example' : ''}"><section class="ai-lesson-example-input">${heading(block.beforeLabel || t('Starting point', 'Исходные данные', 'Бастапқы деректер'))}${exampleText(block.before)}</section><section class="ai-lesson-example-output">${heading(block.afterLabel || t('Worked result', 'Готовый результат', 'Дайын нәтиже'))}${exampleText(block.after)}</section></div>`;
     content = `${block.sceneFrame ? learningSceneFrame(block.sceneFrame, example) : example}${block.explanation && block.explanation !== block.intro ? `<p class="template-explanation">${text(block.explanation)}</p>` : ''}`;
   }
   if (type === 'choice' || type === 'multi-choice') {
@@ -170,7 +174,7 @@ export function renderLessonTemplate(block, state = {}, { external = false, ment
   const feedback = !external && state.checked ? `<div class="ai-lesson-check-feedback${state.correct ? ' is-correct' : ''}" role="status"><strong>${type === 'practice' ? t('Your draft is ready.', 'Черновик готов.', 'Нобайың дайын.') : state.correct ? t('That’s right.', 'Верно.', 'Дұрыс.') : t('Let’s try that again.', 'Попробуем ещё раз.', 'Қайта байқап көрейік.')}</strong><p>${text(type === 'practice' ? block.criterion : block.explanation)}</p></div>` : '';
   const check = !external && interactive ? `<button class="primary template-check" type="button" data-template-check${disabled(busy || !canCheckTemplate(block, state) || state.correct === true)}>${type === 'practice' ? t('Keep my draft', 'Сохранить черновик', 'Нобайды сақтау') : t('Check answer', 'Проверить ответ', 'Жауапты тексеру')} ${icon('arrow', 18)}</button>` : '';
   const material = `<div class="mentor-material" data-mentor-target>${content}</div>`;
-  return `<section class="lesson-template template-${type}" data-lesson-template="${type}">${type === 'theory' ? material + scene : scene + material}${feedback}${check}</section>`;
+  return `<section class="lesson-template template-${type}" data-lesson-template="${type}">${['theory', 'comparison', 'recap'].includes(type) ? material + scene : scene + material}${feedback}${check}</section>`;
 }
 
 export function canCheckTemplate(block, state) {
