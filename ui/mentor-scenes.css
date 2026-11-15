@@ -1,3 +1,8 @@
+.lesson-reference { margin: 16px 0; min-width: 0; }
+.lesson-reference img { display: block; width: auto; max-width: 100%; height: auto; max-height: 320px; margin: 0 auto; border-radius: 8px; object-fit: contain; }
+.lesson-reference figcaption { max-width: 58ch; margin: 9px auto 0; color: var(--muted); font-size: 15px; line-height: 1.45; }
+.lesson-reference a { color: inherit; font-size: .9em; text-underline-offset: 2px; }
+
 /* Large, full-body tutors and readable speech share one stage on every topic. */
 .mentor-scene { display:grid; grid-template-columns:150px minmax(0,1fr); gap:0 20px; align-items:center; margin:16px 0 20px; position:relative; }
 .mentor-figure { position:relative; display:grid; place-items:center; align-self:center; min-width:0; }

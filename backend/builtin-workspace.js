@@ -63,7 +63,10 @@ function session(value, id) {
   if (!integer(lastSeen, 8_640_000_000_000_000) || !integer(step, 3) || !integer(page, 2)
     || !SESSION_MINUTES.includes(minutes) || !integer(quizIndex, id === 'budget' ? 3 : 2)
     || !choice(quizChoice) || typeof quizFeedback !== 'boolean') return undefined;
-  return { lastSeen, cursor: { step, page, minutes, quizIndex, quizChoice, quizFeedback } };
+  const finished = value.finished;
+  if (finished !== undefined && (!Array.isArray(finished) || finished.length > 4
+    || finished.some(i => !integer(i, 3)) || new Set(finished).size !== finished.length)) return undefined;
+  return { lastSeen, ...(finished ? { finished } : {}), cursor: { step, page, minutes, quizIndex, quizChoice, quizFeedback } };
 }
 
 function day(value) {

@@ -1,3 +1,4 @@
+import { finishedSteps, learningStepIndex } from './progress.js';
 import { lessonPages, normalizeTaskReview, planInput, restorePlan, taskReviewInput } from './learning-plan.js';
 import { isAssessmentCorrect, isAssessmentReady, normalizeAssessmentResponse } from './lesson-assessment.js';
 import { message } from '../ui/messages.js';
@@ -97,7 +98,7 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
 
   function currentLesson() {
     const saved = state.learningPlan;
-    const index = saved?.completed;
+    const index = learningStepIndex(saved);
     const step = saved?.plan.steps[index];
     if (!step) return null;
     const study = saved.study[index];
@@ -129,7 +130,7 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
   }
 
   function activeReviewError() {
-    return reviewErrorFor?.saved === state.learningPlan && reviewErrorFor.index === state.learningPlan?.completed
+    return reviewErrorFor?.saved === state.learningPlan && reviewErrorFor.index === learningStepIndex(state.learningPlan)
       ? reviewError : '';
   }
 
@@ -210,7 +211,7 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
     reviewErrorFor = null;
     busy = 'review';
     const version = epoch;
-    const stillCurrent = () => version === epoch && state.learningPlan === saved && saved.completed === index && saved.answers[index] === input.answer;
+    const stillCurrent = () => version === epoch && state.learningPlan === saved && learningStepIndex(saved) === index && saved.answers[index] === input.answer;
     save();
     refresh();
     try {
@@ -351,7 +352,11 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
       saved.reviews[index] = null;
     } else if (learningStep === 'continue' && (saved.reviews[index] || activeReviewError())
       && saved.answers[index].trim()) {
-      saved.completed += 1;
+      const finished = [...finishedSteps(saved.completed, saved.finished), index].sort((a, b) => a - b);
+      saved.completed = finished.length;
+      if (finished.some((step, i) => step !== i)) saved.finished = finished;
+      else delete saved.finished;
+      delete saved.selected;
     } else {
       return;
     }

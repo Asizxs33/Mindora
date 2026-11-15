@@ -49,7 +49,7 @@ test('legacy type inference uses only clear title clues and explicit kinds alway
   assert.deepEqual(normalizeRoadmap(legacy), legacy);
 });
 
-test('every path point retains its type icon while lock, play and completion are separate badges', () => {
+test('every lesson opens directly, with status badges for current and completed lessons', () => {
   let saved = restoreRoadmap(course());
   saved = updateRoadmapStage(saved, 0, id(1), true);
   saved = updateRoadmapStage(saved, 1, id(2));
@@ -58,18 +58,18 @@ test('every path point retains its type icon while lock, play and completion are
   assert.equal(rows.length, 24);
   assert.equal(doc.querySelectorAll('.roadmap-stage-node').length, 24);
   const svgFor = symbol => documentFor(icon(symbol, 34)).querySelector('svg').innerHTML;
-  for (const [index, kindIcon, badge, disabled] of [[0, 'book', 'check', false], [1, 'edit', 'play', false], [2, 'target', 'lock', true], [3, 'work', 'lock', true], [23, 'trophy', 'lock', true]]) {
+  for (const [index, kindIcon, badge] of [[0, 'book', 'check'], [1, 'edit', 'play'], [2, 'target', null], [3, 'work', null], [23, 'trophy', null]]) {
     const row = rows[index];
     assert.equal(row.dataset.roadmapKind, saved.stages[index].kind);
     assert.equal(row.querySelector('.roadmap-stage-kind-icon svg').innerHTML, svgFor(kindIcon));
-    assert.equal(row.querySelector('.roadmap-stage-status svg').innerHTML, svgFor(badge));
+    assert.equal(row.querySelector('.roadmap-stage-status svg')?.innerHTML, badge ? svgFor(badge) : undefined);
     assert.equal(row.querySelector('button').hasAttribute('disabled'), false);
     assert.equal(row.querySelector('button').dataset.roadmapAction, 'start');
     assert.equal(Number(row.querySelector('button').dataset.roadmapStage), index);
-    assert.equal(row.querySelector('.roadmap-stage-status').getAttribute('aria-hidden'), 'true');
+    if (badge) assert.equal(row.querySelector('.roadmap-stage-status').getAttribute('aria-hidden'), 'true');
   }
   assert.equal(rows[1].getAttribute('aria-current'), 'step');
-  assert.match(rows[2].querySelector('button').getAttribute('aria-label'), /^Review\. Tap to open:/);
+  assert.match(rows[2].querySelector('button').getAttribute('aria-label'), /^Review\. Open lesson:/);
   const busy = documentFor(roadmapView({ roadmap: saved, active: roadmapStageStatuses(saved), busy: 'stage' }));
   assert.ok([...busy.querySelectorAll('.roadmap-stage-node')].every(button => button.hasAttribute('disabled')));
 });

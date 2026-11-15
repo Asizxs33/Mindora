@@ -11,13 +11,13 @@ try {
    await p.setViewportSize(size);
    const desktop=size.width>920,nav=desktop?'#navigation':'#mobile-navigation';
    await p.locator(nav+' [data-view="courses"]').click();await p.waitForSelector('.course-library');
-   assert.equal(await p.locator('.ready-course:visible').count(),6,'Catalog is directly available');
+   assert.equal(await p.locator('.ready-course:visible').count(),0,'Sample courses start collapsed');
    assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Library fits '+size.width);
    const input=p.locator('#course-search');await input.fill('Python');
    assert.equal(await p.locator('.ready-course:visible').count(),1);
    await input.fill('not-a-course-xyz');assert.equal(await p.locator('.ready-course:visible').count(),0);
    assert.ok((await p.locator('[data-course-search-status]').innerText()).length>10);
-   await p.locator('[data-course-search-clear]').click();assert.equal(await p.locator('.ready-course:visible').count(),6);
+   await p.locator('[data-course-search-clear]').click();assert.equal(await p.locator('.ready-course:visible').count(),0);
    if(language==='ru'&&[390,1440].includes(size.width))await p.screenshot({path:join(tmpdir(),'mindora-ux-library-'+size.width+'.png'),fullPage:true});
    await p.locator(nav+' [data-view="profile"]').click();
    if(!desktop){
@@ -32,7 +32,8 @@ try {
    assert.equal(style.border,'0px');assert.equal(style.bg,'rgba(0, 0, 0, 0)');
    for(const symbol of ['flame','gem','heart']){
     const button=p.locator('.header-rewards .roadmap-'+symbol),box=await button.boundingBox();assert.ok(box.width>=44&&box.height>=44,'Counter target '+symbol+' '+size.width);
-    assert.equal(await button.locator('.'+symbol+'-outline').evaluate(e=>getComputedStyle(e).stroke),'rgb(173, 73, 14)');
+    assert.ok(await button.getAttribute('aria-label'));
+    assert.equal(await button.locator('span:visible').count(), 0, 'Compact counters show only their icon and value');
    }
    await p.locator('.header-rewards .roadmap-flame').click();await p.waitForSelector('.roadmap-rewards');
    assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
@@ -69,7 +70,7 @@ try {
  await p.reload(); await p.waitForSelector('.phone-course-nav');
  await p.locator('#mobile-navigation [data-view="courses"]').click();
  assert.equal(await p.locator('.learning-library-gate').count(),0,'A studying guest is not told to sign in to start');
- assert.equal(await p.locator('.ready-course:visible').count(),6);
+ assert.equal(await p.locator('.ready-course:visible').count(),0);
  assert.ok(await p.locator('.course-row').first().isVisible());
  await guest.context.close();
  assert.deepEqual(errors,[]);

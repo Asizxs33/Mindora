@@ -1,3 +1,4 @@
+import { finishedSteps, learningStepIndex, nextOpenStep } from '../core/progress.js';
 import { workHeadline, workAudience, priceLine, reportEntry } from './work-skills.js';
 import { mentorForTopic } from '../core/subject-mentor.js';
 import { character } from './characters.js';
@@ -23,7 +24,7 @@ export function guidedStartView({ step = 0, name = '', topic = '', goal = '', mi
   const greeting = step === 0;
   const valid = greeting || step === 1 ? greeting || Boolean(name.trim()) : step === 2 ? Boolean(topic && (topic !== 'custom' || goal.trim().length >= 3)) : true;
   return `<section class="guided-start ${greeting ? 'guided-greeting' : ''}" data-guided-step="${step}">
-    <header class="guided-header"><a class="guided-brand" href="/welcome" data-home aria-label="Mindora">mindora<span>.</span></a><div class="guided-header-actions">${languagePicker()}${signedIn ? `<button type="button" class="guided-account" data-account-open="profile" aria-label="${t('My account','Мой аккаунт','Аккаунтым')}">${icon('user',21)}</button>` : greeting ? `<button type="button" class="guided-signin" data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>` : ''}</div></header>
+    <header class="guided-header"><a class="brand" href="/welcome" data-home aria-label="Mindora"><img class="brand-mark" src="/ui/assets/brand-mark.svg" alt="" width="40" height="40"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a><div class="guided-header-actions">${languagePicker()}${signedIn ? `<button type="button" class="guided-account" data-account-open="profile" aria-label="${t('My account','Мой аккаунт','Аккаунтым')}">${icon('user',21)}</button>` : greeting ? `<button type="button" class="guided-signin" data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>` : ''}</div></header>
     ${greeting ? '' : `<div class="guided-progress"><button type="button" class="guided-back" data-intro-action="back" aria-label="${t('Back','Назад','Артқа')}">${icon('back',22)}</button><progress max="3" value="${step}" aria-label="${t('Getting started','Знакомство','Танысу')}"></progress><span>${step}/3</span></div>`}
     <div class="guided-content">
       ${greeting ? '' : `<div class="guided-dialogue"><p id="guided-prompt" tabindex="-1">${esc(prompts[step])}</p></div>`}
@@ -43,6 +44,8 @@ export function quietHomeView(state) {
   const steps = saved ? saved.plan.steps.map(step => step.title) : lessonNames[id];
   if (!steps?.length) return '';
   const completed = saved ? saved.completed : state.progress[id] || 0;
+  const finished = finishedSteps(completed, saved ? saved.finished : state.sessions?.[id]?.finished);
+  const currentStep = saved ? learningStepIndex(saved) : nextOpenStep(steps.length, finished, state.sessions?.[id]?.cursor?.step);
   const done = completed === steps.length;
   const minutes = saved ? saved.plan.minutes : state.minutes;
   const hasStarted = completed > 0 || Boolean(saved ? saved.study?.some(step => step.page > 0) : state.sessions?.[id]);
@@ -57,9 +60,9 @@ export function quietHomeView(state) {
       <progress value="${completed}" max="${steps.length}" aria-label="${t('Course progress', 'Прогресс курса', 'Курс барысы')}"></progress>
     </div>
     <div class="learning-hub-journey"><ol class="learning-hub-path" aria-label="${t('Course steps','Шаги курса','Курс қадамдары')}">${steps.map((label,index) => {
-      const passed = index < completed, current = index === completed;
+      const passed = finished.includes(index), current = index === currentStep;
       const final = index === steps.length - 1;
-      return `<li class="${passed ? 'is-done' : current ? 'is-current' : 'is-locked'}">${final ? '' : '<span class="learning-hub-connector" aria-hidden="true"></span>'}<div class="learning-hub-stop">${current ? `<span class="learning-hub-start" aria-hidden="true">${currentLabel}</span>` : ''}<button type="button" class="learning-hub-node" ${!passed && !current ? 'data-unlock' : ''} ${current ? resumeAction : saved ? `data-explore-task="${index}"` : `data-step="${index}"`} ${current ? 'aria-current="step"' : ''} aria-label="${current ? `${currentLabel} — ` : ''}${esc(label)}${passed ? ` — ${t('completed','пройдено','аяқталды')}` : current ? '' : ` — ${t('tap to open','нажми, чтобы открыть','басып аш')}`}">${icon(passed ? 'check' : current ? 'play' : 'lock',32)}</button><span class="learning-hub-label"${saved ? ` lang="${esc(saved.plan.language)}"` : ''}>${esc(label)}</span></div></li>`;
+      return `<li class="${passed ? 'is-done' : current ? 'is-current' : 'is-available'}">${final ? '' : '<span class="learning-hub-connector" aria-hidden="true"></span>'}<div class="learning-hub-stop">${current ? `<span class="learning-hub-start" aria-hidden="true">${currentLabel}</span>` : ''}<button type="button" class="learning-hub-node" ${current ? resumeAction : saved ? `data-explore-task="${index}"` : `data-step="${index}"`} ${current ? 'aria-current="step"' : ''} aria-label="${current ? `${currentLabel} — ` : ''}${esc(label)}${passed ? ` — ${t('completed','пройдено','аяқталды')}` : current ? '' : ` — ${t('tap to open','нажми, чтобы открыть','басып аш')}`}">${icon(passed ? 'check' : current ? 'play' : final ? 'trophy' : 'book',32)}</button><span class="learning-hub-label"${saved ? ` lang="${esc(saved.plan.language)}"` : ''}>${esc(label)}</span></div></li>`;
     }).join('')}</ol><aside class="learning-hub-guide"><div class="guided-dialogue"><p>${done ? t('All steps complete. Your result is ready.', 'Все шаги пройдены. Можно посмотреть результат.', 'Барлық қадам аяқталды. Нәтижең дайын.') : t('Take a break anytime. You can pick up where you left off.', 'Можно сделать паузу и продолжить с того же места.', 'Үзіліс жасап, тоқтаған жерден жалғастыра аласың.')}</p></div>${character(saved ? mentorForTopic(`${saved.plan.goal} ${saved.plan.title}`) : id === 'design' ? 'mia' : 'sam', done ? 'celebrate' : 'explaining', 'quiet-mentor')}</aside></div>
     <div class="learning-hub-actions"><button type="button" class="primary" ${resumeAction}>${done ? t('See my result','Мой результат','Нәтижем') : hasStarted ? t('Continue learning','Продолжить','Жалғастыру') : t('Start lesson','Начать урок','Сабақты бастау')}${icon('arrow',20)}</button><button type="button" class="text-link" data-view="courses">${t('Ready mini-courses','Готовые мини-курсы','Дайын мини-курстар')}</button></div>
   </section>`;

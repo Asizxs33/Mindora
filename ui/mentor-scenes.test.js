@@ -38,8 +38,11 @@ test('show me focuses only this lessons material and honours reduced motion', ()
   let focused = false, scroll;
   target.focus = () => { focused = true; };
   target.scrollIntoView = options => { scroll = options; };
-  interactWithMentor(document.querySelector('[data-mentor-focus]'), { animate: false, announce() {}, react() {} });
-  assert.equal(focused, true);
+  for (const selector of ['[data-mentor-focus]', '[data-character-hello]']) {
+    focused = false;
+    interactWithMentor(document.querySelector(selector), { animate: false, announce() {}, react() {} });
+    assert.equal(focused, true);
+  }
   assert.equal(scroll.behavior, 'instant');
   assert.equal(target.classList.contains('mentor-focus-target'), true);
   assert.equal(document.querySelectorAll('[tabindex="-1"]').length, 1);

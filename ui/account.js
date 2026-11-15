@@ -5,7 +5,7 @@ import { t } from './language.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const topics = ['Design', 'Coding', 'Languages', 'Spreadsheets', 'Writing', 'Marketing', 'Photography', 'Everyday skills'];
 const genders = [['', 'Choose, if you like'], ['woman', 'Woman'], ['man', 'Man'], ['nonbinary', 'Non-binary'], ['other', 'Another identity'], ['prefer_not_to_say', 'Prefer not to say']];
-const emptyDraft = () => ({ name: '', age: '', gender: '', interests: [], email: '', password: '', confirm: '', custom: '' });
+const emptyDraft = () => ({ name: '', age: '', gender: '', interests: [], email: '', password: '', confirm: '', privacy: false, custom: '' });
 let mounted = false, dialog, returnFocus, sessionPromise, sessionVersion = 0;
 let accountViewport, dialogConfirmation, pageConfirmation, confirmationTimer;
 let session = { available: null, user: null, profile: null };
@@ -87,13 +87,13 @@ async function loadSession() {
     const data = await api();
     if (version !== sessionVersion) return;
     session = { available: data.available !== false, user: data.user || null, profile: data.profile || null };
-    emitSession();
+    emitSession('initial');
     if (dialog?.open && session.user && !view.pending) {
       view = { ...view, mode: 'profile', step: 0, error: '', notice: pendingUserProfile() ? 'Your details are still here. Choose Save profile to finish setting up your profile.' : '', draft: profileDraft() };
       render();
     }
   } catch {
-    if (version === sessionVersion) { session.available = false; emitSession(); }
+    if (version === sessionVersion) { session.available = false; emitSession('initial'); }
   } finally {
     loadingSession = false;
     if (dialog?.open) {
@@ -133,8 +133,9 @@ function aboutFields() {
   const d = view.draft;
   const genderLabels = [t('Select an option', 'Выберите вариант', 'Нұсқаны таңдаңыз'), t('Woman', 'Женщина', 'Әйел'), t('Man', 'Мужчина', 'Ер'), t('Non-binary', 'Небинарный', 'Бинарлы емес'), t('Another identity', 'Другой вариант', 'Басқа'), t('Prefer not to say', 'Не хочу указывать', 'Көрсеткім келмейді')];
   const optional = t('(optional)', '(необязательно)', '(міндетті емес)');
-  return `<label class="account-field" for="account-name"><span>${t('Name', 'Имя', 'Атыңыз')} <b class="account-required" aria-hidden="true">*</b></span><input id="account-name" name="name" autocomplete="given-name" maxlength="80" value="${esc(d.name)}" placeholder="${t('Your name', 'Ваше имя', 'Атыңыз')}" required></label>
-    <div class="account-field-row"><label class="account-field account-age" for="account-age"><span>${t('Age', 'Возраст', 'Жасыңыз')} <small>${optional}</small></span><input id="account-age" name="age" type="number" inputmode="numeric" min="1" max="120" step="1" value="${esc(d.age)}" placeholder="${t('Your age', 'Ваш возраст', 'Жасыңыз')}"></label><label class="account-field" for="account-gender"><span>${t('Gender', 'Пол', 'Жынысыңыз')} <small>${optional}</small></span><select id="account-gender" name="gender">${genders.map(([value], i) => `<option value="${value}" ${value === d.gender ? 'selected' : ''}>${genderLabels[i]}</option>`).join('')}</select></label></div><p class="account-field-note">${t('You can update this later.', 'Это можно изменить позже.', 'Кейін өзгерте аласыз.')}</p>`;
+  const nameField = `<label class="account-field" for="account-name"><span>${t('Name', 'Имя', 'Атыңыз')} <b class="account-required" aria-hidden="true">*</b></span><input id="account-name" name="name" autocomplete="given-name" maxlength="80" value="${esc(d.name)}" placeholder="${t('Your name', 'Ваше имя', 'Атыңыз')}" required></label>`;
+  if (view.mode === 'signup') return nameField;
+  return `${nameField}<div class="account-field-row"><label class="account-field account-age" for="account-age"><span>${t('Age', 'Возраст', 'Жасыңыз')} <small>${optional}</small></span><input id="account-age" name="age" type="number" inputmode="numeric" min="1" max="120" step="1" value="${esc(d.age)}" placeholder="${t('Your age', 'Ваш возраст', 'Жасыңыз')}"></label><label class="account-field" for="account-gender"><span>${t('Gender', 'Пол', 'Жынысыңыз')} <small>${optional}</small></span><select id="account-gender" name="gender">${genders.map(([value], i) => `<option value="${value}" ${value === d.gender ? 'selected' : ''}>${genderLabels[i]}</option>`).join('')}</select></label></div><p class="account-field-note">${t('You can update this later.', 'Это можно изменить позже.', 'Кейін өзгерте аласыз.')}</p>`;
 }
 
 function interestFields() {
@@ -159,8 +160,13 @@ function passwordField(confirm = false) {
   return `<label class="account-field" for="account-${field}"><span>${confirm ? t('Confirm password', 'Повторите пароль', 'Құпиясөзді қайталаңыз') : t('Password', 'Пароль', 'Құпиясөз')}</span><span class="account-password"><input id="account-${field}" name="${field}" type="${visible ? 'text' : 'password'}" autocomplete="${signup ? 'new-password' : 'current-password'}" ${signup ? 'minlength="8"' : ''} maxlength="128" value="${esc(view.draft[field])}" placeholder="${confirm ? t('Enter it again', 'Ещё раз', 'Қайта енгізіңіз') : signup ? t('At least 8 characters', 'Не менее 8 символов', 'Кемінде 8 таңба') : t('Enter your password', 'Ваш пароль', 'Құпиясөзіңіз')}" required><button type="button" data-account-action="${confirm ? 'toggle-confirm' : 'toggle-password'}" aria-label="${passwordVisibilityLabel(visible, confirm)}" aria-pressed="${visible}">${eye}</button></span></label>`;
 }
 
+function privacyNotice() {
+  return `<details class="privacy-note"><summary>${t('How Mindora uses your data', 'Как Mindora использует данные', 'Mindora деректерді қалай қолданады')}</summary><p>${t('Your email identifies your account. Your profile, courses, answers and progress are saved so you can resume on another device. Course goals and submitted work are sent to the AI service to generate lessons and feedback.', 'Электронная почта нужна для входа. Профиль, курсы, ответы и прогресс сохраняются, чтобы можно было продолжить с другого устройства. Цели и отправленные работы передаются ИИ-сервису для создания уроков и обратной связи.', 'Поштаң аккаунтқа кіруге қажет. Басқа құрылғыдан жалғастыру үшін профиль, курстар, жауаптар мен оқу барысы сақталады. Сабақ құру және жауапты тексеру үшін мақсатың мен тапсырған жұмысың ЖИ сервисіне жіберіледі.')}</p></details>
+    <label class="privacy-consent"><input id="account-privacy" type="checkbox" name="privacy" required ${view.draft.privacy ? 'checked' : ''}><span>${t('I agree to this use of my data.', 'Я согласен на такое использование данных.', 'Деректерімді осылай қолдануға келісемін.')}</span></label>`;
+}
+
 function accountFields() {
-  return `<label class="account-field" for="account-email"><span>${t('Email', 'Электронная почта', 'Электрондық пошта')}</span><input id="account-email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="254" value="${esc(view.draft.email)}" placeholder="you@example.com" required></label>${passwordField()}${view.mode === 'signup' ? passwordField(true) : ''}`;
+  return `<label class="account-field" for="account-email"><span>${t('Email', 'Электронная почта', 'Электрондық пошта')}</span><input id="account-email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="254" value="${esc(view.draft.email)}" placeholder="you@example.com" required></label>${passwordField()}${view.mode === 'signup' ? passwordField(true) + privacyNotice() : ''}`;
 }
 
 function content() {
@@ -181,13 +187,13 @@ function content() {
     </fieldset></div>
     <footer class="account-footer"><button type="submit" class="account-primary" ${view.pending ? 'disabled' : ''}>${primary}${view.pending ? '<span class="account-spinner" aria-hidden="true"></span>' : ''}</button>
     ${profile ? `<button type="button" class="account-guest account-signout" data-account-action="signout" ${view.pending ? 'disabled' : ''}>${t('Sign out', 'Выйти', 'Шығу')}</button>` : `<p class="account-switch">${signup ? t('Already have an account?', 'Уже есть аккаунт?', 'Аккаунтыңыз бар ма?') : t('New to Mindora?', 'Впервые в Mindora?', 'Mindora-ға алғаш келдіңіз бе?')} <button type="button" data-account-action="${signup ? 'signin' : 'signup'}" ${view.pending ? 'disabled' : ''}>${signup ? t('Sign in', 'Войти', 'Кіру') : t('Create account', 'Создать аккаунт', 'Аккаунт құру')}</button></p>`}
-    <button type="button" class="account-guest" data-account-action="close">${t('Back to home', 'На главную', 'Басты бетке')}</button></footer></form>`;
+    ${profile ? '' : `<button type="button" class="account-guest" data-account-action="guest">${t('Continue as a guest', 'Продолжить без аккаунта', 'Қонақ болып жалғастыру')}</button>`}</footer></form>`;
 }
 
 function render(focus = true) {
   const old = document.activeElement;
   const previous = old && dialog.contains(old) ? { id: old.id, interest: old.dataset.accountInterest, selection: old.selectionStart } : null;
-  accountViewport.innerHTML = `<header class="account-header"><a class="account-brand" href="/welcome" aria-label="${t('Mindora home', 'Главная Mindora', 'Mindora басты беті')}"><img src="${new URL('./assets/brand-mark.svg', import.meta.url).href}" width="38" height="38" alt=""><span>mindora<span>.</span></span></a><button type="button" class="account-close" data-account-action="close" aria-label="${t('Close account window', 'Закрыть окно аккаунта', 'Аккаунт терезесін жабу')}">${cross}</button></header><main class="account-panel">${content()}</main>`;
+  accountViewport.innerHTML = `<header class="account-header"><a class="brand" href="/welcome" aria-label="${t('Mindora home', 'Главная Mindora', 'Mindora басты беті')}"><img class="brand-mark" src="/ui/assets/brand-mark.svg" width="40" height="40" alt=""><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a><button type="button" class="account-close" data-account-action="close" aria-label="${t('Close account window', 'Закрыть окно аккаунта', 'Аккаунт терезесін жабу')}">${cross}</button></header><main class="account-panel">${content()}</main>`;
   if (!dialog.open) return;
   if (focus) {
     dialog.scrollTop = 0;
@@ -236,6 +242,7 @@ function validAccount() {
   if (!view.draft.email.trim() || !email?.validity.valid) { showError('Enter a valid email address.', 'email'); return false; }
   if (!view.draft.password || (view.mode === 'signup' && view.draft.password.length < 8)) { showError(view.mode === 'signup' ? 'Choose a password with at least 8 characters.' : 'Enter your password.', 'password'); return false; }
   if (view.mode === 'signup' && view.draft.password !== view.draft.confirm) { showError('Your passwords don’t match. Try again.', 'confirm'); return false; }
+  if (view.mode === 'signup' && !view.draft.privacy) { showError(t('Please confirm your data preference.', 'Подтвердите согласие на использование данных.', 'Деректерді қолдануға келісіміңізді растаңыз.'), 'privacy'); return false; }
   return true;
 }
 
@@ -261,7 +268,7 @@ async function submit() {
   clearConfirmation();
   // Password managers can fill a field without firing an input event.
   for (const input of dialog.querySelectorAll('input[name],select[name]')) {
-    if (Object.hasOwn(view.draft, input.name) && input.name !== 'interests') view.draft[input.name] = input.value;
+    if (Object.hasOwn(view.draft, input.name) && input.name !== 'interests') view.draft[input.name] = input.type === 'checkbox' ? input.checked : input.value;
   }
   clearError();
   view.notice = '';
@@ -372,7 +379,7 @@ export function openAccount(mode = 'signup', introduction = null) {
   mode = ['signup', 'signin', 'profile'].includes(mode) ? mode : 'signup';
   if (session.user) mode = 'profile';
   else if (mode === 'profile' && !loadingSession) mode = 'signup';
-  view = { ...view, mode, step: 0, error: '', notice: mode === 'profile' && pendingUserProfile() ? 'Your details are still here. Choose Save profile to finish setting up your profile.' : '', showPassword: false, showConfirm: false, draft: mode === 'profile' && session.user ? profileDraft() : { ...view.draft, password: '', confirm: '' } };
+  view = { ...view, mode, step: 0, error: '', notice: mode === 'profile' && pendingUserProfile() ? 'Your details are still here. Choose Save profile to finish setting up your profile.' : '', showPassword: false, showConfirm: false, draft: mode === 'profile' && session.user ? profileDraft() : { ...view.draft, password: '', confirm: '', privacy: false } };
   view.guided = mode === 'signup' && typeof introduction?.name === 'string' && Boolean(introduction.name.trim());
   if (view.guided) {
     view.step = 2;
@@ -417,12 +424,12 @@ export function mountAccount() {
   dialog.addEventListener('submit', event => { event.preventDefault(); event.stopPropagation(); submit(); });
   dialog.addEventListener('input', event => {
     const field = event.target.name;
-    if (field && Object.hasOwn(view.draft, field) && field !== 'interests') view.draft[field] = event.target.value;
+    if (field && Object.hasOwn(view.draft, field) && field !== 'interests') view.draft[field] = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     if (view.error) clearError();
   });
   dialog.addEventListener('change', event => {
     const field = event.target.name;
-    if (field && Object.hasOwn(view.draft, field) && field !== 'interests') view.draft[field] = event.target.value;
+    if (field && Object.hasOwn(view.draft, field) && field !== 'interests') view.draft[field] = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
   });
   dialog.addEventListener('keydown', event => {
     if (event.key === 'Enter' && event.target.id === 'account-custom') { event.preventDefault(); addInterest(); }
@@ -434,6 +441,11 @@ export function mountAccount() {
     const action = control.dataset.accountAction;
     if (action === 'close') { closeAccount(); return; }
     if (view.pending) return;
+    if (action === 'guest') {
+      closeAccount();
+      window.dispatchEvent(new CustomEvent('mindora:guest-entry'));
+      return;
+    }
     if (control.hasAttribute('data-account-interest')) {
       const label = control.dataset.accountInterest;
       const index = view.draft.interests.findIndex(item => item.toLowerCase() === label.toLowerCase());

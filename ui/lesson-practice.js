@@ -3,6 +3,8 @@ import { paletteContrast, restorePracticeAnswer } from '../core/lesson-practice.
 import { t } from './language.js';
 import { capyEditor, drawingEditor, logExplorer } from './learning-labs.js';
 import { drawingSvg } from '../core/lab-models.js';
+import { STUDIO_TYPES } from '../core/studio-practice.js';
+import { studioEditor, studioResult } from './studio-practice.js';
 import { icon } from './icons.js';
 
 function preview(answer) {
@@ -15,7 +17,8 @@ export function practiceEditor(practice, value, busy) {
   if (!answer) return `<label class="field"><span>${t('Record your result', 'Запиши результат', 'Нәтижеңді жаз')}</span><textarea name="answer" maxlength="1500" rows="5" required${disabled}>${esc(value)}</textarea></label>`;
   const field = (name, label, max, rows = 3, required = true) => `<label class="field"><span>${label}</span><textarea data-practice-field="${name}" maxlength="${max}" rows="${rows}"${required ? ' required' : ''}${disabled}>${esc(answer[name])}</textarea></label>`;
   let content;
-  if (practice.type === 'drawing') content = `${drawingEditor(answer, busy)}${field('explanation', t('What did you choose to draw, and why?', 'Что ты нарисовал и почему?', 'Не салдың және неге?'), 150, 2)}`;
+  if (STUDIO_TYPES.includes(practice.type)) content = studioEditor(practice, answer, disabled);
+  else if (practice.type === 'drawing') content = `${drawingEditor(answer, busy)}${field('explanation', t('What did you choose to draw, and why?', 'Что ты нарисовал и почему?', 'Не салдың және неге?'), 150, 2)}`;
   else if (practice.type === 'code') {
     const python = practice.language === 'python';
     const capy = practice.language === 'capy';
@@ -38,6 +41,7 @@ export function practiceResult(practice, value) {
   try { stored = JSON.parse(value); } catch { /* Preserve old text answers. */ }
   if (!stored || stored.type !== practice?.type) return esc(value);
   const answer = restorePracticeAnswer(practice, value);
+  if (STUDIO_TYPES.includes(practice.type)) return studioResult(practice, answer);
   if (practice.type === 'drawing') return `<div class="drawing-result">${drawingSvg(answer.strokes)}</div><p>${esc(answer.explanation)}</p>`;
   if (practice.type === 'palette') return `${preview(answer)}<p>${esc(answer.explanation)}</p>`;
   if (practice.type === 'code') return `<pre class="practice-code-output">${esc(answer.code)}</pre><p><strong>${t('Recorded output', 'Сохранённый вывод', 'Сақталған нәтиже')}</strong></p><pre class="practice-code-output">${esc(answer.output)}</pre><p>${esc(answer.explanation)}</p>`;

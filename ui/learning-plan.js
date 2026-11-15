@@ -1,12 +1,15 @@
+import { finishedSteps, learningStepIndex } from '../core/progress.js';
 import { escapeHtml as esc } from '../core/engine.js';
 import { lessonPages } from '../core/learning-plan.js';
 import { isAssessmentCorrect, isAssessmentReady, normalizeAssessmentResponse } from '../core/lesson-assessment.js';
 import { timeOptions } from './budget-session.js';
 import { icon } from './icons.js';
 import { courseLanguageField, currentLanguage, languagePicker, t } from './language.js';
+import { lessonReference } from './lesson-references.js';
 import { message } from './messages.js';
 import { mentorForTopic, mentorScene, renderLessonTemplate } from './lesson-templates.js';
 import { sceneForTopic } from './learning-scenes.js';
+import { workedStudio } from './studio-practice.js';
 import { practiceEditor, practiceResult } from './lesson-practice.js';
 import { isLogarithmTopic } from '../core/subject-mentor.js';
 import { logExplorer } from './learning-labs.js';
@@ -95,9 +98,10 @@ function sourceMaterialLink(resource) {
   return '<p class="small-note"><a class="source-link" href="' + esc(resource.url) + '" target="_blank" rel="noopener noreferrer" lang="' + esc(currentLanguage()) + '">' + t('Open lesson material', 'Открыть материал урока', 'Сабақ материалын ашу') + ' ' + icon('arrow', 14) + '</a></p>';
 }
 
-function explanationView(step, mentor) {
+function explanationView(step, mentor, language) {
   const images = step.teaching?.assessment ? [] : step.resource?.images;
   return `${renderLessonTemplate({ type: 'theory', intro: step.teaching?.why ?? step.criterion, body: step.instruction, images }, {}, { external: true, mentor })}
+    ${step.resource?.images?.length ? '' : lessonReference(step.title + ' ' + step.instruction, language)}
     ${sourceMaterialLink(step.resource)}`;
 }
 
@@ -105,9 +109,11 @@ function illustrationView(step) {
   return renderLessonTemplate({ type: 'illustration', images: step.resource.images }, {}, { external: true });
 }
 
-function exampleView(teaching, mentor, topic) {
+function exampleView(teaching, mentor, topic, practice, language) {
+  const interactive = workedStudio(practice, teaching.example);
+  if (interactive) return interactive;
   const codeExample = /\b(python|javascript|programming|coding|html|css|sql)\b|программ|бағдарлам/i.test(topic);
-  return (isLogarithmTopic(topic) ? logExplorer() : '') + renderLessonVisual(teaching.example.visual) + renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output, explanation: teaching.example.explanation, sceneFrame: sceneForTopic(topic), codeExample,
+  return (isLogarithmTopic(topic) ? logExplorer() : '') + renderLessonVisual(teaching.example.visual, language) + renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output, explanation: teaching.example.explanation, sceneFrame: sceneForTopic(topic), codeExample,
     ...(codeExample ? { beforeLabel: t('Code', 'Код', 'Код'), afterLabel: t('Output', 'Результат', 'Нәтиже') } : {}),
   }, {}, { external: true, mentor });
 }
@@ -155,7 +161,7 @@ function practiceView(step, answer, review, busy, reviewError, last, mentor, use
     ? renderLessonTemplate({ type: 'practice', prompt, body: step.task, criterion: step.criterion }, {}, { external: true, mentor, sceneMood: mood })
     : `${mentorView(mentor, mood, `<h3 lang="${esc(currentLanguage())}">${prompt}</h3><p class="learning-answer">${esc(step.task)}</p>`, 'ai-lesson-mentor-practice', { hint: step.teaching?.takeaway || step.criterion, focus: t('What to check', 'Что проверить', 'Нені тексеру керек') })}
       ${step.teaching && !last ? `<div class="ai-lesson-note"><strong lang="${esc(currentLanguage())}">${t('Keep in mind', 'Запомни', 'Есте сақта')}</strong><p>${esc(step.teaching.takeaway)}</p></div>` : ''}
-      <div class="ai-lesson-criterion"><strong lang="${esc(currentLanguage())}">${t('Before you submit', 'Перед проверкой', 'Тексеруге жіберер алдында')}</strong><p>${esc(step.criterion)}</p></div>`;
+      ${step.criterion.trim() !== step.task.trim() ? `<div class="ai-lesson-criterion"><strong lang="${esc(currentLanguage())}">${t('Before you submit', 'Перед проверкой', 'Тексеруге жіберер алдында')}</strong><p>${esc(step.criterion)}</p></div>` : ''}`;
   return `${task}
     ${review ? `
       <h3 lang="${esc(currentLanguage())}">${t('Your answer', 'Твой ответ', 'Жауабың')}</h3>
@@ -176,11 +182,12 @@ function practiceView(step, answer, review, busy, reviewError, last, mentor, use
 }
 
 function screenView(saved, busy, reviewError, preview = false) {
-  const { plan, answers, reviews, completed } = saved;
-  const step = plan.steps[completed];
-  const last = completed === plan.steps.length - 1;
+  const { plan, answers, reviews } = saved;
+  const stepIndex = learningStepIndex(saved);
+  const step = plan.steps[stepIndex];
+  const last = stepIndex === plan.steps.length - 1;
   const pages = lessonPages(step, last);
-  const study = saved.study?.[completed] ?? { page: 0, choice: null, checked: false };
+  const study = saved.study?.[stepIndex] ?? { page: 0, choice: null, checked: false };
   const { teaching } = step;
   const assessment = teaching?.assessment;
   const response = assessment ? normalizeAssessmentResponse(assessment, study.response) : null;
@@ -192,14 +199,14 @@ function screenView(saved, busy, reviewError, preview = false) {
   const sections = visible.map((page, index) => {
     let content;
     switch (page) {
-      case 'explain': content = explanationView(step, mentor); break;
+      case 'explain': content = explanationView(step, mentor, plan.language); break;
       case 'illustration': content = illustrationView(step); break;
-      case 'example': content = exampleView(teaching, mentor, `${plan.goal || ''} ${plan.title}`); break;
+      case 'example': content = exampleView(teaching, mentor, `${plan.goal || ''} ${plan.title}`, step.practice, plan.language); break;
       case 'check': content = assessment
         ? assessmentView(assessment, response, study.checked, checkedCorrect, busy, mentor)
         : checkpointView(teaching, study, busy, mentor); break;
       case 'recap': content = recapView(teaching, mentor); break;
-      default: content = practiceView(step, answers[completed], reviews[completed], busy, reviewError, last, mentor, plan.formatVersion === 3);
+      default: content = practiceView(step, answers[stepIndex], reviews[stepIndex], busy, reviewError, last, mentor, plan.formatVersion === 3);
     }
     const title = page === 'explain' || (last && page === 'practice') ? step.title : pageName(page);
     const checkButton = page === 'check' && !checkedCorrect
@@ -209,7 +216,7 @@ function screenView(saved, busy, reviewError, preview = false) {
       ${content}${checkButton}
     </section>`;
   });
-  return `<div class="ai-lesson-reader lesson-stream" data-reader-step="${completed}" data-reader-cursor="${study.page}" tabindex="0" role="region" aria-label="${esc(step.title)}" lang="${esc(plan.language)}">
+  return `<div class="ai-lesson-reader lesson-stream" data-reader-step="${stepIndex}" data-reader-cursor="${study.page}" tabindex="0" role="region" aria-label="${esc(step.title)}" lang="${esc(plan.language)}">
     ${preview ? '' : historyView(saved)}
     <article class="ai-lesson-page">${sections.join('')}</article>
   </div>`;
@@ -218,9 +225,9 @@ function screenView(saved, busy, reviewError, preview = false) {
 function lessonView(saved, busy, reviewError, onRoadmap, nextStage) {
   const { plan, completed } = saved;
   const lengths = plan.steps.map((step, i) => lessonPages(step, i === plan.steps.length - 1).length);
-  const base = lengths.slice(0, completed).reduce((total, n) => total + n, 0);
+  const base = finishedSteps(completed, saved.finished).reduce((sum, i) => sum + lengths[i], 0);
   const total = lengths.reduce((sum, n) => sum + n, 0);
-  const value = base + (saved.study?.[completed]?.page || 0);
+  const value = base + (saved.study?.[learningStepIndex(saved)]?.page || 0);
   return `<div class="reader-toolbar">
     <button type="button" class="icon-button ai-lesson-exit" data-view="${onRoadmap ? 'my-path' : 'course-path'}" aria-label="${t('Save and leave', 'Сохранить и выйти', 'Сақтап шығу')}">${icon('close', 21)}</button>
     <progress class="reader-progress" data-reader-base="${base}" max="${total}" value="${value}" aria-label="${t('Lesson progress', 'Прогресс занятия', 'Сабақ барысы')}"></progress>

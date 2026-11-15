@@ -86,7 +86,10 @@ try {
   await p.screenshot({path:join(tmpdir(),'mindora-welcome-'+width+'.png'),fullPage:true});
  }
  await p.setViewportSize({width:390,height:844});
- await p.locator('.landing-hero [data-view="new-course"]').click();
+ await p.locator('#mindora-account[open] #account-name').waitFor();
+ await p.locator('[data-account-action="close"]').click();
+ await p.locator('.landing-hero [data-account-open="signup"]').click();
+ await p.locator('[data-account-action="guest"]').click();
  await p.locator('#goal-input').fill('Learn spreadsheet formulas for my weekly report');
  await p.locator('#time-select').selectOption('5');
  await p.locator('#goal-form button[type="submit"]').click();
@@ -101,7 +104,7 @@ try {
  await p.locator('#roadmap-form button[type="submit"]').click();
  await p.waitForSelector('.roadmap-layout');
  await p.screenshot({path:join(tmpdir(),'mindora-compact-path.png'),fullPage:true});
- await p.locator('[data-roadmap-stage="3"][data-unlock]').click();
+ await p.locator('.roadmap-stage-node[data-roadmap-stage="3"]').click();
  await p.waitForSelector('.lesson-stream');
  assert.deepEqual((await guestState(p)).learningRoadmap.opened, [3]);
  assert.equal((await guestState(p)).learningRoadmap.progress.filter(stage => stage.completed).length, 0);

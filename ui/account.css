@@ -150,3 +150,8 @@ dialog.account-dialog { --account-orange: #c34b00; --account-orange-dark: #a93f0
 @media(max-height:560px) { .account-footer { position: static; } }
 @media(prefers-reduced-motion:reduce) { .account-spinner { animation: none; } .account-dialog * { transition: none!important; } }
 .account-guided .account-intro h1{font-size:27px;margin-bottom:12px}.account-guided .account-guide-scene{gap:16px;margin-bottom:18px}.account-guided .account-guide{flex-basis:100px;width:100px;height:110px}.account-dialog .account-guided .account-mino{--character-size:110px;flex-basis:110px;width:110px;height:110px}.account-guided .account-field{margin-bottom:16px}.account-guided .account-intro-copy{padding:12px 15px}.account-guided .account-intro-copy p{font-size:15px}.account-guided .account-footer{margin-top:10px}.account-guided .account-speaker{display:none}
+.privacy-note, .privacy-consent { font-size: 15px; line-height: 1.45; }
+.privacy-note summary { padding-block: 8px; cursor: pointer; font-weight: 700; }
+.privacy-note p { margin: 0 0 8px; }
+.privacy-consent { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.privacy-consent input { flex: none; width: 19px; height: 19px; accent-color: var(--accent); }

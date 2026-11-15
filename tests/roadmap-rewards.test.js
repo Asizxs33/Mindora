@@ -37,22 +37,23 @@ test('roadmap input retains prior work to inform placement; saved maps retain on
   assert.equal(normalizeRoadmap({ ...provider, stages: [...provider.stages.slice(0, 3), provider.stages[0]] }, input), null);
 });
 
-test('roadmap unlocks one next stage at a time and restores linked courses through workspace storage', () => {
+test('roadmap supports studying stages in any order and restores linked courses through workspace storage', () => {
   const fresh = restoreRoadmap(normalizeRoadmap(provider, input));
-  assert.deepEqual(roadmapStageStatuses(fresh).map(stage => stage.status), ['ready', 'locked', 'locked', 'locked']);
-  assert.equal(updateRoadmapStage(fresh, 1, id(2)), fresh, 'locked stage cannot receive a course');
+  assert.deepEqual(roadmapStageStatuses(fresh).map(stage => stage.status), ['ready', 'available', 'available', 'available']);
+  const skipped = updateRoadmapStage(fresh, 1, id(2), true);
+  assert.deepEqual(restoreRoadmap(skipped).progress.map(p => p.completed), [false, true, false, false]);
   const started = updateRoadmapStage(fresh, 0, id(1));
-  assert.deepEqual(roadmapStageStatuses(started).map(stage => stage.status), ['active', 'locked', 'locked', 'locked']);
+  assert.deepEqual(roadmapStageStatuses(started).map(stage => stage.status), ['active', 'available', 'available', 'available']);
   assert.equal(updateRoadmapStage(started, 0, id(2), true), started, 'a different course cannot complete the stage');
   const finished = updateRoadmapStage(started, 0, id(1), true);
-  assert.deepEqual(roadmapStageStatuses(finished).map(stage => stage.status), ['completed', 'ready', 'locked', 'locked']);
+  assert.deepEqual(roadmapStageStatuses(finished).map(stage => stage.status), ['completed', 'ready', 'available', 'available']);
   assert.equal(updateRoadmapStage(finished, 1, id(1)), finished, 'one course cannot be linked twice');
   const rewards = recordLessonReward(undefined, id(1), date(14));
   const data = validateBuiltinWorkspace({ learningRoadmap: finished, learningRewards: rewards });
   assert.deepEqual(data.learningRoadmap, finished);
   assert.deepEqual(data.learningRewards, rewards);
   assert.equal(validateBuiltinWorkspace({ learningRewards: { ...rewards, gems: -1 } }), null);
-  assert.equal(validateBuiltinWorkspace({ learningRoadmap: { ...fresh, progress: [fresh.progress[0], started.progress[0], ...fresh.progress.slice(2)] } }), null);
+  assert.equal(validateBuiltinWorkspace({ learningRoadmap: { ...fresh, progress: [started.progress[0], started.progress[0], ...fresh.progress.slice(2)] } }), null);
 });
 
 test('a narrowed path retains its original subject through account workspace save and restore', () => {

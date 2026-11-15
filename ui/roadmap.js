@@ -141,7 +141,7 @@ export function rewardMetrics(rewards, compact = false) {
     const displayed = phone ? new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value) : value;
     return `<button type="button" class="roadmap-metric roadmap-${symbol}" data-view="${view}" aria-label="${label} ${value}" title="${label} · ${value}">
       ${icon(symbol, compact ? 22 : 30)}
-      <strong>${displayed}</strong><span aria-hidden="true">${label}</span>
+      <strong>${displayed}</strong>${compact ? '' : `<span aria-hidden="true">${label}</span>`}
     </button>`;
   }).join('')}</div>`;
 }
@@ -185,7 +185,7 @@ function stageRows(roadmap, active, busy) {
     completed: t('View result', 'Результат', 'Нәтиже'),
     active: t('Continue lesson', 'Продолжить', 'Жалғастыру'),
     ready: t('Start lesson', 'Начать', 'Бастау'),
-    locked: t('Tap to open', 'Нажми, чтобы открыть', 'Басып аш'),
+    available: t('Open lesson', 'Открыть урок', 'Сабақты ашу'),
   };
   const milestones = new Map(roadmap.curriculumVersion === 2
     ? roadmap.modules.map((module, index) => [module.startIndex, { ...module, index }]) : []);
@@ -196,8 +196,7 @@ function stageRows(roadmap, active, busy) {
     'mini-project': t('Mini-project', 'Мини-проект', 'Шағын жоба'),
   };
   return roadmap.stages.map((stage, index) => {
-    const status = active[index]?.status || (index === 0 ? 'ready' : 'locked');
-    const locked = status === 'locked';
+    const status = active[index]?.status || (index === 0 ? 'ready' : 'available');
     const current = status === 'ready' || status === 'active';
     const milestone = milestones.get(index);
     const milestoneComplete = milestone && active.slice(index, index + milestone.count).filter(item => item.status === 'completed').length === milestone.count;
@@ -205,14 +204,14 @@ function stageRows(roadmap, active, busy) {
     const titleTag = roadmap.curriculumVersion === 2 ? 'h3' : 'h2';
     const kind = roadmapStageKind(stage);
     const symbol = { lesson: 'book', practice: 'edit', review: 'target', 'mini-project': index === roadmap.stages.length - 1 ? 'trophy' : 'work' }[kind];
-    const statusSymbol = locked ? 'lock' : status === 'completed' ? 'check' : 'play';
+    const statusSymbol = status === 'completed' ? 'check' : 'play';
     return `<li class="roadmap-stage kind-${kind} is-${status}${milestone ? ' has-milestone' : ''}${milestones.has(index + 1) ? ' before-milestone' : ''}" data-roadmap-kind="${kind}"${current ? ' aria-current="step"' : ''}>
       ${milestone ? `<header class="roadmap-milestone${milestoneComplete ? ' is-completed' : milestoneCurrent ? ' is-current' : ''}" data-roadmap-milestone="${milestone.index}"><span class="roadmap-milestone-label">${milestoneComplete ? icon('check', 13) : icon('flag', 13)} ${t(`Milestone ${milestone.index + 1}`, `Цель ${milestone.index + 1}`, `${milestone.index + 1}-мақсат`)}</span><h2>${escape(milestone.title)}</h2><p class="visually-hidden">${escape(milestone.outcome)}</p></header>` : ''}
       ${index < roadmap.stages.length - 1 ? `<svg class="roadmap-stage-connector" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${index % 2 ? 'M75 0 H38 Q25 0 25 18 V100' : 'M25 0 H62 Q75 0 75 18 V100'}"/></svg>` : ''}
       <div class="roadmap-stage-stop">
         ${current ? `<span class="roadmap-start-bubble" aria-hidden="true">${status === 'active' ? t('Continue', 'Продолжить', 'Жалғастыру') : t('Start here', 'Начать', 'Бастау')}</span>` : ''}
-        <button type="button" class="roadmap-stage-marker roadmap-stage-node" data-roadmap-action="start" ${locked ? 'data-unlock' : ''} data-roadmap-stage="${index}" aria-label="${escape(`${kindLabels[kind]}. ${statusLabels[status]}: ${stage.title}`)}" aria-describedby="roadmap-stage-detail-${index}"${busy ? ' disabled' : ''}><span class="roadmap-stage-kind-icon" aria-hidden="true">${icon(symbol, 34)}</span><span class="roadmap-stage-status" aria-hidden="true">${icon(statusSymbol, 14)}</span></button>
-        <div class="roadmap-stage-text"><span class="roadmap-stage-kind-label">${kindLabels[kind]}</span><${titleTag}>${escape(stage.title)}</${titleTag}><p class="${current ? 'roadmap-stage-objective' : 'visually-hidden'}" id="roadmap-stage-detail-${index}">${escape(stage.objective)}${locked ? ` — ${statusLabels.locked}` : ''}</p></div>
+        <button type="button" class="roadmap-stage-marker roadmap-stage-node" data-roadmap-action="start" data-roadmap-stage="${index}" aria-label="${escape(`${kindLabels[kind]}. ${statusLabels[status]}: ${stage.title}`)}" aria-describedby="roadmap-stage-detail-${index}"${busy ? ' disabled' : ''}><span class="roadmap-stage-kind-icon" aria-hidden="true">${icon(symbol, 34)}</span>${status === 'available' ? '' : `<span class="roadmap-stage-status" aria-hidden="true">${icon(statusSymbol, 14)}</span>`}</button>
+        <div class="roadmap-stage-text"><span class="roadmap-stage-kind-label">${kindLabels[kind]}</span><${titleTag}>${escape(stage.title)}</${titleTag}><p class="${current ? 'roadmap-stage-objective' : 'visually-hidden'}" id="roadmap-stage-detail-${index}">${escape(stage.objective)}</p></div>
       </div>
     </li>`;
   }).join('');
@@ -241,7 +240,7 @@ export function roadmapView({ roadmap, wizard, active = [], busy = false, error 
   const all = roadmap.stages.length;
   const progressLabel = t(`${finished} of ${all} lessons done`, `Пройдено ${finished} из ${all} занятий`, `${all} сабақтың ${finished}-і аяқталды`);
   const complete = all > 0 && finished === all;
-  const resumeIndex = roadmap.curriculumVersion === 2 ? active.findIndex(stage => stage.status === 'ready' || stage.status === 'active') : -1;
+  const resumeIndex = active.findIndex(stage => stage.status === 'ready' || stage.status === 'active');
   const resumeStage = roadmap.stages[resumeIndex];
   const resumeLabel = active[resumeIndex]?.status === 'active'
     ? t('Continue lesson', 'Продолжить занятие', 'Сабақты жалғастыру')
@@ -249,15 +248,15 @@ export function roadmapView({ roadmap, wizard, active = [], busy = false, error 
   return `<section class="roadmap-layout" aria-labelledby="roadmap-title">
     <div class="roadmap-main-column">
       <header class="roadmap-heading">
-        <div><h1 id="roadmap-title" tabindex="-1">${escape(roadmap.title)}</h1></div>
+        <div><h1 id="roadmap-title" tabindex="-1" lang="${escape(roadmap.language)}">${escape(roadmap.title)}</h1></div>
         <div class="roadmap-heading-progress"><span aria-hidden="true">${finished}/${all}</span><progress value="${finished}" max="${Math.max(1, all)}" aria-label="${progressLabel}"></progress></div>
       </header>
-      ${roadmap.curriculumVersion === 2 ? `<div class="roadmap-course-scale" aria-label="${t('Course pace', 'Объём и темп курса', 'Курс көлемі мен қарқыны')}"><span>${icon('book', 16)} ${t(`${all} daily lessons`, `Занятий в курсе: ${all}`, `Курста ${all} сабақ`)}</span><span>${icon('clock', 16)} ${t(`${roadmap.minutes} min a day`, `${roadmap.minutes} мин в день`, `Күніне ${roadmap.minutes} минут`)}</span><small>${t(`About ${Math.ceil(all / 7)} weeks at one lesson a day`, `Около ${Math.ceil(all / 7)} нед. при одном занятии в день`, `Күніне бір сабақпен шамамен ${Math.ceil(all / 7)} апта`)}</small></div>` : ''}
-      ${resumeStage ? `<div class="roadmap-resume"><button type="button" class="primary" data-roadmap-action="start" data-roadmap-stage="${resumeIndex}" aria-label="${escape(`${resumeLabel}: ${resumeStage.title}`)}"${busy ? ' disabled' : ''}>${icon('play', 17)} ${resumeLabel}</button><span>${escape(resumeStage.title)}</span></div>` : ''}
-      ${roadmap.curriculumVersion === 2 && roadmap.sourceStatus === 'unavailable' ? syllabusSources(roadmap) : ''}
-      <details class="roadmap-about"><summary>${icon('book', 17)} ${t('About this course', 'Об этом курсе', 'Курс туралы')}</summary><div><p>${escape(roadmap.outcome)}</p><div class="roadmap-level"><strong>${t('Estimated level', 'Стартовый уровень', 'Бастапқы деңгей бағасы')}<span>${levelName(roadmap.level)}</span></strong><p>${escape(roadmap.levelReason)}</p></div>${roadmap.curriculumVersion === 2 ? roadmap.sourceStatus === 'verified' ? syllabusSources(roadmap) : '' : `<ol>${roadmap.stages.map(stage => `<li><strong>${escape(stage.title)}</strong><p>${escape(stage.objective)}</p></li>`).join('')}</ol>`}</div></details>
+      <div class="roadmap-intro">
+        ${character(mentorForTopic(`${roadmap.originalGoal || ''} ${roadmap.goal} ${roadmap.title}`), busy ? 'thinking' : complete ? 'celebrate' : 'explaining', 'roadmap-guide')}
+        ${resumeStage && roadmap.curriculumVersion === 2 ? `<div class="roadmap-resume"><span lang="${escape(roadmap.language)}">${escape(resumeStage.title)}</span><button type="button" class="primary" data-roadmap-action="start" data-roadmap-stage="${resumeIndex}" aria-label="${escape(`${resumeLabel}: ${resumeStage.title}`)}"${busy ? ' disabled' : ''}>${icon('play', 17)} ${resumeLabel}</button></div>` : ''}
+      </div>
+      <details class="roadmap-about"><summary>${icon('book', 17)} ${t('Course details', 'О курсе', 'Курс туралы')}</summary><div><p lang="${escape(roadmap.language)}">${escape(roadmap.outcome)}</p><p>${levelName(roadmap.level)} · ${roadmap.minutes} ${t('min per lesson','мин на занятие','мин / сабақ')}</p>${syllabusSources(roadmap)}</div></details>
       ${feedback(busy, error, notice)}
-      <div class="roadmap-tutor">${character(mentorForTopic(`${roadmap.originalGoal || ''} ${roadmap.goal} ${roadmap.title}`), busy ? 'thinking' : complete ? 'celebrate' : 'explaining', 'roadmap-guide')}<div class="roadmap-tutor-speech"><p>${complete ? t('Look how far you’ve come. You did it!', 'Посмотри, какой путь ты прошёл. Получилось!', 'Қаншама жол жүріп өттің. Жарайсың!') : (finished ? t('Ready for the next lesson?', 'Продолжим со следующего урока?', 'Келесі сабақты бастаймыз ба?') : t('Follow the orange step, or tap a lock to explore another lesson.', 'Продолжай с оранжевого шага или нажми на замок, чтобы открыть другой урок.', 'Қызғылт сары қадаммен жалғастыр не басқа сабақты ашу үшін құлыпты бас.'))}</p></div></div>
       ${syllabusView(roadmap, active, busy)}
       <button type="button" class="text-link roadmap-new-goal" data-roadmap-action="setup"${busy ? ' disabled' : ''}>${icon('plus', 17)} ${t('Set another goal', 'Выбрать другую цель', 'Басқа мақсат таңдау')}</button>
     </div>

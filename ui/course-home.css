@@ -227,7 +227,7 @@ body.quiet-shell.has-course-home:not(.is-guided) #main { max-width: 800px; paddi
 }
 
 @media (max-width: 920px) {
-  :is(.topbar, .landing-header) .brand-mark, body.quiet-shell .header-account[data-account-open="profile"] { display: none; }
+  body.quiet-shell .header-account[data-account-open="profile"] { display: none; }
   body.quiet-shell:not(.is-guided):not(.is-learning) .mobile-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-height: 70px; padding: 5px max(18px, env(safe-area-inset-left)) calc(5px + env(safe-area-inset-bottom)); }
   body.quiet-shell.has-course-home:not(.is-guided) #main { padding-bottom: calc(94px + env(safe-area-inset-bottom)); }
   .mobile-navigation .nav-item { min-height: 58px; font-size: 12px; gap: 4px; }

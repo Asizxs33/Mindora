@@ -1,10 +1,12 @@
 import { cleanStrokes, RELATIONS } from './lab-models.js';
-export const PRACTICE_TYPES = Object.freeze(['text', 'code', 'palette', 'calculation', 'drawing']);
+import { normalizeStudio, STUDIO_TYPES, studioAnswer } from './studio-practice.js';
+export const PRACTICE_TYPES = Object.freeze(['text', 'code', 'palette', 'calculation', 'drawing', ...STUDIO_TYPES]);
 const color = value => typeof value === 'string' && /^#[a-f0-9]{6}$/i.test(value) ? value.toLowerCase() : null;
 const field = (value, max) => typeof value === 'string' ? value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').slice(0, max) : '';
 
 export function normalizePractice(raw) {
   if (!raw || !PRACTICE_TYPES.includes(raw.type)) return null;
+  if (STUDIO_TYPES.includes(raw.type)) return normalizeStudio(raw);
   const result = { type: raw.type };
   if (raw.type === 'code') {
     if (typeof raw.language !== 'string' || !/^[a-z0-9+# .-]{1,30}$/i.test(raw.language)) return null;
@@ -21,6 +23,7 @@ export function normalizePractice(raw) {
 
 // Bounded fields keep structured submissions inside the existing answer limit.
 export function practiceAnswer(practice, raw = {}) {
+  if (STUDIO_TYPES.includes(practice?.type)) return studioAnswer(practice, raw);
   if (practice?.type === 'drawing') return { type: 'drawing', strokes: cleanStrokes(raw.strokes), explanation: field(raw.explanation, 150) };
   if (practice?.type === 'code') return {
     type: 'code', code: field(raw.code, 500), output: field(raw.output, 100),

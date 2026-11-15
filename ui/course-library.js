@@ -1,7 +1,7 @@
 import { t } from './language.js';
 
 let query = '', currentOwner = '', mounted = false;
-const cardSelector = '.learning-library-card, .course-row, .ready-course';
+const cardSelector = '.learning-library-card, .course-row, .ready-course, .phone-catalog .report-entry';
 const normalize = value => String(value).normalize('NFKC').toLocaleLowerCase().trim();
 
 export function filterCourses(root, value) {
@@ -13,12 +13,20 @@ export function filterCourses(root, value) {
     card.hidden = !terms.every(term => text.includes(term));
     if (!card.hidden) visible++;
   }
-  const hasSaved = cards.some(card => !card.matches('.ready-course') && !card.hidden);
+  const hasSaved = cards.some(card => !card.matches('.ready-course,.report-entry') && !card.hidden);
   const hasReady = cards.some(card => card.matches('.ready-course') && !card.hidden);
   const saved = root.querySelector('.course-saved-section');
   if (saved) saved.hidden = !hasSaved && !root.querySelector('.learning-library[aria-busy="true"],.learning-library-status.is-error,.learning-library-import');
   const catalog = root.querySelector('.phone-catalog');
-  if (catalog) catalog.hidden = Boolean(terms.length && !hasReady);
+  if (catalog) {
+    catalog.hidden = Boolean(terms.length && !hasReady);
+    if (terms.length && catalog.dataset.beforeSearch === undefined) catalog.dataset.beforeSearch = String(catalog.open);
+    if (terms.length && hasReady) catalog.open = true;
+    if (!terms.length && catalog.dataset.beforeSearch !== undefined) {
+      catalog.open = catalog.dataset.beforeSearch === 'true';
+      delete catalog.dataset.beforeSearch;
+    }
+  }
   const status = root.querySelector('[data-course-search-status]');
   if (status) status.textContent = terms.length
     ? visible ? t(`${visible} courses found`, `Найдено курсов: ${visible}`, `Табылған курс: ${visible}`)
@@ -30,7 +38,10 @@ export function filterCourses(root, value) {
 
 export function captureCourseSearch(main) {
   const input = main.querySelector('[data-course-search]');
-  return input && document.activeElement === input ? { start: input.selectionStart, end: input.selectionEnd } : null;
+  if (!input) return null;
+  const shelf = main.querySelector('.phone-catalog');
+  return { expanded: shelf?.open, beforeSearch: shelf?.dataset.beforeSearch,
+    selection: document.activeElement === input ? [input.selectionStart, input.selectionEnd] : null };
 }
 
 export function syncCourseSearch(main, owner, focus) {
@@ -38,9 +49,14 @@ export function syncCourseSearch(main, owner, focus) {
   const library = main.querySelector('.course-library');
   if (!library) return;
   const input = library.querySelector('[data-course-search]');
+  const shelf = library.querySelector('.phone-catalog');
+  if (shelf && focus) {
+    shelf.open = Boolean(focus.expanded);
+    if (focus.beforeSearch !== undefined) shelf.dataset.beforeSearch = focus.beforeSearch;
+  }
   input.value = query;
   filterCourses(library, query);
-  if (focus) { input.focus({ preventScroll: true }); input.setSelectionRange(focus.start, focus.end); }
+  if (focus?.selection) { input.focus({ preventScroll: true }); input.setSelectionRange(...focus.selection); }
 }
 
 export function mountCourseSearch() {

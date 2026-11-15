@@ -18,7 +18,7 @@ const topics = () => [
 
 function startButton(text, canResume) {
   if (canResume) return `<a class="primary landing-start" href="/">${text}</a>`;
-  return `<button type="button" class="primary landing-start" data-view="new-course">${text}</button>`;
+  return `<button type="button" class="primary landing-start" data-account-open="signup">${text}</button>`;
 }
 
 export function landingView({ canResume = false, signedIn = false } = {}) {
@@ -77,7 +77,7 @@ export function landingView({ canResume = false, signedIn = false } = {}) {
       <div><h2 id="landing-finish-title">${t('What will you learn first?', 'Чему научишься первым делом?', 'Алдымен нені үйренесің?')}</h2>${startButton(start, canResume)}<p class="course-price-note">${priceLine()}</p>${reportEntry()}</div>
     </div></section>
     <footer class="landing-container landing-footer">
-      <a class="brand" href="#landing-top" aria-label="Mindora"><img src="${brand}" width="32" height="32" alt=""><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
+      <a class="brand" href="#landing-top" aria-label="Mindora"><img class="brand-mark" src="${brand}" width="32" height="32" alt=""><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
       <nav class="landing-nav" aria-label="${t('Explore Mindora', 'О Mindora', 'Mindora туралы')}"><a href="#landing-topics">${courses}</a><a href="#landing-method">${method}</a></nav>
       ${signedIn ? '' : `<button class="text-link" type="button" data-account-open="signin">${t('Sign in', 'Войти', 'Кіру')}</button>`}
     </footer>

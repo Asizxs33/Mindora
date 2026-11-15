@@ -1,3 +1,4 @@
+import { finishedSteps } from '../core/progress.js';
 import { escapeHtml as esc } from '../core/engine.js';
 import { restorePlan } from '../core/learning-plan.js';
 import { drawingSvg } from '../core/lab-models.js';
@@ -9,7 +10,8 @@ import { t } from './language.js';
 export function learningProjects(saved) {
   saved = restorePlan(saved);
   if (!saved?.completed) return '';
-  return `<section class="lesson-projects"><h2>${t('Completed tasks in this course', 'Завершённые задания этого курса', 'Осы курста аяқталған тапсырмалар')}</h2><p class="small-note">${t('Open another saved course to find its answers.', 'Ответы из другого курса доступны после его открытия в «Мои курсы».', 'Басқа курстың жауаптарын «Курстарым» бөлімінен сол курсты ашып көре аласың.')}</p><div class="portfolio-grid">${saved.plan.steps.slice(0, saved.completed).map((step, index) => {
+  return `<section class="lesson-projects"><h2>${t('Completed tasks in this course', 'Завершённые задания этого курса', 'Осы курста аяқталған тапсырмалар')}</h2><p class="small-note">${t('Open another saved course to find its answers.', 'Ответы из другого курса доступны после его открытия в «Мои курсы».', 'Басқа курстың жауаптарын «Курстарым» бөлімінен сол курсты ашып көре аласың.')}</p><div class="portfolio-grid">${finishedSteps(saved.completed, saved.finished).map(index => {
+    const step = saved.plan.steps[index];
     const answer = saved.answers[index], parsed = restorePracticeAnswer(step.practice, answer);
     const svg = step.practice?.type === 'drawing';
     const text = parsed?.type === 'code' ? `${parsed.code}\n\n${parsed.output}\n\n${parsed.explanation}` : answer;

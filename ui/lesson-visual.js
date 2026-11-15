@@ -1,3 +1,4 @@
+import { studioTable } from './studio-practice.js';
 import { escapeHtml as esc } from '../core/engine.js';
 import { languageCode } from '../core/language.js';
 import { normalizeLessonVisual, visualContrastRatio } from '../core/lesson-visual.js';
@@ -91,6 +92,10 @@ export function renderLessonVisual(raw, language = currentLanguage()) {
   const visual = normalizeLessonVisual(raw);
   if (!visual) return '';
   const locale = languageCode(language);
+  if (visual.type === 'table' || visual.type === 'flow') {
+    const content = visual.type === 'table' ? studioTable(visual) : '<ol class="studio-flow">' + visual.steps.map(step => '<li>' + esc(step) + '</li>').join('') + '</ol>';
+    return '<figure class="instructional-visual" data-lesson-visual="' + visual.type + '" lang="' + locale + '"><figcaption><strong>' + esc(visual.label) + '</strong></figcaption>' + content + '</figure>';
+  }
   const render = { palette: paletteView, percent: percentView, dialogue: dialogueView, 'social-post': socialPostView }[visual.type];
   return render(visual, locale, copy[locale]);
 }

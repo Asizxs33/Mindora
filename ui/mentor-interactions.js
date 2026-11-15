@@ -12,7 +12,7 @@ export function interactWithMentor(target, { animate, announce, react }) {
   if (!help && !focus && !portrait) return false;
   const mentor = scene.querySelector('[data-character-kind]');
   const hint = scene.querySelector('[data-mentor-hint]');
-  if (focus) {
+  if (focus || (portrait && !hint && scene.querySelector('[data-mentor-focus]'))) {
     const scope = scene.closest('[data-learn-page], .lesson-template, .ai-lesson-page, .lesson-flow');
     const content = scope?.querySelector('[data-mentor-target], .ai-lesson-example, .ai-lesson-choices, .ai-lesson-criterion');
     if (!content) return false;

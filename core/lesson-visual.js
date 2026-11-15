@@ -1,3 +1,4 @@
+import { normalizeTable } from './studio-practice.js';
 const label = (value, max) => typeof value === 'string' && value.trim() && value.length <= max ? value.trim() : null;
 const color = value => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value.trim()) ? value.trim().toLowerCase() : null;
 
@@ -17,6 +18,16 @@ export function visualContrastRatio(foreground, background) {
 // Structured examples only: no model-authored HTML, SVG, CSS or executable code.
 export function normalizeLessonVisual(raw) {
   if (!raw || typeof raw !== 'object') return null;
+  if (raw.type === 'table') {
+    const table = normalizeTable(raw), title = label(raw.label, 120);
+    return table && title ? { type: 'table', label: title, ...table } : null;
+  }
+  if (raw.type === 'flow') {
+    const title = label(raw.label, 120);
+    if (!title || !Array.isArray(raw.steps) || raw.steps.length < 2 || raw.steps.length > 5) return null;
+    const steps = raw.steps.map(step => label(step, 95));
+    return steps.every(Boolean) ? { type: 'flow', label: title, steps } : null;
+  }
   if (raw.type === 'dialogue') {
     const title = label(raw.label, 120);
     if (!title || !Array.isArray(raw.turns) || raw.turns.length < 2 || raw.turns.length > 4) return null;

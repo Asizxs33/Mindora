@@ -91,22 +91,6 @@ export function mountShell() {
     <button class="modal-close icon-button" data-action="close-modal" aria-label="Close window">${icon('close', 22)}</button>
     <div id="modal-content"></div>
   </dialog>`;
-  // The node can be replaced immediately by a generated lesson's loading state.
-  // Animate a decorative copy so opening the lesson never waits for motion.
-  document.addEventListener('click', event => {
-    const node = event.target.closest?.('button[data-unlock]:not(:disabled)');
-    if (!node || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const mark = node.querySelector('.roadmap-stage-status svg') || node.querySelector('svg');
-    if (!mark?.animate) return;
-    const box = mark.getBoundingClientRect();
-    const lock = mark.cloneNode(true);
-    Object.assign(lock.style, { position: 'fixed', left: box.left + 'px', top: box.top + 'px',
-      width: box.width + 'px', height: box.height + 'px', zIndex: '20', color: '#ad4f13', pointerEvents: 'none' });
-    lock.setAttribute('aria-hidden', 'true');
-    document.body.append(lock);
-    const fall = lock.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(32px) rotate(22deg)', opacity: 0 }], { duration: 300, easing: 'ease-in' });
-    fall.onfinish = fall.oncancel = () => lock.remove();
-  }, true);
   mountCharacters();
   mountPresentation();
   mountCourseSearch();

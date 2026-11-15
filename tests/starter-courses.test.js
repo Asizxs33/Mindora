@@ -75,10 +75,10 @@ test('each start is an independent fresh copy and unsupported IDs cannot open a 
   assert.equal(new Set(['en', 'ru', 'kk'].map(language => getStarterCourse('ai-prompts', language).plan.title)).size, 3);
 });
 
-test('all 63 variants contain the selected duration and distinct, valid lessons', () => {
+test('all 72 variants contain the selected duration and distinct, valid lessons', () => {
   for (const language of ['en', 'ru', 'kk']) for (const minutes of STARTER_DURATIONS) {
     const cards = starterCourses(language, minutes);
-    assert.equal(cards.length, 7);
+    assert.equal(cards.length, 8);
     for (const card of cards) {
       const saved = getStarterCourse(card.id, language, minutes);
       assert.ok(saved, `${card.id}/${language}/${minutes}`);
