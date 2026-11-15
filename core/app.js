@@ -654,7 +654,9 @@ function render() {
     case 'welcome': html = landingView({ canResume: canStudy(), signedIn: Boolean(accountOwner) }); break;
     case 'discover':
       if (!canStudy() || startingNew) html = guidedStartView({ ...introduction, courseLanguage: state.courseDraftLanguage, signedIn: Boolean(accountOwner) });
-      else html = phoneLayout?.matches || selectedHomeKind() ? phonePath(roadmapProps) : homeScreen();
+      else if (phoneLayout?.matches || selectedHomeKind()) html = phonePath(roadmapProps);
+      else if (phoneLayout?.matches === false) html = quietHomeView({ ...state, active: 'budget', lastLearningType: 'builtin' });
+      else html = homeScreen();
       break;
     case 'weekly-report': html = weeklyReportView(weeklyWorkspace().progress, reportChecks); break;
     case 'new-course': html = courseHomeView(state, { composerOnly: true }); break;
@@ -1398,6 +1400,7 @@ document.addEventListener('click', event => {
     openCourse();
     return;
   }
+  if (requestedStep !== undefined && !state.active && id && Object.hasOwn(COURSES, id)) return resumeCourse(id, Number(requestedStep));
   if (requestedStep !== undefined) return openStep(Number(requestedStep));
   if (choice !== undefined && view === 'lesson' && step === 1) {
     quizChoice = Number(choice);
@@ -1488,7 +1491,10 @@ document.addEventListener('input', event => {
     refreshCertificatePreview(certificateData(state.active));
   }
 });
-window.addEventListener('mindora:guest-entry', () => go('new-course'));
+window.addEventListener('mindora:guest-entry', () => {
+  if (phoneLayout?.matches === false) { ensureLearning(); go('discover'); }
+  else go('new-course');
+});
 window.addEventListener('mindora:account-changed', event => {
   const account = getAccountState();
   const owner = account.user?.id || null;
