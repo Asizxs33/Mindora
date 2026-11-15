@@ -3,7 +3,7 @@ import { roadmapStageKind } from '../core/roadmap-model.js';
 import { mentorForTopic } from '../core/subject-mentor.js';
 import { character } from './characters.js';
 import { icon } from './icons.js';
-import { t } from './language.js';
+import { courseLanguageField, t } from './language.js';
 
 const TITLE = {
   roadmap: () => t('My learning path', 'Мой путь обучения', 'Оқу жолым'),
@@ -100,7 +100,7 @@ function wizardView(wizard, busy, error) {
     fields = radioOptions('minutes', durationOptions(), minutes);
   } else {
     fields = `<label class="field"><span class="visually-hidden">${title}</span>
-      <input name="goal" minlength="3" maxlength="180" required autocomplete="off" value="${escape(goal)}" placeholder="${t('I want to build a budget spreadsheet', 'Хочу собрать таблицу для бюджета', 'Бюджет кестесін жасауды үйренгім келеді')}"></label>`;
+      <input name="goal" minlength="3" maxlength="180" required autocomplete="off" value="${escape(goal)}" placeholder="${t('I want to build a budget spreadsheet', 'Хочу собрать таблицу для бюджета', 'Бюджет кестесін жасауды үйренгім келеді')}"></label>${courseLanguageField(wizard.language)}`;
   }
   return `<section class="roadmap-wizard" aria-labelledby="roadmap-title">
     <div class="roadmap-wizard-progress">

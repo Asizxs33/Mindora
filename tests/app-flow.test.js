@@ -1,3 +1,4 @@
+import { languageCode } from '../core/language.js';
 import { mentorForTopic } from '../core/subject-mentor.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -124,7 +125,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
     mentorForTopic, ...engine, ...progress, ...budget, ...learningModel, ...assessments, ...returnReview, ...roadmapModel, ...rewardsModel,
     createGuestCourseRequest, BROWSER_GUEST, resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, startTopics, getStarterCourse, starterCourses, createPracticeController,
     needsReturnReview: (lastSeen, learned) => returnReview.needsReturnReview(lastSeen, learned, time),
-    languageCode: value => value || 'en', setLanguage() {}, message: value => value, t: value => value,
+    languageCode, setLanguage() {}, message: value => value, t: value => value,
     createCloudDrafts: () => ({ render() {}, async init() {} }),
     createPlanController: () => ({ screen: () => ({}), reset() {}, async generate(goal, minutes, details) {
       generations.push(clone({ goal, minutes, ...(details ? { context: details } : {}) }));
@@ -502,15 +503,17 @@ test('an explicitly requested roadmap builds a personalized path and starts only
   run.click({ roadmapAction: 'setup' });
   assert.equal(run.current.view, 'roadmap');
   assert.equal(run.current.html.args[0].wizard.step, 0);
-  run.answerRoadmap({ goal: 'I want to learn spreadsheet formulas' });
+  run.answerRoadmap({ goal: 'I want to learn spreadsheet formulas', courseLanguage: 'kk' });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.clarificationRequests[0].goal, 'I want to learn spreadsheet formulas');
+  assert.equal(run.clarificationRequests[0].language, 'kk');
   assert.equal(run.current.html.args[0].wizard.directionConfirmed, false);
   run.answerRoadmap({ direction: '0' });
   run.answerRoadmap({ experience: 'some', evidence: 'I know SUM.', diagnosticAnswer: '5, because SUM adds the two cells.' });
   run.answerRoadmap({ motivation: 'work' });
   run.answerRoadmap({ minutes: '10' });
   await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.roadmapRequests[0].language, 'kk');
   assert.equal(run.roadmapRequests[0].evidence, 'I know SUM.');
   assert.equal(run.roadmapRequests[0].goal, 'Build a small spreadsheet report');
   assert.equal(run.roadmapRequests[0].originalGoal, 'I want to learn spreadsheet formulas');

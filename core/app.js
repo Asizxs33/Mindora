@@ -1,4 +1,4 @@
-import { reportProgress, checkWeeklyReport } from './weekly-report.js';
+import { reportProgress, reportReturnDue, submitReport } from './weekly-report.js';
 import { weeklyReportView, membershipView } from '../ui/work-skills.js';
 import { COURSES, DESIGN_QUIZ, evaluatePoster } from './engine.js';
 import { budgetCsv, budgetSession, budgetDraftKey, createBudgetDraft, evaluateBudgetSession, normalizeMinutes, readBudgetQuiz, readBudgetResume } from './budget-session.js';
@@ -63,7 +63,9 @@ try {
 const empty={version:1,minutes:10,active:null,goals:{},progress:{design:0,budget:0},drafts:{},works:{},notes:{},sessions:{},certificates:{},practiceCount:0,studyDays:[]};
 function readState(){try{const v=JSON.parse(workspaceStorage.read());if(!v||v.version!==1)return structuredClone(empty);return {...empty,...v,active:['design','budget'].includes(v.active)?v.active:null,minutes:[5,10,20].includes(v.minutes)?v.minutes:10,progress:{design:Math.min(4,Math.max(0,Number(v.progress?.design)||0)),budget:Math.min(4,Math.max(0,Number(v.progress?.budget)||0))},goals:v.goals||{},drafts:v.drafts||{},works:v.works||{},notes:v.notes||{}};}catch{return structuredClone(empty);}}
 const state = readState();
-state.language = languageCode(state.language);
+let deviceLanguage;
+try { deviceLanguage = localStorage.getItem('mindora.interface-language'); } catch { /* Use the workspace preference. */ }
+state.language = languageCode(deviceLanguage, languageCode(state.language));
 setLanguage(state.language);
 const resume = readBudgetResume(state);
 const phoneLayout = window.matchMedia?.('(max-width: 920px)');
@@ -456,6 +458,10 @@ function go(next, cursor = null, newCourse = false) {
     window.history.replaceState(null, '', path + window.location.search + (next === 'weekly-report' ? '#weekly-report' : ''));
   }
   if (reportRoute) reportChecks = null;
+  if (next === 'weekly-report' && reportReturnDue(state.weeklyReport) && state.weeklyReport.day === 0) {
+    state.weeklyReport.day = 1;
+    save();
+  }
   view = next;
   if (next !== 'discover') startingNew = false;
   if (next === 'roadmap' && state.learningRoadmap) { state.lastLearningType = 'roadmap'; saveLocal(); }
@@ -606,7 +612,7 @@ function render() {
   switch (view) {
     case 'welcome': html = landingView({ canResume: canStudy(), signedIn: Boolean(accountOwner) }); break;
     case 'discover':
-      if (!canStudy() || startingNew) html = guidedStartView({ ...introduction, signedIn: Boolean(accountOwner) });
+      if (!canStudy() || startingNew) html = guidedStartView({ ...introduction, courseLanguage: state.courseDraftLanguage, signedIn: Boolean(accountOwner) });
       else html = phoneLayout?.matches || selectedHomeKind() ? phonePath(roadmapProps) : homeScreen();
       break;
     case 'weekly-report': html = weeklyReportView(weeklyWorkspace().progress, reportChecks); break;
@@ -614,7 +620,7 @@ function render() {
     case 'new-course': html = courseHomeView(state, { composerOnly: true }); break;
     case 'courses':
       html = canStudy()
-        ? phoneCourseLibrary(courseLibraryHtml(), readyCoursesView(starterCourses(state.language, state.minutes), state.minutes))
+        ? phoneCourseLibrary(courseLibraryHtml(), readyCoursesView(starterCourses(state.language, state.minutes), state.minutes), state.weeklyReport)
         : homeScreen();
       break;
     case 'task-preview': html = taskPreviewView(previewController.screen()); break;
@@ -798,7 +804,7 @@ function beginRoadmap(goal = '', minutes = state.minutes) {
   if (roadmapOperation) return;
   if (savedRoadmaps().length) return go('membership');
   roadmapWizard = {
-    step: goal ? 1 : 0, goal, originalGoal: goal, minutes, experience: '', evidence: '', motivation: '',
+    step: goal ? 1 : 0, goal, originalGoal: goal, minutes, language: languageCode(state.courseDraftLanguage), experience: '', evidence: '', motivation: '',
     clarification: null, direction: '', customGoal: '', directionConfirmed: false,
     diagnosticQuestion: '', diagnosticAnswer: '', diagnosticUnknown: false,
   };
@@ -823,7 +829,7 @@ function clarifyRoadmap() {
     try {
       response = await fetch('/api/learning-roadmap', {
         method: 'POST', headers: { 'Content-Type': 'application/json', ...learningHeaders(owner) },
-        body: JSON.stringify({ action: 'clarify', goal: wizard.originalGoal, minutes: wizard.minutes, language: state.language }),
+        body: JSON.stringify({ action: 'clarify', goal: wizard.originalGoal, minutes: wizard.minutes, language: wizard.language }),
         signal: AbortSignal.timeout(38000),
       });
     } catch {
@@ -866,7 +872,8 @@ function captureRoadmapAnswers(form) {
   const wizard = roadmapWizard;
   if (wizard.step === 0) {
     const goal = String(fields.get('goal') || '').trim();
-    if (goal !== wizard.originalGoal) {
+    const language = languageCode(fields.get('courseLanguage'), languageCode(wizard.language));
+    if (goal !== wizard.originalGoal || language !== wizard.language) {
       wizard.clarification = null;
       wizard.direction = '';
       wizard.directionConfirmed = false;
@@ -874,6 +881,7 @@ function captureRoadmapAnswers(form) {
       wizard.diagnosticUnknown = false;
     }
     wizard.goal = goal;
+    wizard.language = language;
   }
   if (wizard.step === 1) {
     if (!wizard.directionConfirmed) {
@@ -939,7 +947,7 @@ function submitRoadmap(form) {
     return;
   }
   const input = roadmapInput({
-    ...wizard, language: state.language,
+    ...wizard, language: wizard.language,
     diagnosticAnswer: wizard.diagnosticUnknown ? 'I do not know yet.' : wizard.diagnosticAnswer,
   });
   if (!input) {
@@ -973,6 +981,7 @@ function submitRoadmap(form) {
     state.learningRoadmaps = savedRoadmaps().map(path => path.id ? path : { ...path, id: crypto.randomUUID() });
     state.learningRoadmap = restoreRoadmap({ ...roadmap, id: crypto.randomUUID() });
     state.minutes = input.minutes;
+    delete state.courseDraftLanguage;
     roadmapWizard = null;
     save();
     if (view === 'roadmap') go('roadmap');
@@ -1031,8 +1040,7 @@ document.addEventListener('submit', event => {
     const { progress, save } = weeklyWorkspace();
     const draft = progress.days[progress.day];
     for (const [field, value] of new FormData(event.target)) draft[field] = String(value).slice(0, 80);
-    reportChecks = checkWeeklyReport(progress.day, draft);
-    draft.completed = Object.values(reportChecks).every(Boolean);
+    reportChecks = submitReport(progress.day, draft);
     save();
     render();
     if (!draft.completed) $('#weekly-report-form [name="' + Object.keys(reportChecks).find(key => !reportChecks[key]) + '"]')?.focus();
@@ -1175,13 +1183,19 @@ document.addEventListener('input', event => {
 });
 
 document.addEventListener('change', event => {
-  if (event.target.id === 'interface-language') {
+  if (event.target.name === 'courseLanguage') {
+    state.courseDraftLanguage = languageCode(event.target.value);
+    saveLocal();
+    return;
+  }
+  if (event.target.id === 'interface-language' || event.target.id === 'reader-language') {
     captureRoadmapAnswers($('#roadmap-form'));
     const goal = $('#goal-input')?.value;
     const planForm = $('#learning-plan-form');
     const inputs = planForm ? [planForm.elements.goal.value, planForm.elements.minutes.value] : null;
     state.language = languageCode(event.target.value);
     setLanguage(state.language);
+    try { localStorage.setItem('mindora.interface-language', state.language); } catch { /* In-memory choice still applies. */ }
     save();
     render();
     if (goal !== undefined) $('#goal-input').value = goal;
@@ -1189,7 +1203,6 @@ document.addEventListener('change', event => {
       $('#learning-plan-form').elements.goal.value = inputs[0];
       $('#learning-plan-form').elements.minutes.value = inputs[1];
     }
-    $('#interface-language')?.focus();
     return;
   }
   if (['time-select', 'profile-minutes', 'budget-session-minutes'].includes(event.target.id)) {

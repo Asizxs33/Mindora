@@ -2,7 +2,7 @@ import { workHeadline, workAudience, priceLine, reportEntry } from './work-skill
 import { mentorForTopic } from '../core/subject-mentor.js';
 import { character } from './characters.js';
 import { escapeHtml as esc } from '../core/engine.js';
-import { t, languagePicker } from './language.js';
+import { t, languagePicker, courseLanguageField } from './language.js';
 import { icon } from './icons.js';
 import { lessonNames } from './dashboard.js';
 import { landingView } from './landing.js';
@@ -14,7 +14,7 @@ export const startTopics = () => [
   { id: 'custom', label: t('My own topic', 'Своя тема', 'Өз тақырыбым'), goal: '', icon: 'spark' },
 ];
 
-export function guidedStartView({ step = 0, name = '', topic = '', goal = '', minutes = 10, signedIn = false } = {}) {
+export function guidedStartView({ step = 0, name = '', topic = '', goal = '', minutes = 10, courseLanguage = 'en', signedIn = false } = {}) {
   if (step === 0 && !signedIn) return landingView();
   const prompts = [t('Hi, I’m Mino. Tell me what you’d like to learn.', 'Привет, я Мино. Чему хочешь научиться?', 'Сәлем, мен Миномын. Не үйренгің келеді?'),
     t('What should I call you?', 'Как тебя зовут?', 'Сені қалай атайын?'),
@@ -31,7 +31,7 @@ export function guidedStartView({ step = 0, name = '', topic = '', goal = '', mi
       ${greeting ? `<h1 id="guided-prompt" tabindex="-1">${workHeadline()}</h1><p class="guided-work-copy">${workAudience()}</p>` : ''}
       ${step === 1 ? `<form id="intro-name-form" class="guided-field"><label for="intro-name">${t('Your name','Твоё имя','Атың')}</label><input id="intro-name" name="name" value="${esc(name)}" maxlength="80" autocomplete="given-name" required placeholder="${t('Your name','Твоё имя','Атың')}"></form>` : ''}
       ${step === 2 ? `<div class="guided-topics" role="group" aria-labelledby="guided-prompt">${startTopics().map(item => `<button type="button" class="guided-option" data-intro-topic="${item.id}" aria-pressed="${topic === item.id}">${icon(item.icon,23)}<span>${item.label}</span>${topic === item.id ? icon('check',19) : ''}</button>`).join('')}</div>${topic === 'custom' ? `<label class="guided-field" for="intro-goal"><span>${t('What do you want to do?','Что хочешь научиться делать?','Не істеуді үйренгің келеді?')}</span><input id="intro-goal" value="${esc(goal)}" minlength="3" maxlength="180" placeholder="${t('For example, edit my first video','Например, смонтировать первое видео','Мысалы, алғашқы видеомды өңдеу')}"></label>` : ''}` : ''}
-      ${step === 3 ? `<div class="guided-pace" role="group" aria-labelledby="guided-prompt">${[5,10,20].map(value => `<button type="button" class="guided-option" data-intro-minutes="${value}" aria-pressed="${minutes === value}"><strong>${value}</strong><span>${t('minutes','минут','минут')}</span>${minutes === value ? icon('check',18) : ''}</button>`).join('')}</div><p class="guided-small">${t('You can pause whenever you need.', 'Можно остановиться в любой момент.', 'Кез келген уақытта үзіліс жасай аласың.')}</p>` : ''}
+      ${step === 3 ? `<div class="guided-pace" role="group" aria-labelledby="guided-prompt">${[5,10,20].map(value => `<button type="button" class="guided-option" data-intro-minutes="${value}" aria-pressed="${minutes === value}"><strong>${value}</strong><span>${t('minutes','минут','минут')}</span>${minutes === value ? icon('check',18) : ''}</button>`).join('')}</div>${courseLanguageField(courseLanguage)}<p class="guided-small">${t('You can pause whenever you need.', 'Можно остановиться в любой момент.', 'Кез келген уақытта үзіліс жасай аласың.')}</p>` : ''}
     </div>
     <footer class="guided-footer"><button type="button" class="primary" ${greeting ? 'data-view="new-course"' : `data-intro-action="${step === 3 ? 'start' : 'next'}"`} ${valid ? '' : 'disabled'}>${greeting ? t('Build my free course','Создать бесплатный курс','Тегін курсымды құру') : step === 3 ? t('Start learning','Начать обучение','Оқуды бастау') : t('Continue','Продолжить','Жалғастыру')}${icon('arrow',20)}</button>${greeting && !signedIn ? `<button type="button" class="secondary" data-view="courses">${icon('book',18)} ${t('Explore courses','Открыть курсы','Курстарды көру')}</button>` : ''}</footer>
     ${greeting ? `<div class="guided-offer">${reportEntry()}<p class="course-price-note">${priceLine()}</p></div>` : ''}

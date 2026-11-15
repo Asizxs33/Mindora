@@ -18,7 +18,7 @@ body.quiet-shell.is-guided .app-shell:has(.mindora-landing) { max-width: none; }
 .landing-language .language-picker > summary:hover, .landing-language .language-picker[open] > summary { background: #fff7f0; }
 
 .landing-hero {
-  min-height: max(498px, calc(100svh - 142px));
+  min-height: 420px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.04fr);
   align-items: center;
@@ -29,7 +29,7 @@ body.quiet-shell.is-guided .app-shell:has(.mindora-landing) { max-width: none; }
 .landing-hero-art { display: grid; place-items: center; min-width: 0; }
 .landing-mascot {
   display: block;
-  width: min(100%, 440px, 53svh);
+  width: min(100%, 340px, 47svh);
   height: auto;
   object-fit: contain;
   transform-origin: 50% 88%;
@@ -49,12 +49,13 @@ body.quiet-shell.is-guided .app-shell:has(.mindora-landing) { max-width: none; }
 .landing-hero-copy h1 {
   margin: 0 auto;
   max-width: 22ch;
-  font-size: clamp(29px, 3.1vw, 40px);
+  font-size: var(--page-title);
   line-height: 1.22;
   font-weight: 900;
   letter-spacing: -.024em;
   text-wrap: balance;
 }
+.landing-intro { max-width: 42ch; margin: 12px auto 0; color: var(--landing-muted); font: 500 16px/1.5 var(--font-text); }
 .landing-actions { display: grid; gap: 13px; margin: 35px auto 0; width: min(100%, 326px); }
 .mindora-landing .landing-start,
 .mindora-landing .landing-signin {
@@ -135,7 +136,7 @@ body.quiet-shell.is-guided .app-shell:has(.mindora-landing) { max-width: none; }
   padding-block: 95px;
 }
 .landing-route h2, .landing-method h2, .landing-finish h2 {
-  font-size: clamp(30px, 4.4vw, 52px);
+  font-size: clamp(24px, 2.1vw, 30px);
   font-weight: 950;
   letter-spacing: -.035em;
   line-height: 1.05;
@@ -173,12 +174,12 @@ body.quiet-shell.is-guided .app-shell:has(.mindora-landing) { max-width: none; }
     grid-template-rows: minmax(0, 1fr) auto;
     align-items: end;
     gap: 22px;
-    min-height: max(555px, calc(100svh - 60px));
+    min-height: 0;
     padding-block: 24px 25px;
   }
-  .landing-mascot { width: min(78%, 262px, 34svh); }
-  .landing-hero-copy h1 { max-width: 21ch; font-size: clamp(26px, 7vw, 33px); }
-  .landing-actions { margin-top: clamp(22px, 11.5svh, 92px); width: 100%; max-width: 380px; gap: 12px; }
+  .landing-mascot { width: min(68%, 202px, 28svh); }
+  .landing-hero-copy h1 { max-width: 21ch; font-size: var(--page-title); }
+  .landing-actions { margin-top: 20px; width: 100%; max-width: 380px; gap: 12px; }
   .landing-topics-inner { width: 100%; padding-block: 9px; }
   .landing-topics ul { padding-inline: 18px; scroll-padding-inline: 18px; }
   .landing-topics button { font-size: 13px; }
@@ -195,6 +196,6 @@ body.quiet-shell.is-guided .app-shell:has(.mindora-landing) { max-width: none; }
 }
 @media (max-height: 660px) and (max-width: 700px) {
   .landing-hero { min-height: 0; gap: 17px; padding-block: 22px 24px; }
-  .landing-mascot { width: min(68%, 212px); }
+  .landing-mascot { width: min(62%, 154px); }
   .landing-actions { margin-top: 22px; }
 }

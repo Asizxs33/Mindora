@@ -7,7 +7,7 @@ import { icon } from './icons.js';
 import { courseIllustration } from './course-cover.js';
 import { timeOptions } from './budget-session.js';
 import { character } from './characters.js';
-import { t, currentLanguage } from './language.js';
+import { t, currentLanguage, courseLanguageField } from './language.js';
 
 export const courseNames = {
   get design() { return t('Your first poster','Твой первый постер','Алғашқы постерің'); },
@@ -64,12 +64,12 @@ export function phoneCourseNav(selected) {
     `<button type="button" data-view="${view}"${selected === view ? ' aria-current="page"' : ''}>${icon(symbol, 17)}<span>${label}</span></button>`).join('')}</nav>`;
 }
 
-export function phoneCourseLibrary(libraryHtml, readyHtml) {
+export function phoneCourseLibrary(libraryHtml, readyHtml, weeklyReport) {
   return `<section class="phone-library course-library"><header class="course-library-heading"><h1>${t('My courses', 'Мои курсы', 'Курстарым')}</h1><button type="button" class="secondary course-library-create" data-view="new-course">${icon('plus', 18)} ${t('Create a course', 'Создать курс', 'Курс жасау')}</button></header>
     <div class="course-library-search"><label class="visually-hidden" for="course-search">${t('Find a course', 'Найти курс', 'Курс іздеу')}</label>${icon('search',20)}<input id="course-search" type="search" data-course-search placeholder="${t('Find a course', 'Найти курс', 'Курс іздеу')}" autocomplete="off"><button type="button" class="icon-button" data-course-search-clear aria-label="${t('Clear search', 'Очистить поиск', 'Іздеуді тазалау')}" hidden>${icon('close',18)}</button></div>
     <p class="course-search-status" role="status" data-course-search-status></p>
     <section class="course-saved-section"><h2 class="course-section-title">${t('Continue learning', 'Продолжить обучение', 'Оқуды жалғастыру')}</h2><div data-course-library>${libraryHtml}</div></section>
-    ${reportEntry()}
+    ${reportEntry(weeklyReport)}
     <section class="phone-catalog" aria-labelledby="course-catalog-title"><h2 class="course-section-title" id="course-catalog-title">${t('Explore mini-courses', 'Готовые мини-курсы', 'Дайын шағын курстар')}</h2>${readyHtml}</section>
   </section>`;
 }
@@ -90,7 +90,7 @@ export function courseHomeView(state, { current = null, libraryHtml = '', readyH
     <form id="goal-form" class="course-home-composer">
       <label class="visually-hidden" for="goal-input">${t('What do you want to learn?', 'Чему хочешь научиться?', 'Не үйренгің келеді?')}</label>
       <input id="goal-input" name="goal" value="${escapeHtml(state.homeGoal || '')}" placeholder="${t('For example, use AI to draft a Friday update', 'Например, подготовить отчёт за неделю с ИИ', 'Мысалы, ЖИ көмегімен апталық есеп жазу')}" minlength="3" maxlength="180" required autocomplete="off" enterkeyhint="go">
-      <div class="course-home-form-actions"><label class="course-home-time" for="time-select"><span>${t('Per lesson', 'На занятие', 'Бір сабаққа')}</span><select id="time-select" name="minutes">${[5, 10, 20].map(value => `<option value="${value}"${value === state.minutes ? ' selected' : ''}>${value} ${t('min', 'мин', 'мин')}</option>`).join('')}</select></label><button type="submit" class="primary">${guest ? t('Build my free course','Создать бесплатный курс','Тегін курсымды құру') : t('Create a path', 'Создать путь', 'Оқу жолын құру')}${icon('arrow', 18)}</button></div>
+      <div class="course-home-form-actions">${courseLanguageField(state.courseDraftLanguage)}<label class="course-home-time" for="time-select"><span>${t('Per lesson', 'На занятие', 'Бір сабаққа')}</span><select id="time-select" name="minutes">${[5, 10, 20].map(value => `<option value="${value}"${value === state.minutes ? ' selected' : ''}>${value} ${t('min', 'мин', 'мин')}</option>`).join('')}</select></label><button type="submit" class="primary">${guest ? t('Build my free course','Создать бесплатный курс','Тегін курсымды құру') : t('Create a path', 'Создать путь', 'Оқу жолын құру')}${icon('arrow', 18)}</button></div>
     </form>
     <p class="course-price-note">${priceLine()}</p>
     <ol class="course-home-method" aria-label="${t('How your lessons work', 'Как устроены занятия', 'Сабақтар қалай өтеді')}">
@@ -98,7 +98,7 @@ export function courseHomeView(state, { current = null, libraryHtml = '', readyH
       <li>${icon('target', 18)}<span>${t('Examples & practice', 'Примеры и практика', 'Мысал мен жаттығу')}</span></li>
       <li>${icon('path', 18)}<span>${t('Resume anytime', 'Продолжай в удобное время', 'Кез келген уақытта жалғастыр')}</span></li>
     </ol>
-    ${composerOnly ? '' : reportEntry()}
+    ${composerOnly ? '' : reportEntry(state.weeklyReport)}
     ${composerOnly ? '' : `<div class="course-home-shortcuts topic-shortcuts">
       <button type="button" class="topic-shortcut" data-course="design" data-course-path>${icon('palette', 18)} ${t('Make a poster', 'Сделать постер', 'Постер жасау')}</button>
       <button type="button" class="topic-shortcut" data-course="budget" data-course-path>${icon('sheet', 18)} ${t('Learn spreadsheets', 'Изучить таблицы', 'Кестелерді үйрену')}</button>

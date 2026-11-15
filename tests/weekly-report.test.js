@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkWeeklyReport, reportProgress } from '../core/weekly-report.js';
+import { checkWeeklyReport, reportProgress, submitReport, reportReturnDue } from '../core/weekly-report.js';
 import { validateBuiltinWorkspace } from '../backend/builtin-workspace.js';
 import { quotaIdentity } from '../backend/personal-course-quota.js';
 import { roadmapApi } from '../backend/roadmap-api.js';
@@ -38,4 +38,20 @@ test('a spent free course is rejected before generation', async () => {
   const response = await roadmapApi(request,{ settings:{},apiKey:'fixture',quota:()=>({run:async()=>({code:'COURSE_LIMIT'})}),generate:async()=>{called=true;} });
   assert.equal(response.status,402);
   assert.equal(called,false);
+});
+
+test('later-day independent practice is distinguished from immediate practice and counts checked attempts', () => {
+  const progress = reportProgress();
+  const today = new Date(2026, 10, 15, 16).getTime();
+  const tomorrow = new Date(2026, 10, 16, 9).getTime();
+  Object.assign(progress.days[0], { formula:'=SUM(B2:B4)', total:'80', decision:'within' });
+  submitReport(0, progress.days[0], today);
+  assert.equal(reportReturnDue(progress, today + 60000), false);
+  assert.equal(reportReturnDue(progress, tomorrow), true);
+  submitReport(1, progress.days[1], tomorrow);
+  Object.assign(progress.days[1], { formula:'=SUM(B2:B5)', total:'103', decision:'over' });
+  submitReport(1, progress.days[1], tomorrow + 1000);
+  assert.equal(progress.days[1].attempts, 2);
+  assert.equal(reportReturnDue(progress, tomorrow + 2000), false);
+  assert.deepEqual(validateBuiltinWorkspace({ weeklyReport:progress }).weeklyReport,progress);
 });
