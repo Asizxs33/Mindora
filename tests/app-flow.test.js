@@ -677,6 +677,47 @@ test('an existing roadmap stage resumes the saved lesson and draft without anoth
   assert.equal(reloaded.current.state.learningPlan.answers[1], 'My current draft');
 });
 
+test('a stage tapped during account hydration opens once with its saved checkpoint', async () => {
+  let finish;
+  const reconcile = new Promise(resolve => { finish = resolve; });
+  const id = '12345678-1234-4000-8000-123456789012';
+  const course = { id, revision: 3, saved: savedAiCourse(), updatedAt: new Date(NOW).toISOString() };
+  const storage = new Map([[KEY, JSON.stringify(seed({ learningRoadmap: savedRoadmap(id) }))]]);
+  const run = app(null, { account: { user: null, profile: null }, storage, reconcile, realPlans: true, libraryCourses: [course] });
+  run.signIn({ id: 'test-user' });
+  assert.equal(run.current.html.kind, 'roadmap');
+  run.click({ roadmapAction: 'start', roadmapStage: '0' });
+  run.click({ roadmapAction: 'start', roadmapStage: '0' });
+  assert.deepEqual(run.loadedCourses, [], 'wait for the account before loading the course');
+  finish();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(run.loadedCourses, [id], 'rapid taps queue only one resume');
+  assert.deepEqual(run.generations, []);
+  assert.equal(run.current.view, 'learning-plan');
+  assert.equal(run.current.state.learningPlan.completed, 1);
+  assert.equal(run.current.state.learningPlan.answers[1], 'My current draft');
+  assert.equal(run.current.state.learningPlan.study[1].page, 1);
+});
+
+test('a queued stage tap does not override navigation or an account change', async () => {
+  for (const leave of [run => run.click({ view: 'profile' }), run => run.signIn({ id: 'another-user' })]) {
+    let finish;
+    const reconcile = new Promise(resolve => { finish = resolve; });
+    const id = '12345678-1234-4000-8000-123456789012';
+    const storage = new Map([[KEY, JSON.stringify(seed({ learningRoadmap: savedRoadmap(id) }))]]);
+    const run = app(null, { account: { user: null, profile: null }, storage, reconcile });
+    run.signIn({ id: 'test-user' });
+    run.click({ roadmapAction: 'start', roadmapStage: '0' });
+    leave(run);
+    const destination = run.current.view;
+    finish();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(run.loadedCourses, []);
+    assert.deepEqual(run.generations, []);
+    assert.equal(run.current.view, destination);
+  }
+});
+
 test('the next generated stage receives only prior completed stage objectives', async () => {
   const roadmap = savedRoadmap('12345678-1234-4000-8000-123456789011');
   roadmap.originalGoal = 'Python';

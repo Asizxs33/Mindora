@@ -934,6 +934,17 @@ function startRoadmapStage(index) {
   const roadmap = restoreRoadmap(state.learningRoadmap);
   const selected = roadmap && roadmapStageStatuses(roadmap)[index];
   if (!selected || selected.status === 'locked') return;
+  const requestedOwner = learningOwner();
+  const requestedView = view;
+  const pathKey = path => path && (path.id || JSON.stringify([path.goal, path.title, path.stages]));
+  const requestedPath = pathKey(roadmap);
+  // The locally restored path can appear before account reconciliation finishes.
+  // Keep that first tap, but discard it if the learner navigates or changes paths.
+  if (!ensureLearning(() => {
+    if (learningOwner() === requestedOwner && view === requestedView
+      && pathKey(restoreRoadmap(state.learningRoadmap)) === requestedPath) startRoadmapStage(index);
+    else render();
+  })) return;
   // The saved path also renders as home. Give its async operation the same
   // route/error handling as a path opened from navigation.
   if (view === 'discover') { roadmapWizard = null; go('roadmap'); }
@@ -1131,7 +1142,7 @@ document.addEventListener('click', event => {
   if (button.dataset.starterCourse) { void startReadyCourse(button.dataset.starterCourse, button.dataset.starterMinutes); return; }
   const { roadmapAction, roadmapStage, roadmapBuy, roadmapClaim } = button.dataset;
   if (roadmapAction || roadmapBuy || roadmapClaim) {
-    if (!ensureLearning() || roadmapOperation) return;
+    if (roadmapOperation || (roadmapAction !== 'start' && !ensureLearning())) return;
     if (roadmapAction === 'setup' && phoneLayout?.matches) go('new-course');
     else if (roadmapAction === 'setup') beginRoadmap();
     else if (roadmapAction === 'skip' && roadmapWizard) {
