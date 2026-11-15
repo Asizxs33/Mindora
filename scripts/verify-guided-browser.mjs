@@ -83,7 +83,7 @@ try {
     assert.equal(bounds.width, bounds.vw);
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator('.guided-footer [data-view="new-course"]').click();
+  await page.locator('.landing-hero [data-view="new-course"]').click();
   await page.locator('.phone-course-nav [data-view="courses"]').click();
   assert.ok(await page.locator('.phone-catalog .ready-course').first().isVisible());
   await page.locator('[data-course="design"][data-course-path]').click();
@@ -270,12 +270,12 @@ try {
   // Profile logout is directly reachable on the phone and returns to Mino.
   await p.locator('#mobile-navigation [data-view="profile"]').click();
   await p.locator('[data-account-signout]').click();
-  await p.waitForSelector('.guided-greeting');
+  await p.waitForSelector('.mindora-landing');
   assert.equal(await p.locator('#mindora-account[open]').count(), 0);
-  assert.equal(await p.locator('#guided-prompt').isVisible(), true);
+  assert.equal(await p.locator('#landing-title').isVisible(), true);
   await p.reload();
-  await p.waitForSelector('.guided-greeting');
-  await p.locator('.guided-signin').click();
+  await p.waitForSelector('.mindora-landing');
+  await p.locator('.landing-signin').click();
   await p.locator('#account-email').fill(user.email);
   await p.locator('#account-password').fill('Browser-fixture-8');
   await p.locator('.account-primary').click();
@@ -346,6 +346,24 @@ try {
   await j.locator('[data-roadmap-stage="1"]').click();
   await j.waitForSelector('.ai-lesson-reader');
   assert.equal(lessonRequests.length, generated, 'opening the first course loads its saved lesson');
+  await j.locator('.reader-toolbar summary').click();
+  await j.locator('[data-interface-language="kk"]:visible').click();
+  assert.equal(await j.locator('html').getAttribute('lang'), 'kk');
+  assert.equal(await j.locator('.ai-lesson-reader').getAttribute('lang'), 'en');
+  await j.locator('.ai-lesson-exit').click();
+  await j.setViewportSize({ width: 1440, height: 900 });
+  const navSize = () => j.locator('#navigation .nav-item').first().evaluate(el => {
+    const { width, height } = el.getBoundingClientRect();
+    return [width, height, getComputedStyle(el).fontSize];
+  });
+  await j.waitForSelector('.roadmap-layout');
+  const pathNav = await navSize();
+  for (const view of ['courses', 'work', 'profile']) {
+    await nav(j, view).click();
+    assert.deepEqual(await navSize(), pathNav, 'sidebar size must stay stable on ' + view);
+  }
+  await j.reload();
+  await j.waitForSelector('html[lang="kk"]');
   await journey.ctx.close();
   assert.deepEqual(errors, []);
   console.log('PASS: responsive greeting/path, guest greeting → lesson, interrupted recall, low-score repair, saved cursor/drafts, 5/10/20-minute courses, mobile signout → greeting → signin, personalized roadmap → completion → unlock → reload → next lesson. API mocked explicitly.');

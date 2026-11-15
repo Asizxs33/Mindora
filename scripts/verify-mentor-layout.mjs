@@ -65,7 +65,7 @@ try {
       import('/ui/return-review.js'), import('/core/return-review.js'), import('/ui/language.js'),
       import('/ui/roadmap.js'),
     ]);
-    for (const href of ['/ui/guided-start.css', '/ui/roadmap.css']) {
+    for (const href of ['/ui/guided-start.css', '/ui/roadmap.css', '/ui/landing.css']) {
       const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = href; document.head.append(css);
     }
     const state = { active: 'design', progress: { design: 0, budget: 0 }, goals: { design: 'Make a poster' }, works: {}, minutes: 10, learningPlan: starter };
@@ -114,8 +114,8 @@ try {
       for (const step of ['intro', 'setup'].includes(kind) ? [0, 1, 2, 3] : kind === 'review' ? [0, 1] : [0]) {
         await render({ kind, step, mentor: 'mia' });
         if (kind === 'intro' && step === 0) {
-          await page.waitForFunction(() => document.querySelector('.guided-mino')?.dataset.characterPlaying === 'true');
-          assert.match(await page.locator('.guided-mino [data-character-animation]').getAttribute('src'), /\.webp$/);
+          await page.locator('.landing-mascot').evaluate(image => image.decode());
+          assert.ok(await page.locator('.landing-mascot').evaluate(image => image.naturalWidth > 0));
         }
         await geometry(page, `${size.width}/${kind}/${step}`);
         const speech = await page.locator('.guided-dialogue,.return-review-speech,[data-mentor-message]').allTextContents();
@@ -193,7 +193,7 @@ try {
     await profile.setViewportSize({ width: size.width, height: 450 });
     await profile.locator('[data-account-action="signout"]').click();
     await profile.waitForFunction(() => !document.querySelector('dialog[open]'));
-    await profile.locator('.guided-greeting').waitFor();
+    await profile.locator('.mindora-landing').waitFor();
     await profile.setViewportSize(size);
     await profile.screenshot({ path: join(tmpdir(), `mindora-layout-after-signout-${size.width}.png`), fullPage: true });
     assert.equal(await profile.evaluate(async () => (await import('/ui/account.js')).getAccountState().user), null);

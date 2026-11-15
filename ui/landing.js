@@ -43,6 +43,7 @@ export function landingView() {
       </div>
       <div class="landing-hero-copy">
         <h1 id="landing-title">${workHeadline()}</h1>
+        <p class="landing-intro">${t('Have five minutes between work and family? Practise a task like your weekly report. Pick up where you stopped next time.', 'Есть пять минут между работой и семейными делами? Попрактикуйся на задаче вроде недельного отчёта. В следующий раз продолжишь с того же места.', 'Жұмыс пен отбасы арасында бес минут табылды ма? Апталық есеп сияқты өзіңе керек тапсырманы орында. Келесі жолы тоқтаған жеріңнен жалғастырасың.')}</p>
         <div class="landing-actions">${startButton(start)}<button type="button" class="secondary landing-signin" data-account-open="signin">${signIn}</button></div>
       </div>
     </section>
