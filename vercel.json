@@ -1,5 +1,6 @@
 {
   "installCommand": "npm ci",
   "buildCommand": "node scripts/build.mjs",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "rewrites": [{ "source": "/welcome", "destination": "/index.html" }]
 }

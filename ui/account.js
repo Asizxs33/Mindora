@@ -187,7 +187,7 @@ function content() {
 function render(focus = true) {
   const old = document.activeElement;
   const previous = old && dialog.contains(old) ? { id: old.id, interest: old.dataset.accountInterest, selection: old.selectionStart } : null;
-  accountViewport.innerHTML = `<header class="account-header"><a class="account-brand" href="#discover" data-account-action="close" aria-label="${t('Back to Mindora', 'Вернуться в Mindora', 'Mindora-ға оралу')}"><img src="${new URL('./assets/brand-mark.svg', import.meta.url).href}" width="38" height="38" alt=""><span>mindora<span>.</span></span></a><button type="button" class="account-close" data-account-action="close" aria-label="${t('Close account window', 'Закрыть окно аккаунта', 'Аккаунт терезесін жабу')}">${cross}</button></header><main class="account-panel">${content()}</main>`;
+  accountViewport.innerHTML = `<header class="account-header"><a class="account-brand" href="/welcome" aria-label="${t('Mindora home', 'Главная Mindora', 'Mindora басты беті')}"><img src="${new URL('./assets/brand-mark.svg', import.meta.url).href}" width="38" height="38" alt=""><span>mindora<span>.</span></span></a><button type="button" class="account-close" data-account-action="close" aria-label="${t('Close account window', 'Закрыть окно аккаунта', 'Аккаунт терезесін жабу')}">${cross}</button></header><main class="account-panel">${content()}</main>`;
   if (!dialog.open) return;
   if (focus) {
     dialog.scrollTop = 0;
@@ -319,7 +319,7 @@ async function submit() {
     if (mode === 'signin' && !data.profilePending && !pendingUserProfile()) {
       closeAccount();
       view.draft = emptyDraft();
-      emitSession();
+      emitSession('signin');
       showConfirmation(t('You’re signed in.', 'Вход выполнен.', 'Аккаунтқа кірдіңіз.'));
       return;
     }
