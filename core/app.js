@@ -1296,11 +1296,9 @@ document.addEventListener('click', event => {
     return;
   }
   if (button.matches('[data-home]')) {
-    event.preventDefault();
-    startingNew = false;
     captureRoadmapAnswers($('#roadmap-form'));
     rememberPosition();
-    return go('discover');
+    return;
   }
   if (destination || course) {
     captureRoadmapAnswers($('#roadmap-form'));
