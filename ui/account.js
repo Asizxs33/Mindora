@@ -134,7 +134,7 @@ function aboutFields() {
   const genderLabels = [t('Select an option', 'Выберите вариант', 'Нұсқаны таңдаңыз'), t('Woman', 'Женщина', 'Әйел'), t('Man', 'Мужчина', 'Ер'), t('Non-binary', 'Небинарный', 'Бинарлы емес'), t('Another identity', 'Другой вариант', 'Басқа'), t('Prefer not to say', 'Не хочу указывать', 'Көрсеткім келмейді')];
   const optional = t('(optional)', '(необязательно)', '(міндетті емес)');
   const nameField = `<label class="account-field" for="account-name"><span>${t('Name', 'Имя', 'Атыңыз')} <b class="account-required" aria-hidden="true">*</b></span><input id="account-name" name="name" autocomplete="given-name" maxlength="80" value="${esc(d.name)}" placeholder="${t('Your name', 'Ваше имя', 'Атыңыз')}" required></label>`;
-  if (view.mode === 'signup') return nameField;
+  if (view.mode === 'signup' || view.learnIntro) return nameField;
   return `${nameField}<div class="account-field-row"><label class="account-field account-age" for="account-age"><span>${t('Age', 'Возраст', 'Жасыңыз')} <small>${optional}</small></span><input id="account-age" name="age" type="number" inputmode="numeric" min="1" max="120" step="1" value="${esc(d.age)}" placeholder="${t('Your age', 'Ваш возраст', 'Жасыңыз')}"></label><label class="account-field" for="account-gender"><span>${t('Gender', 'Пол', 'Жынысыңыз')} <small>${optional}</small></span><select id="account-gender" name="gender">${genders.map(([value], i) => `<option value="${value}" ${value === d.gender ? 'selected' : ''}>${genderLabels[i]}</option>`).join('')}</select></label></div><p class="account-field-note">${t('You can update this later.', 'Это можно изменить позже.', 'Кейін өзгерте аласыз.')}</p>`;
 }
 
@@ -174,16 +174,16 @@ function content() {
   const signup = view.mode === 'signup', profile = view.mode === 'profile';
   const titles = [t('A little about you.', 'Немного о вас.', 'Өзіңіз жайлы.'), t('What interests you?', 'Что вам интересно?', 'Сізге не қызық?'), t('Make it yours.', 'Ваш личный аккаунт.', 'Жеке аккаунтыңыз.')];
   const descriptions = [t('What should we call you?', 'Как вас называть?', 'Сізді қалай атаймыз?'), t('Choose what you’d love to learn.', 'Выберите, чему хотите научиться.', 'Нені үйренгіңіз келетінін таңдаңыз.'), t('Keep your courses and progress together.', 'Курсы и прогресс будут в вашем аккаунте.', 'Курстарыңыз бен жетістігіңіз бір жерде.')];
-  const title = signup ? titles[view.step] : profile ? t('Your profile.', 'Ваш профиль.', 'Сіздің профиліңіз.') : t('Welcome back.', 'С возвращением.', 'Қайта қош келдіңіз.');
-  const description = signup ? descriptions[view.step] : profile ? t('Your learning, your way.', 'Учитесь в своём ритме.', 'Өз қарқыныңызбен оқыңыз.') : t('Let’s pick up where you left off.', 'Продолжим с того места, где остановились.', 'Тоқтаған жеріңізден жалғастырайық.');
-  const primary = view.pending ? (profile ? t('Saving…', 'Сохраняем…', 'Сақталуда…') : signup ? t('Creating your account…', 'Создаём аккаунт…', 'Аккаунт құрылуда…') : t('Signing in…', 'Входим…', 'Кіруде…')) : profile ? t('Save profile', 'Сохранить профиль', 'Профильді сақтау') : signup ? view.step === 2 ? t('Create account', 'Создать аккаунт', 'Аккаунт құру') : t('Continue', 'Продолжить', 'Жалғастыру') : t('Sign in', 'Войти', 'Кіру');
+  const title = view.learnIntro ? titles[0] : signup ? titles[view.step] : profile ? t('Your profile.', 'Ваш профиль.', 'Сіздің профиліңіз.') : t('Welcome back.', 'С возвращением.', 'Қайта қош келдіңіз.');
+  const description = view.learnIntro ? descriptions[0] : signup ? descriptions[view.step] : profile ? t('Your learning, your way.', 'Учитесь в своём ритме.', 'Өз қарқыныңызбен оқыңыз.') : t('Let’s pick up where you left off.', 'Продолжим с того места, где остановились.', 'Тоқтаған жеріңізден жалғастырайық.');
+  const primary = view.pending ? (profile ? t('Saving…', 'Сохраняем…', 'Сақталуда…') : signup ? t('Creating your account…', 'Создаём аккаунт…', 'Аккаунт құрылуда…') : t('Signing in…', 'Входим…', 'Кіруде…')) : view.learnIntro ? t('Continue', 'Продолжить', 'Жалғастыру') : profile ? t('Save profile', 'Сохранить профиль', 'Профильді сақтау') : signup ? view.step === 2 ? t('Create account', 'Создать аккаунт', 'Аккаунт құру') : t('Continue', 'Продолжить', 'Жалғастыру') : t('Sign in', 'Войти', 'Кіру');
   return `<form id="mindora-account-form" class="account-form account-${view.mode}${view.guided ? ' account-guided' : ''}" novalidate aria-busy="${view.pending}">
     <div class="account-form-body">${signup && !view.guided ? progress() : ''}
     ${signup && view.step > 0 && !view.guided ? `<button type="button" class="account-back" data-account-action="back" ${view.pending ? 'disabled' : ''}>${arrow} ${t('Back', 'Назад', 'Артқа')}</button>` : ''}
-    <div class="account-intro"><h1 id="account-heading" tabindex="-1">${title}</h1><div class="account-guide-scene"><div class="account-guide">${character('mino', view.pending ? 'thinking' : profile ? 'explaining' : signup && view.step === 2 ? 'celebrate' : signup && view.step === 1 ? 'explaining' : 'welcome', 'account-mino')}</div><div class="account-intro-copy"><span class="account-speaker">Mino</span><p>${signup && view.step === 1 && view.draft.name ? `${t('Nice to meet you,', 'Рад знакомству,', 'Танысқаныма қуаныштымын,')} ${esc(view.draft.name.trim())}! ` : ''}${description}</p></div></div></div>
+    <div class="account-intro"><h1 id="account-heading" tabindex="-1">${title}</h1><div class="account-guide-scene"><div class="account-guide">${character('mino', view.pending ? 'thinking' : view.learnIntro ? 'welcome' : profile ? 'explaining' : signup && view.step === 2 ? 'celebrate' : signup && view.step === 1 ? 'explaining' : 'welcome', 'account-mino')}</div><div class="account-intro-copy"><span class="account-speaker">Mino</span><p>${signup && view.step === 1 && view.draft.name ? `${t('Nice to meet you,', 'Рад знакомству,', 'Танысқаныма қуаныштымын,')} ${esc(view.draft.name.trim())}! ` : ''}${description}</p></div></div></div>
     <div class="account-error" id="account-error" role="alert" ${view.error ? '' : 'hidden'}>${esc(view.error)}</div><div class="account-notice" id="account-notice" role="status" ${view.notice ? '' : 'hidden'}>${esc(view.notice)}</div><div class="account-service-note" data-account-service ${session.available === false ? '' : 'hidden'}>${t('Accounts are temporarily unavailable. Please try again shortly.', 'Вход в аккаунт временно недоступен. Попробуй чуть позже.', 'Аккаунтқа кіру уақытша қолжетімсіз. Біраздан кейін қайталап көр.')}</div>
     <fieldset class="account-inputs" ${view.pending ? 'disabled' : ''}><legend class="account-sr-only">${title}</legend>
-    ${profile ? `<p class="account-email-label">${esc(session.user?.email || '')}</p>${aboutFields()}<h2 class="account-section-title">${t('Your interests', 'Ваши интересы', 'Қызығушылықтарыңыз')}</h2>${interestFields()}` : signup ? view.step === 0 ? aboutFields() : view.step === 1 ? interestFields() : accountFields() : accountFields()}
+    ${view.learnIntro ? aboutFields() : profile ? `<p class="account-email-label">${esc(session.user?.email || '')}</p>${aboutFields()}<h2 class="account-section-title">${t('Your interests', 'Ваши интересы', 'Қызығушылықтарыңыз')}</h2>${interestFields()}` : signup ? view.step === 0 ? aboutFields() : view.step === 1 ? interestFields() : accountFields() : accountFields()}
     </fieldset></div>
     <footer class="account-footer"><button type="submit" class="account-primary" ${view.pending ? 'disabled' : ''}>${primary}${view.pending ? '<span class="account-spinner" aria-hidden="true"></span>' : ''}</button>
     ${profile ? `<button type="button" class="account-guest account-signout" data-account-action="signout" ${view.pending ? 'disabled' : ''}>${t('Sign out', 'Выйти', 'Шығу')}</button>` : `<p class="account-switch">${signup ? t('Already have an account?', 'Уже есть аккаунт?', 'Аккаунтыңыз бар ма?') : t('New to Mindora?', 'Впервые в Mindora?', 'Mindora-ға алғаш келдіңіз бе?')} <button type="button" data-account-action="${signup ? 'signin' : 'signup'}" ${view.pending ? 'disabled' : ''}>${signup ? t('Sign in', 'Войти', 'Кіру') : t('Create account', 'Создать аккаунт', 'Аккаунт құру')}</button></p>`}
@@ -316,6 +316,11 @@ async function submit() {
       rememberProfile(session.user.email, profile, finishingSignup);
     }
     if (mode === 'profile' && !data.profilePending) pendingProfile = null;
+    if (view.learnIntro && !data.profilePending && !finishingSignup) {
+      closeAccount();
+      emitSession('profile');
+      return;
+    }
     if (finishingSignup && !data.profilePending) {
       closeAccount();
       view = { ...view, draft: emptyDraft() };
@@ -376,10 +381,11 @@ export function openAccount(mode = 'signup', introduction = null) {
   mountAccount();
   if (view.pending) { if (!dialog.open) { dialog.showModal(); document.body.classList.add('account-open'); } return; }
   returnFocus = document.activeElement;
+  const learnIntro = mode === 'learn' && Boolean(session.user);
   mode = ['signup', 'signin', 'profile'].includes(mode) ? mode : 'signup';
   if (session.user) mode = 'profile';
   else if (mode === 'profile' && !loadingSession) mode = 'signup';
-  view = { ...view, mode, step: 0, error: '', notice: mode === 'profile' && pendingUserProfile() ? 'Your details are still here. Choose Save profile to finish setting up your profile.' : '', showPassword: false, showConfirm: false, draft: mode === 'profile' && session.user ? profileDraft() : { ...view.draft, password: '', confirm: '', privacy: false } };
+  view = { ...view, mode, learnIntro, step: 0, error: '', notice: mode === 'profile' && pendingUserProfile() ? 'Your details are still here. Choose Save profile to finish setting up your profile.' : '', showPassword: false, showConfirm: false, draft: mode === 'profile' && session.user ? profileDraft() : { ...view.draft, password: '', confirm: '', privacy: false } };
   view.guided = mode === 'signup' && typeof introduction?.name === 'string' && Boolean(introduction.name.trim());
   if (view.guided) {
     view.step = 2;

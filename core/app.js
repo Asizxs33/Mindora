@@ -1389,6 +1389,11 @@ document.addEventListener('click', event => {
     if (course && !ensureLearning(openCourse)) return;
     rememberPosition();
     if ($('#modal').open) $('#modal').close();
+    if (destination === 'discover' && button.classList?.contains('nav-item') && !phoneLayout?.matches) {
+      go('discover');
+      openAccount('learn');
+      return;
+    }
     if (destination) return go(destination);
     openCourse();
     return;
