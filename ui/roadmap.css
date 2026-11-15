@@ -57,8 +57,6 @@
 .roadmap-wizard-actions .primary { min-width: 145px; }
 .roadmap-feedback { display: flex; align-items: center; gap: 9px; margin-block: 12px; padding: 10px 13px; border-radius: 10px; background: var(--accent-soft); color: #813600; font-size: .91rem; }
 .roadmap-feedback.has-error { background: #fff0ef; color: #981f27; }
-.roadmap-feedback.reading svg { animation: roadmap-pulse 1.5s ease-in-out infinite alternate; }
-@keyframes roadmap-pulse { to { opacity: .42; transform: scale(.88); } }
 .roadmap-empty { display: grid; justify-items: center; gap: 13px; text-align: center; }
 .roadmap-empty p { max-width: 380px; color: var(--muted); }
 .roadmap-empty>.primary { margin-block-start: 10px; }
@@ -257,7 +255,6 @@
 @media(prefers-reduced-motion:reduce) {
   .roadmap-stage-node { transition:none!important; }
   .roadmap-stage-node:hover:not(:disabled),.roadmap-stage-node:active:not(:disabled) { transform:none; }
-  .roadmap-feedback.reading svg { animation:none; }
 }
 @media (max-width: 450px) {
   .top-actions.has-roadmap-metrics .roadmap-metrics { display: none; }
