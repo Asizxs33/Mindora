@@ -1391,12 +1391,14 @@ document.addEventListener('click', event => {
     if (course && !ensureLearning(openCourse)) return;
     rememberPosition();
     if ($('#modal').open) $('#modal').close();
-    if (destination === 'discover' && button.classList?.contains('nav-item') && !phoneLayout?.matches) {
-      go('discover');
-      openAccount('learn');
+    if (destination) {
+      go(destination);
+      if (destination === 'discover' && button.classList?.contains('nav-item') && !phoneLayout?.matches) {
+        const { user, profile } = getAccountState();
+        if (user && !profile?.name?.trim() && !user.name?.trim()) openAccount('learn');
+      }
       return;
     }
-    if (destination) return go(destination);
     openCourse();
     return;
   }

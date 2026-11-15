@@ -10,7 +10,7 @@ export function studioTable({ columns, rows }, sheet = false) {
 
 const resultLabel = () => t('Result', 'Результат', 'Нәтиже');
 const formulaHint = () => t('Use SUM, AVERAGE, MIN or MAX with a cell range.', 'Используй SUM, AVERAGE, MIN или MAX с диапазоном ячеек.', 'SUM, AVERAGE, MIN немесе MAX функциясын ұяшық ауқымымен қолдан.');
-const queryHint = () => t('Select columns from this table. Add WHERE to filter on one column.', 'Выбери столбцы этой таблицы. Условие WHERE отбирает строки по одному столбцу.', 'Кесте бағандарын таңда. WHERE арқылы бір баған бойынша жолдарды сүзуге болады.');
+const queryHint = () => t('Use SELECT with this table. Rename a result column with AS or filter rows with one WHERE condition.', 'Используй SELECT для этой таблицы. AS меняет имя столбца в результате, а одно условие WHERE отбирает строки.', 'Осы кестемен SELECT қолдан. AS нәтиже бағанын қайта атайды, ал бір WHERE шарты жолдарды сүзеді.');
 const replyLabel = () => t('Your reply', 'Твоя реплика', 'Сенің жауабың');
 
 export function expressionIssue(practice, value) {

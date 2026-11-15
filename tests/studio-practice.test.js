@@ -4,7 +4,7 @@ import { parseHTML } from 'linkedom';
 import { getStarterCourse } from '../core/starter-courses.js';
 import { restorePlan, taskReviewInput } from '../core/learning-plan.js';
 import { normalizePractice, practiceAnswer } from '../core/lesson-practice.js';
-import { queryTable, sheetValue, studioCheck } from '../core/studio-practice.js';
+import { normalizeStudio, queryTable, sheetValue, studioCheck } from '../core/studio-practice.js';
 import { practiceEditor, practiceResult } from '../ui/lesson-practice.js';
 import { workedStudio } from '../ui/studio-practice.js';
 import { normalizeLessonVisual } from '../core/lesson-visual.js';
@@ -22,6 +22,20 @@ test('SQL evaluates projection and a single filter with typed values; a wrong re
   for (const invalid of ['SELECT unknown FROM sales','SELECT * FROM other','SELECT * FROM sales; SELECT * FROM sales','', 'SELECT item FROM sales WHERE missing > 1']) {
     assert.equal(queryTable(sql, invalid), null);
   }
+});
+test('SQL lessons accept AS aliases in saved targets and in answers', () => {
+  const practice = {
+    type: 'sql', table: 'small_shop', columns: ['item', 'amount'], rows: [['Tea', 12], ['Milk', 20]],
+    target: 'SELECT amount AS quantity FROM small_shop;',
+  };
+  assert.deepEqual(normalizeStudio(practice), practice);
+  assert.deepEqual(queryTable(practice, practice.target), { columns: ['quantity'], rows: [[12], [20]] });
+  assert.deepEqual(queryTable(practice, 'select item, amount AS Quantity from SMALL_SHOP where amount > 12'), {
+    columns: ['item', 'quantity'], rows: [['Milk', 20]],
+  });
+  assert.equal(studioCheck(practice, 'SELECT amount AS Quantity FROM small_shop'), 'correct');
+  assert.equal(studioCheck(practice, 'SELECT amount AS price FROM small_shop'), 'different');
+  assert.equal(queryTable(practice, 'SELECT missing AS quantity FROM small_shop'), null);
 });
 test('sheet formulas compute a bounded range on actual cells and reject invalid ranges', () => {
   assert.equal(studioCheck(sheet,'=SUM(B2:B3)'),'different');

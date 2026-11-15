@@ -69,6 +69,13 @@ try {
   assert.equal(await p.locator('#course-search').inputValue(),title);
   assert.ok(await p.locator('#course-search').evaluate(e=>e===document.activeElement));
   await p.keyboard.type('x');assert.equal(await p.locator('#course-search').inputValue(),'x'+title);
+  await p.setViewportSize({width:1440,height:900});
+  for (let visit = 0; visit < 2; visit++) {
+   await p.locator('#navigation [data-view="profile"]').click();
+   await p.locator('#navigation [data-view="discover"]').click();
+   await p.locator('.learning-hub-node[aria-current="step"]').waitFor();
+   assert.equal(await p.locator('#mindora-account[open]').count(),0,'Saved names must not reopen the introduction on Learn');
+  }
   console.log('PASS visible tools, search recovery, orange counters, work and phone resume '+language);await f.context.close();
  }
  const guest = await fixture('en'), p = guest.page;
@@ -80,6 +87,10 @@ try {
  assert.equal(await p.locator('.ready-course:visible').count(),0);
  await p.locator('.phone-catalog summary').click();
  assert.ok(await p.locator('.mini-enrollments [data-course="design"]').isVisible());
+ await p.setViewportSize({width:1440,height:900});
+ await p.locator('#navigation [data-view="discover"]').click();
+ await p.locator('.learning-hub-node[aria-current="step"]').waitFor();
+ assert.equal(await p.locator('#mindora-account[open]').count(),0,'Guest navigation must keep the course map open');
  await guest.context.close();
  assert.deepEqual(errors,[]);
  console.log('PASS UX journey 320/390/640/768/1024/1440/1920, EN/RU/KK, API fixtures explicitly.');

@@ -49,13 +49,22 @@ export function normalizeStudio(raw) {
   return null;
 }
 
-// Interpret only this lesson's bounded in-memory table, never learner code or database commands.
+const sqlColumn = String.raw`[a-z_]\w*(?:\s+as\s+[a-z_]\w*)?`;
+const sqlSelect = new RegExp(String.raw`^select\s+(\*|${sqlColumn}(?:\s*,\s*${sqlColumn})*)\s+from\s+([a-z_]\w*)(?:\s+where\s+([a-z_]\w*)\s*(<=|>=|<>|!=|=|<|>)\s*(-?\d+(?:\.\d+)?|'(?:[^']|'')*'))?\s*;?$`, 'i');
+
+// Interpret SELECT against this lesson's bounded in-memory table.
 export function queryTable(practice, expression) {
-  const m = /^select\s+(\*|[a-z_]\w*(?:\s*,\s*[a-z_]\w*)*)\s+from\s+([a-z_]\w*)(?:\s+where\s+([a-z_]\w*)\s*(<=|>=|<>|!=|=|<|>)\s*(-?\d+(?:\.\d+)?|'(?:[^']|'')*'))?\s*;?$/i.exec(expression.trim());
+  const m = sqlSelect.exec(expression.trim());
   if (!m || m[2].toLowerCase() !== practice.table.toLowerCase()) return null;
   const names = practice.columns.map(c => c.toLowerCase());
-  const indexes = m[1] === '*' ? names.map((_, i) => i) : m[1].toLowerCase().split(/\s*,\s*/).map(c => names.indexOf(c));
-  if (indexes.includes(-1)) return null;
+  const projection = m[1] === '*'
+    ? practice.columns.map((label, index) => ({ index, label }))
+    : m[1].toLowerCase().split(/\s*,\s*/).map(selection => {
+      const [column, alias] = selection.split(/\s+as\s+/);
+      const index = names.indexOf(column);
+      return { index, label: alias ?? practice.columns[index] };
+    });
+  if (projection.some(({ index }) => index < 0)) return null;
   let rows = practice.rows;
   if (m[3]) {
     const index = names.indexOf(m[3].toLowerCase());
@@ -74,7 +83,7 @@ export function queryTable(practice, expression) {
       }
     });
   }
-  return { columns: indexes.map(i => practice.columns[i]), rows: rows.map(row => indexes.map(i => row[i])) };
+  return { columns: projection.map(({ label }) => label), rows: rows.map(row => projection.map(({ index }) => row[index])) };
 }
 
 export function sheetValue(practice, expression) {

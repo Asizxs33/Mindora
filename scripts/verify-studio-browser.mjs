@@ -7,6 +7,8 @@ const base = process.env.MINDORA_URL || 'http://127.0.0.1:4173';
 const sheet = { type:'sheet', columns:['Name','Units'], rows:[['A',2],['B',7]], target:'=SUM(B2:B3)' };
 const examples = [
   [{ ...sheet, type:'sql', table:'sales', target:'SELECT Units FROM sales' }, 'SELECT Name FROM sales', 'SELECT Units FROM sales'],
+  [{ type:'sql', table:'small_shop', columns:['item','amount'], rows:[['Tea',12],['Milk',20]], target:'SELECT amount AS quantity FROM small_shop' },
+    'SELECT amount AS price FROM small_shop', 'SELECT amount AS quantity FROM small_shop;'],
   [sheet, '=SUM(B2:B2)', '=SUM(B2:B3)'],
   [{ type:'bar-chart', labels:['Jan','Feb'], max:50 }, '100', ['12','18']],
   [{ type:'flow', labels:['Source','Review','Publish'] }, '', ['Brief','Peer check','Email']],
