@@ -431,6 +431,7 @@ function modal(type, data) {
   if (!$("#modal").open) $("#modal").showModal();
 }
 function go(next, cursor = null, newCourse = false) {
+  if (next === 'courses' && !accountOwner) ensureLearning();
   if (next === 'my-path') { roadmapWizard = null; return openMyPath(); }
   if (next === 'new-course') { roadmapWizard = null; if (!accountOwner) ensureLearning(); }
   if (['path', 'builtin-path', 'course-path', 'lesson', 'learning-plan', 'return-review', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop'].includes(next)
@@ -1430,7 +1431,8 @@ mountReturnReview({
 });
 
 $('#modal').addEventListener('click',e=>{if(e.target===$('#modal')){const r=$('#modal').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('#modal').close();}});
-if (view === 'return-review' && !restoreOpenReview()) go('discover');
+if (window.location?.hash === '#courses') go('courses');
+else if (view === 'return-review' && !restoreOpenReview()) go('discover');
 else if (view === 'learning-plan') go('learning-plan');
 else if (view === 'lesson') resumeCourse(state.active, step);
 else render();
