@@ -287,8 +287,8 @@ function shopDefinition(id) {
   if (id === 'one-heart') return ['heart', t('One extra life','Одна жизнь','Бір қосымша өмір'), t('Restore one missing heart.', 'Верни одно потерянное сердце.', 'Жоғалған бір жүректі қайтар.')];
   if (id === 'mistake-shield') return ['shield', t('Second chance','Вторая попытка','Екінші мүмкіндік'), t('Keep your heart on the next incorrect lesson check.', 'Следующая ошибка в задании не заберёт сердце.', 'Келесі тексерісте қателессең, жүрегің сақталады.')];
   if (id === 'lesson-bonus') return ['trophy', t('Three-lesson bonus','Бонус за три урока','Үш сабаққа бонус'), t('Earn 4 extra gems for each of your next three completed lessons.', 'Получи по 4 дополнительных алмаза за три следующих завершённых урока.', 'Келесі үш сабақты аяқтаған сайын 4 қосымша алмас ал.')];
-  if (id === 'hearts') return ['heart', t('Refill lives', 'Восстановить жизни', 'Өмірді қалпына келтіру'), t('Restore all five lives now. One life returns each hour.', 'Верни все пять жизней сразу. Одна жизнь восстанавливается каждый час.', 'Бес өмірді бірден қалпына келтір. Сағат сайын бір өмір қайтады.')];
-  return ['shield', t('Streak freeze', 'Заморозка серии', 'Серияны қатыру'), t('Protect your streak for one missed day. You can keep one freeze.', 'Защищает серию за один пропущенный день. Можно хранить одну заморозку.', 'Бір күн өткізіп алсаң, серияң сақталады. Бір қатыруды сақтай аласың.')];
+  if (id === 'hearts') return ['heart-plus', t('Refill lives', 'Восстановить жизни', 'Өмірді қалпына келтіру'), t('Restore all five lives now. One life returns each hour.', 'Верни все пять жизней сразу. Одна жизнь восстанавливается каждый час.', 'Бес өмірді бірден қалпына келтір. Сағат сайын бір өмір қайтады.')];
+  return ['snowflake', t('Streak freeze', 'Заморозка серии', 'Серияны қатыру'), t('Protect your streak for one missed day. You can keep one freeze.', 'Защищает серию за один пропущенный день. Можно хранить одну заморозку.', 'Бір күн өткізіп алсаң, серияң сақталады. Бір қатыруды сақтай аласың.')];
 }
 
 function shopRow(item, rewards) {
@@ -299,9 +299,8 @@ function shopRow(item, rewards) {
     : item.reason === 'owned' ? t('Ready to use', 'Уже действует', 'Қолдануға дайын')
     : t(`Gems still needed: ${missing}`, `Алмазов до покупки — ${missing}`, `Сатып алуға ${missing} алмас жетпейді`);
   const price = t(`Buy ${title} for ${item.cost} gems`, `Купить «${title}» за ${item.cost} алмазов`, `${title} үшін ${item.cost} алмас төлеу`);
-  const art = ['hearts', 'freeze'].includes(item.id) ? `<span class="reward-illustration reward-illustration-${item.id}"></span>` : icon(symbol, 29);
   return `<article class="roadmap-shop-item reward-shop-card">
-    <div class="reward-shop-art reward-shop-art-${escape(item.id)}" aria-hidden="true">${art}</div>
+    <div class="reward-shop-icon">${icon(symbol, 28)}</div>
     <div class="reward-shop-copy"><h3>${title}</h3><p>${detail}</p>
       ${item.available ? '' : `<div class="reward-shop-state"><small id="reward-state-${escape(item.id)}">${item.reason === 'owned' ? icon('check', 15) : ''}${unavailable}</small>
         ${item.reason === 'insufficient' ? `<progress value="${rewards.gems}" max="${item.cost}" aria-label="${unavailable}"></progress>` : ''}
