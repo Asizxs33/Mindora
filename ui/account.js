@@ -48,7 +48,8 @@ async function api(method = 'GET', body) {
   try {
     const response = await fetch('/api/account', {
       method, credentials: 'same-origin', signal: controller.signal,
-      headers: body ? { 'Content-Type': 'application/json', Accept: 'application/json' } : { Accept: 'application/json' },
+      headers: { Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}),
+        ...(method === 'PUT' && session.user?.id ? { 'X-Mindora-Account': session.user.id } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
     let data;

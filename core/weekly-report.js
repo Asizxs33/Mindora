@@ -42,5 +42,37 @@ export function reportProgress(saved) {
       ...(completed && Number.isSafeInteger(entry.completedAt) && entry.completedAt > 0 ? { completedAt: entry.completedAt } : {}) };
 
   });
-  return { day: days[0].completed && saved?.day === 1 ? 1 : 0, days };
+  return { day: days[0].completed && saved?.day === 1 ? 1 : 0, days,
+    ...(typeof saved?.note === 'string' ? { note: saved.note.slice(0, 600) } : {}) };
+}
+
+// Projects, downloads and certificates share the same checked completion rule.
+export function completedReport(saved) {
+  const progress = reportProgress(saved);
+  return progress.days.every(day => day.completed) ? progress : null;
+}
+
+export function weeklyReportCsv(saved) {
+  const progress = completedReport(saved);
+  if (!progress) return null;
+  const { days } = progress;
+  const totals = days.map(day => Number(day.total));
+  const rows = [
+    ['Expense', 'Week 1 (USD)', 'Week 2 (USD)'],
+    ...['Supplies', 'Delivery', 'Printing', 'Packing'].map((label, index) => [label, ...REPORT_WEEKS.map(week => week.amounts[index] ?? '')]),
+    ['Total', ...totals],
+    ['Budget', ...REPORT_WEEKS.map(week => week.budget)],
+    ['Remaining', ...REPORT_WEEKS.map((week, index) => week.budget - totals[index])],
+    ['Decision', ...days.map(day => day.decision === 'over' ? 'Over budget' : 'Within budget')],
+    ['Checks used', ...days.map(day => day.attempts ?? '')],
+    ['Completed at', ...days.map(day => {
+      const date = new Date(day.completedAt);
+      return day.completedAt && Number.isFinite(date.getTime()) ? date.toISOString() : '';
+    })],
+    // These refer to the exercise table, not the export's different columns.
+    ['Formula used in lesson', ...days.map(day => `'${day.formula}`)],
+    ['My note', progress.note ? `'${progress.note}` : '', ''],
+  ];
+  const cell = value => /[",\r\n]/.test(String(value)) ? `"${String(value).replaceAll('"', '""')}"` : String(value);
+  return rows.map(row => row.map(cell).join(',')).join('\r\n') + '\r\n';
 }

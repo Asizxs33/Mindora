@@ -37,7 +37,7 @@ async function accountDialog(hash, responses) {
     character: () => '', mountCharacters() {}, t: en => en,
     async fetch(path, options) {
       assert.equal(path, '/api/account');
-      requests.push({ method: options.method, body: options.body && JSON.parse(options.body) });
+      requests.push({ method: options.method, headers: options.headers, body: options.body && JSON.parse(options.body) });
       if (options.method === 'GET') return Response.json({ available: true, user: null, profile: null });
       const response = responses.shift();
       return response instanceof Response ? response : Response.json(response);
@@ -119,6 +119,7 @@ test('signup waits for email verification and completes after its profile is sav
   run.submit();
   await drain();
   assert.equal(run.requests.at(-1).method, 'PUT');
+  assert.equal(run.requests.at(-1).headers['X-Mindora-Account'], user.id);
   assert.deepEqual(run.requests.at(-1).body, profile);
   assert.equal(run.dialog.open, false);
   assert.equal(run.accountEvents.at(-1).detail.reason, 'signup-complete');

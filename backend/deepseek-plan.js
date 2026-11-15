@@ -11,6 +11,7 @@ import { selectLessonPractice } from './practice-selection.js';
 import { enrichLearningVisualSources } from './learning-visual-sources.js';
 import { lessonTopic, topicVisualSchema } from './lesson-topic.js';
 import { isLessonTaskUsable } from './lesson-task-quality.js';
+import { lessonTableFactIssues } from './lesson-table-facts.js';
 
 const LESSON_TOKEN_LIMITS = Object.freeze({ 5: 3500, 10: 5000, 20: 6500 });
 const CHATGPT_WEB_SEARCH_GUIDE = 'https://help.openai.com/en/articles/9237897-searching-the-web-with-chatgpt';
@@ -189,6 +190,7 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
     `Return a JSON object with formatVersion: 3, a short title (up to ${PLAN_TEXT_LIMITS.title} characters), an outcome (up to ${PLAN_TEXT_LIMITS.outcome} characters) in one sentence, a guided array, and a final object. Output only JSON.`,
     'Serialize all string values as valid JSON: escape embedded double quotes, backslashes and line breaks, especially in code examples and starter code. Do not write raw multiline strings or append explanations outside the JSON object.',
     'Before returning, check every worked result and criterion against its exact input data. Count all loop iterations and output lines, calculate numeric results, and verify the final task and its criterion describe the same output. Do not omit the last intermediate value or require a different number of lines from the task. Prefer small examples you can verify reliably.',
+    'For every spreadsheet table, headers are row 1 and the first data row is row 2. Derive each cell address from its actual column and row, including in worked explanations and quiz options. A cell-address choice must include exactly one correct address and mark it as the answer. Calculate any claimed SUM/AVERAGE/MIN/MAX result from that exact table; the example and independent task may use different data.',
     `Each guided step has title (up to ${PLAN_TEXT_LIMITS.title} characters), instruction (up to ${PLAN_TEXT_LIMITS.instruction} characters), task (up to ${PLAN_TEXT_LIMITS.task} characters), criterion (up to ${PLAN_TEXT_LIMITS.criterion} characters), practice (required workspace object described above), teaching, sourceId, and imageIds (an array of up to two image IDs from that source, or []). Give a few short, actionable sentences in instruction that explain the idea and how to apply it. Name a real interface control only when the opened source supports it. Keep the task distinct from the explanation.`,
     'For an example that teaches color roles, contrast or palette selection, include example.visual with {"type":"palette","background":"#RRGGBB","foreground":"#RRGGBB","accent":"#RRGGBB","headline":"short sample headline"}. Use exactly the colors described in the example. For an example teaching percentages or discounts, include example.visual with {"type":"percent","percent":25,"total":200,"label":"short explanation of what the highlighted part represents"}; use the exact example numbers, with percent in 0..100 and total positive. The app draws an original diagram and calculates the highlighted quantity. This is an instructional diagram, not an external screenshot. Keep the diagram consistent with the written worked example. For English use the dialogue schema supplied below with 2–4 short English turns, optional translations and a short situation label. For SMM use the social-post schema below with audience, hook, body and cta; this shows an original example publication. For a worked dataset use {type:"table",label,columns,rows}; for a sequence of decisions or process use {type:"flow",label,steps} with 2-5 actual short actions (max 95 characters). Label the visual with the concrete example title. For other subjects pick a flow or table when it explains the topic; never use a percent diagram for unrelated mathematics. Never invent image URLs.',
     ...(visualSchema ? [`For this lesson, teaching.example.visual is required in each guided step. Its JSON structure is ${JSON.stringify(visualSchema)}. Replace sample values with the actual worked example data; keep visual as an object, not a string, and place it inside teaching.example.`] : []),
@@ -223,11 +225,12 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
     'Each guided step must include title, instruction, task, criterion, practice, teaching, sourceId and imageIds. Every teaching object needs why, example with input/output/explanation, a valid assessment using one of the original supported shapes, and takeaway. Follow all original field limits and cite at least one of the supplied sources in guided.',
     `The final object must contain its own nonempty title (up to ${PLAN_TEXT_LIMITS.title} characters), task (up to ${PLAN_TEXT_LIMITS.task}), criterion (up to ${PLAN_TEXT_LIMITS.criterion}) and practice. Write a fresh self-contained independent task with concrete input data and an observable result. Do not substitute the worked example or invent source URLs. Check all required objects and strings before returning.`,
   ].join('\n');
-  // Research is reused. At most two structural attempts (each completeJson has
+  let factCorrection = '';
+  // Research is reused. At most two content attempts (each completeJson has
   // its own bounded parsing retry) share the original 50-second deadline.
   for (let attempt = 0; attempt < 2; attempt++) {
     signal.throwIfAborted();
-    const requestMessages = attempt === 0 ? messages : [...messages, { role: 'user', content: correction }];
+    const requestMessages = attempt === 0 ? messages : [...messages, { role: 'user', content: correction + factCorrection }];
     const raw = await completeJson(requestMessages, LESSON_TOKEN_LIMITS[input.minutes], apiKey, fetcher, signal);
     const guided = Array.isArray(raw?.guided) ? raw.guided.slice(0, durations.length - 1) : [];
     const steps = guided.map((step, index) => {
@@ -246,14 +249,18 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
     });
     steps.push({ ...raw?.final, practice: selectLessonPractice(raw?.final, input) ?? raw?.final?.practice, instruction: 'Independent practice', sourceUrl: null });
     const plan = normalizePlan({ ...raw, formatVersion: 3, steps }, lessonInput, sources);
-    if (plan?.steps.slice(0, -1).some(step => step.resource) && plan.steps.every(step => isLessonTaskUsable(step, subject))) {
+    const factIssues = plan ? [...new Set(plan.steps.flatMap(lessonTableFactIssues))] : [];
+    if (plan?.steps.slice(0, -1).some(step => step.resource) && plan.steps.every(step => isLessonTaskUsable(step, subject)) && !factIssues.length) {
       for (const step of plan.steps) {
         if (step.teaching) mixStartingOrder(step.teaching.assessment);
       }
       return plan;
     }
+    factCorrection = factIssues.length
+      ? '\nA deterministic table check found inconsistent cell references, quiz answers or numeric results. Recompute them from each exact table: header row 1, first data row 2. Ensure the cell-address quiz includes and marks the correct option. Recalculate formula results. Regenerate a consistent complete lesson; do not repeat an unverified result.' : '';
     console.warn('Mindora lesson response validation', {
       attempt: attempt + 1,
+      factIssues,
       title: raw?.title?.length,
       outcome: raw?.outcome?.length,
       steps: steps.map(step => ({

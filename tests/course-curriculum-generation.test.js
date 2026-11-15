@@ -90,6 +90,30 @@ test('two invalid outlines fail without another source fetch or a third composit
   assert.equal(run.calls.length, 2);
 });
 
+test('new curricula enforce six four-stage modules while saved outlines remain flexible', async () => {
+  const expanded = curriculum();
+  expanded.modules.push({ title: 'Module 7', outcome: 'Apply another skill group.', startIndex: 24, count: 4 });
+  expanded.stages.push(...Array.from({ length: 4 }, (_, index) => ({
+    title: `Extra skill ${index + 1}`, objective: `Produce another result ${index + 1}.`,
+    kind: ['lesson', 'practice', 'review', 'mini-project'][index],
+  })));
+  const regrouped = { ...curriculum(), modules: Array.from({ length: 8 }, (_, index) => ({
+    title: `Module ${index + 1}`, outcome: `Apply skill group ${index + 1}.`, startIndex: index * 3, count: 3,
+  })) };
+  for (const outline of [expanded, regrouped]) {
+    assert.ok(normalizeRoadmap({ ...outline, sources: metadata, sourceStatus: 'verified' }, input),
+      'existing saved curricula may use the wider restoration bounds');
+    const run = fixture([outline, curriculum()]);
+    const result = await run.generate(input);
+    assert.equal(run.calls.length, 2);
+    assert.equal(run.loads.length, 1);
+    assert.equal(run.calls[0].signal, run.calls[1].signal);
+    assert.equal(result.stages.length, 24);
+    assert.equal(result.modules.length, 6);
+    assert.ok(result.modules.every(module => module.count === 4));
+  }
+});
+
 test('unavailable course sources cannot be replaced by model-invented attribution', async () => {
   const run = fixture([{ ...curriculum(), sources: metadata, sourceStatus: 'verified' }], { sources: [], status: 'unavailable' });
   const result = normalizeRoadmap(await run.generate(input), input);

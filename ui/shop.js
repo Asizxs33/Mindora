@@ -62,7 +62,7 @@ export function plusShopView({ active, pending, choose, round, result }) {
       <div class="plus-actions"><button class="primary" data-demo-action="practice">${t('Try the exercise','Начать практику','Тапсырманы бастау')} ${icon('arrow',18)}</button>
       <button class="text-link" data-demo-action="choose">${changePlan()}</button></div>`;
   } else {
-    content = `${heading('Mindora Plus')}<p>${t('Your first personal course is free. Explore plans for more courses in the demo shop.', 'Первый личный курс бесплатно. Выбери демо-тариф для следующих курсов.', 'Бірінші жеке курс тегін. Келесі курстарға арналған тарифті демо дүкенде сынап көр.')}</p>
+    content = `${heading('Mindora Plus')}<p>${t('Your first personal course is free. Preview pricing for future additional courses. This demo does not unlock another course.', 'Первый личный курс бесплатно. Здесь можно посмотреть тарифы будущей подписки. Демо-покупка пока не открывает второй курс.', 'Бірінші жеке курс тегін. Болашақ жазылым тарифтерін қарап көр. Демо сатып алу екінші курсты әзірге ашпайды.')}</p>
       <div class="plus-offers">${offer('monthly', active)}${offer('annual', active)}</div>
       <small class="plus-caption">${demoLabel()} · ${t('No payment required','Без оплаты','Төлемсіз')}</small>
       ${validPlan(active) ? `<button class="text-link" data-demo-action="back">${icon('back',16)} ${t('My demo','Мой демо-тариф','Демо тарифім')}</button>` : ''}`;

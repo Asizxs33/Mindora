@@ -13,6 +13,7 @@ import * as assessments from '../core/lesson-assessment.js';
 import * as returnReview from '../core/return-review.js';
 import * as roadmapModel from '../core/roadmap-model.js';
 import * as rewardsModel from '../core/roadmap-rewards.js';
+import * as weeklyReportModel from '../core/weekly-report.js';
 import { createWorkspaceStorage } from '../core/workspace-storage.js';
 import { resumeCursor, needsRecap, certificateEligible, RECAP_AFTER_MS } from '../core/resume.js';
 import { recapQuestion, builtinReviewContent } from '../ui/recap.js';
@@ -123,7 +124,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
   }
   const screen = kind => (...args) => ({ kind, args: clone(args) });
   const context = vm.createContext({
-    mentorForTopic, ...engine, ...progress, ...budget, ...learningModel, ...assessments, ...returnReview, ...roadmapModel, ...rewardsModel,
+    mentorForTopic, ...engine, ...progress, ...budget, ...learningModel, ...assessments, ...returnReview, ...roadmapModel, ...rewardsModel, ...weeklyReportModel,
     createGuestCourseRequest, BROWSER_GUEST, resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, startTopics, getStarterCourse, splitLibraryCourses, starterCourses, createPracticeController,
     needsReturnReview: (lastSeen, learned) => returnReview.needsReturnReview(lastSeen, learned, time),
     languageCode, setLanguage() {}, message: value => value, t: value => value,
@@ -909,6 +910,27 @@ test('switching accounts selects separate local workspaces and signout hides lea
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.current.view, 'discover');
   assert.deepEqual(run.current.state.notes, {});
+});
+
+test('weekly report project notes persist with the report without adding unsupported work records', async () => {
+  const weeklyReport = weeklyReportModel.reportProgress();
+  Object.assign(weeklyReport.days[0], { formula: '=SUM(B2:B4)', total: '80', decision: 'within' });
+  Object.assign(weeklyReport.days[1], { formula: '=SUM(B2:B5)', total: '103', decision: 'over' });
+  for (const day of [0, 1]) weeklyReportModel.submitReport(day, weeklyReport.days[day], NOW);
+  const run = app(seed({ weeklyReport }));
+  run.click({ view: 'work' });
+  run.input('report-note', 'Include the added fourth expense.', { note: 'weekly-report' });
+  assert.equal(run.saved().weeklyReport.note, 'Include the added fourth expense.');
+  assert.deepEqual(run.saved().notes, {});
+  assert.deepEqual(run.saved().works, {});
+  const reloaded = app(null, { storage: run.storage });
+  assert.equal(reloaded.current.state.weeklyReport.note, 'Include the added fourth expense.');
+  reloaded.signIn({ id: 'other-report-user' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(reloaded.current.state.weeklyReport, undefined);
+  reloaded.signIn({ id: 'test-user' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(reloaded.current.state.weeklyReport.note, 'Include the added fourth expense.');
 });
 
 test('budget home path resumes through overdue review and preserves the reading page', () => {
