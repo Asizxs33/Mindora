@@ -14,6 +14,7 @@ import { practiceEditor, practiceResult } from './lesson-practice.js';
 import { isLogarithmTopic } from '../core/subject-mentor.js';
 import { logExplorer } from './learning-labs.js';
 import { renderLessonVisual } from './lesson-visual.js';
+import { minoWaitScreen, minoWalk } from './mino-wait.js';
 
 if (typeof document !== 'undefined' && !document.getElementById('mindora-template-styles')) {
   const stylesheet = document.createElement('link');
@@ -178,7 +179,7 @@ function practiceView(step, answer, review, busy, reviewError, last, mentor, use
           ${reviewError ? `<button class="secondary" type="button" data-learning-step="continue"${disabled}>${t('Continue without feedback', 'Продолжить без разбора', 'Талдаусыз жалғастыру')}</button>` : ''}
         </div>
       </form>
-      <p id="learning-review-status" role="status" tabindex="-1" lang="${esc(currentLanguage())}">${busy === 'review' ? t('Checking your answer…', 'Проверяем ответ…', 'Жауабың тексеріліп жатыр…') : esc(message(reviewError))}</p>`}`;
+      <p id="learning-review-status"${busy === 'review' ? ' class="mino-wait-inline"' : ''} role="status" tabindex="-1" lang="${esc(currentLanguage())}">${busy === 'review' ? `${minoWalk()}<span>${t('Checking your answer…', 'Проверяем ответ…', 'Жауабың тексеріліп жатыр…')}</span>` : esc(message(reviewError))}</p>`}`;
 }
 
 function screenView(saved, busy, reviewError, preview = false) {
@@ -236,24 +237,28 @@ function lessonView(saved, busy, reviewError, onRoadmap, nextStage) {
   ${completed === plan.steps.length ? resultView(saved, onRoadmap, nextStage) + historyView(saved) : screenView(saved, busy, reviewError)}`;
 }
 
-function goalForm({ goal, minutes, busy, error, courseLanguage }) {
+function goalForm({ goal, minutes, error, courseLanguage }) {
   return `<form id="learning-plan-form">
-    <label class="field"><span>${t('What do you want to learn?', 'Чему хочешь научиться?', 'Не үйренгің келеді?')}</span><input name="goal" value="${esc(goal)}" placeholder="${t('For example, design my first poster', 'Например, создать свой первый плакат', 'Мысалы, алғашқы постерімді жасау')}" maxlength="180" minlength="3" required${busy ? ' disabled' : ''}></label>
-    ${courseLanguageField(courseLanguage, Boolean(busy))}
-    <label class="field"><span>${t('Time for this lesson', 'Время на занятие', 'Сабақ уақыты')}</span><select name="minutes" class="profile-select"${busy ? ' disabled' : ''}>${timeOptions(minutes)}</select></label>
+    <label class="field"><span>${t('What do you want to learn?', 'Чему хочешь научиться?', 'Не үйренгің келеді?')}</span><input name="goal" value="${esc(goal)}" placeholder="${t('For example, design my first poster', 'Например, создать свой первый плакат', 'Мысалы, алғашқы постерімді жасау')}" maxlength="180" minlength="3" required></label>
+    ${courseLanguageField(courseLanguage)}
+    <label class="field"><span>${t('Time for this lesson', 'Время на занятие', 'Сабақ уақыты')}</span><select name="minutes" class="profile-select">${timeOptions(minutes)}</select></label>
     <div class="lesson-actions">
-      <button class="primary" type="submit"${busy ? ' disabled' : ''}>${busy === 'plan' ? t('Preparing your lesson…', 'Готовим занятие…', 'Сабақ дайындалып жатыр…') : t('Build my lesson', 'Построить занятие', 'Сабақ құру')} ${icon('arrow', 18)}</button>
-      <button class="secondary" type="button" data-view="courses"${busy ? ' disabled' : ''}>${t('My courses', 'Мои курсы', 'Курстарым')}</button>
+      <button class="primary" type="submit">${t('Build my lesson', 'Построить занятие', 'Сабақ құру')} ${icon('arrow', 18)}</button>
+      <button class="secondary" type="button" data-view="courses">${t('My courses', 'Мои курсы', 'Курстарым')}</button>
     </div>
   </form>
-  <p role="status">${busy === 'plan' ? t('Finding materials and preparing your lesson…', 'Подбираем материалы и готовим занятие…', 'Материалдар іздеп, сабақ дайындап жатырмыз…') : esc(message(error))}</p>`;
+  <p role="status">${esc(message(error))}</p>`;
 }
 
 export function learningPlanView(screen) {
-  const { saved, busy, error, reviewError, onRoadmap } = screen;
+  const { saved, busy, reviewError, onRoadmap } = screen;
+  if (!saved && busy === 'plan') return minoWaitScreen(
+    t('Finding materials and preparing your lesson…', 'Подбираем материалы и готовим занятие…', 'Материалдар іздеп, сабақ дайындап жатырмыз…'),
+    t('Think of a small example you could try on your own.', 'Придумай маленький пример, который сможешь выполнить сам.', 'Өз бетіңше орындай алатын шағын мысал ойлап көр.'),
+  );
   return `<div class="learning-plan ai-lesson${saved ? ' has-course' : ''}">
     ${saved ? '' : `<button type="button" class="icon-button ai-lesson-exit" data-view="${onRoadmap ? 'my-path' : 'discover'}" aria-label="${t('Save and leave', 'Сохранить и выйти', 'Сақтап шығу')}">${icon('close',22)}</button>`}
-    ${saved ? lessonView(saved, busy, reviewError, onRoadmap, screen.nextStage) : `<header class="ai-lesson-welcome"><p class="ai-lesson-eyebrow">${t('A little time. A new skill.', 'Немного времени. Новый навык.', 'Аз уақыт. Жаңа дағды.')}</p><h1>${t('What will we learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</h1>${mentorView('mino', busy === 'plan' ? 'waiting' : 'listening', `<p>${t('Tell me your goal. We’ll learn one idea, see an example, then try it together.', 'Расскажи о своей цели. Разберём идею, посмотрим пример и попробуем вместе.', 'Мақсатыңды айт. Бір ойды түсініп, мысалды қарап, бірге орындап көреміз.')}</p>`)}</header>`}
+    ${saved ? lessonView(saved, busy, reviewError, onRoadmap, screen.nextStage) : `<header class="ai-lesson-welcome"><p class="ai-lesson-eyebrow">${t('A little time. A new skill.', 'Немного времени. Новый навык.', 'Аз уақыт. Жаңа дағды.')}</p><h1>${t('What will we learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</h1>${mentorView('mino', 'listening', `<p>${t('Tell me your goal. We’ll learn one idea, see an example, then try it together.', 'Расскажи о своей цели. Разберём идею, посмотрим пример и попробуем вместе.', 'Мақсатыңды айт. Бір ойды түсініп, мысалды қарап, бірге орындап көреміз.')}</p>`)}</header>`}
     ${saved || onRoadmap ? '' : `<section class="game-card simple-panel">${goalForm(screen)}</section>`}
   </div>`;
 }

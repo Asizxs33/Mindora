@@ -2,6 +2,7 @@ import { escapeHtml as escape } from '../core/engine.js';
 import { roadmapStageKind } from '../core/roadmap-model.js';
 import { mentorForTopic } from '../core/subject-mentor.js';
 import { character } from './characters.js';
+import { minoWaitScreen } from './mino-wait.js';
 import { icon } from './icons.js';
 import { courseLanguageField, t } from './language.js';
 
@@ -42,16 +43,27 @@ function radioOptions(name, options, selected) {
   </label>`).join('');
 }
 
-function feedback(busy, error, notice) {
-  return `${busy ? `<p class="roadmap-feedback reading" role="status">${icon('spark', 20)}${busy === 'stage'
-    ? t('Preparing this lesson…', 'Готовим занятие…', 'Сабақ дайындалып жатыр…')
-    : busy === 'clarify' ? t('Finding useful directions for your goal…', 'Подбираем направления под твою цель…', 'Мақсатыңа сай бағыттар дайындалып жатыр…')
-    : t('Building your learning path…', 'Строим твой путь обучения…', 'Оқу жолың құрылып жатыр…')}</p>` : ''}
-    ${error ? `<p class="roadmap-feedback has-error" role="alert">${escape(error)}</p>` : ''}
+function roadmapWait(busy) {
+  if (busy === 'stage') return minoWaitScreen(
+    t('Preparing this lesson…', 'Готовим занятие…', 'Сабақ дайындалып жатыр…'),
+    t('Think of one place where you could use this skill.', 'Подумай, где тебе может пригодиться этот навык.', 'Бұл дағдыны қайда қолдана алатыныңды ойлап көр.'),
+  );
+  if (busy === 'clarify') return minoWaitScreen(
+    t('Finding useful directions for your goal…', 'Подбираем направления под твою цель…', 'Мақсатыңа сай бағыттар дайындалып жатыр…'),
+    t('Think about what you want to be able to do by the end of the course.', 'Подумай, что хочешь уметь делать к концу курса.', 'Курстың соңында не істей алғың келетінін ойлап көр.'),
+  );
+  return minoWaitScreen(
+    t('Building your learning path…', 'Строим твой путь обучения…', 'Оқу жолың құрылып жатыр…'),
+    t('Pick a regular time for your next short lesson.', 'Выбери удобное время для следующего короткого занятия.', 'Келесі қысқа сабаққа ыңғайлы уақыт таңда.'),
+  );
+}
+
+function feedback(error, notice) {
+  return `${error ? `<p class="roadmap-feedback has-error" role="alert">${escape(error)}</p>` : ''}
     ${notice ? `<p class="roadmap-feedback" role="status">${escape(notice)}</p>` : ''}`;
 }
 
-function wizardView(wizard, busy, error) {
+function wizardView(wizard, error) {
   const { step, goal, experience, evidence, motivation, minutes } = wizard;
   const compact = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 920px)').matches;
   const choosingDirection = step === 1 && !wizard.directionConfirmed;
@@ -104,19 +116,19 @@ function wizardView(wizard, busy, error) {
   }
   return `<section class="roadmap-wizard" aria-labelledby="roadmap-title">
     <div class="roadmap-wizard-progress">
-      ${step > 0 ? `<button class="icon-button" type="button" data-roadmap-action="back" aria-label="${t('Back', 'Назад', 'Артқа')}"${busy ? ' disabled' : ''}>${icon('back')}</button>` : ''}
+      ${step > 0 ? `<button class="icon-button" type="button" data-roadmap-action="back" aria-label="${t('Back', 'Назад', 'Артқа')}">${icon('back')}</button>` : ''}
       <div><progress value="${step + 1}" max="4" aria-label="${stepText}"></progress><p>${stepText}</p></div>
     </div>
     <header class="roadmap-wizard-intro">
-      ${character('mino', busy ? 'waiting' : step === 0 ? 'listening' : 'idea', 'roadmap-guide')}
+      ${character('mino', step === 0 ? 'listening' : 'idea', 'roadmap-guide')}
       <div><h1 id="roadmap-title" tabindex="-1">${escape(title)}</h1><p>${escape(hint)}</p></div>
     </header>
-    <form id="roadmap-form" aria-busy="${Boolean(busy)}">
-      <fieldset aria-labelledby="roadmap-title"${busy ? ' disabled' : ''}>${fields}</fieldset>
-      ${feedback(busy, error)}
+    <form id="roadmap-form">
+      <fieldset aria-labelledby="roadmap-title">${fields}</fieldset>
+      ${feedback(error)}
       <div class="roadmap-wizard-actions">
-        <button type="button" class="text-link" data-roadmap-action="skip"${busy ? ' disabled' : ''}>${t('Later', 'Позже', 'Кейін')}</button>
-        <button class="primary" type="submit"${busy ? ' disabled' : ''}>${choosingDirection && !wizard.clarification && error ? t('Try again', 'Попробовать снова', 'Қайта байқап көру') : step === 3 ? t('Build my path', 'Построить путь', 'Оқу жолын құру') : t('Continue', 'Дальше', 'Жалғастыру')} ${icon('arrow', 18)}</button>
+        <button type="button" class="text-link" data-roadmap-action="skip">${t('Later', 'Позже', 'Кейін')}</button>
+        <button class="primary" type="submit">${choosingDirection && !wizard.clarification && error ? t('Try again', 'Попробовать снова', 'Қайта байқап көру') : step === 3 ? t('Build my path', 'Построить путь', 'Оқу жолын құру') : t('Continue', 'Дальше', 'Жалғастыру')} ${icon('arrow', 18)}</button>
       </div>
     </form>
   </section>`;
@@ -228,12 +240,12 @@ function syllabusView(roadmap, active, busy) {
 }
 
 export function roadmapView({ roadmap, wizard, active = [], busy = false, error = '', notice = '', rewards, quests = rewards?.quests ?? [] } = {}) {
-  if (wizard) return wizardView(wizard, busy, error);
+  if (wizard) return busy ? roadmapWait(busy) : wizardView(wizard, error);
   if (!roadmap) return `<section class="roadmap-empty" aria-labelledby="roadmap-title">
     ${character('mino', 'map', 'roadmap-guide')}
     <h1 id="roadmap-title">${TITLE.roadmap()}</h1>
     <p>${t('Tell me your goal. I’ll help you practise it in 5, 10 or 20 minutes at a time.', 'Расскажи о своей цели. Будем практиковаться короткими уроками по 5, 10 или 20 минут.', 'Мақсатыңды айт. Оған жету үшін 5, 10 немесе 20 минуттық сабақтармен жаттығамыз.')}</p>
-    ${feedback(busy, error, notice)}
+    ${feedback(error, notice)}
     <button type="button" class="primary" data-roadmap-action="setup">${t('Set my goal', 'Выбрать цель', 'Мақсат таңдау')} ${icon('arrow', 18)}</button>
   </section>`;
   const finished = active.filter(stage => stage.status === 'completed').length;
@@ -245,7 +257,8 @@ export function roadmapView({ roadmap, wizard, active = [], busy = false, error 
   const resumeLabel = active[resumeIndex]?.status === 'active'
     ? t('Continue lesson', 'Продолжить занятие', 'Сабақты жалғастыру')
     : t('Start lesson', 'Начать занятие', 'Сабақты бастау');
-  return `<section class="roadmap-layout" aria-labelledby="roadmap-title">
+  return `${busy ? roadmapWait(busy) : ''}
+  <section class="roadmap-layout" aria-labelledby="roadmap-title"${busy ? ' inert' : ''}>
     <div class="roadmap-main-column">
       <header class="roadmap-heading">
         <div><h1 id="roadmap-title" tabindex="-1" lang="${escape(roadmap.language)}">${escape(roadmap.title)}</h1></div>
@@ -256,9 +269,9 @@ export function roadmapView({ roadmap, wizard, active = [], busy = false, error 
         ${resumeStage && roadmap.curriculumVersion === 2 ? `<div class="roadmap-resume"><span lang="${escape(roadmap.language)}">${escape(resumeStage.title)}</span><button type="button" class="primary" data-roadmap-action="start" data-roadmap-stage="${resumeIndex}" aria-label="${escape(`${resumeLabel}: ${resumeStage.title}`)}"${busy ? ' disabled' : ''}>${icon('play', 17)} ${resumeLabel}</button></div>` : ''}
       </div>
       <details class="roadmap-about"><summary>${icon('book', 17)} ${t('Course details', 'О курсе', 'Курс туралы')}</summary><div><p lang="${escape(roadmap.language)}">${escape(roadmap.outcome)}</p><p>${levelName(roadmap.level)} · ${roadmap.minutes} ${t('min per lesson','мин на занятие','мин / сабақ')}</p>${syllabusSources(roadmap)}</div></details>
-      ${feedback(busy, error, notice)}
+      ${feedback(error, notice)}
       ${syllabusView(roadmap, active, busy)}
-      <button type="button" class="text-link roadmap-new-goal" data-roadmap-action="setup"${busy ? ' disabled' : ''}>${icon('plus', 17)} ${t('Set another goal', 'Выбрать другую цель', 'Басқа мақсат таңдау')}</button>
+      <button type="button" class="text-link roadmap-new-goal" data-roadmap-action="setup">${icon('plus', 17)} ${t('Set another goal', 'Выбрать другую цель', 'Басқа мақсат таңдау')}</button>
     </div>
     ${rewards ? `<aside class="roadmap-aside">
       <details class="roadmap-extra"><summary>${icon('gem', 18)} ${t('Activity & rewards', 'Активность и награды', 'Белсенділік пен марапаттар')}</summary><div class="roadmap-extra-content">${rewardMetrics(rewards)}
@@ -318,7 +331,7 @@ export function rewardsView(section, { rewards, quests = rewards?.quests ?? [], 
     </header>
     ${rewardMetrics(rewards)}
     ${rewardTabs}
-    ${feedback(false, error, notice)}
+    ${feedback(error, notice)}
     <div class="roadmap-rewards-list">${section === 'shop' ? items.map(item => shopRow(item, rewards)).join('') : quests.map(questRow).join('')}</div>
     <button type="button" class="text-link" data-view="roadmap">${icon('back', 17)} ${t('Back to my path', 'Вернуться к пути', 'Оқу жолына қайту')}</button>
   </section>`;
