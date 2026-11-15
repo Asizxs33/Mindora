@@ -90,6 +90,22 @@ export function mountShell() {
     <button class="modal-close icon-button" data-action="close-modal" aria-label="Close window">${icon('close', 22)}</button>
     <div id="modal-content"></div>
   </dialog>`;
+  // The node can be replaced immediately by a generated lesson's loading state.
+  // Animate a decorative copy so opening the lesson never waits for motion.
+  document.addEventListener('click', event => {
+    const node = event.target.closest?.('button[data-unlock]:not(:disabled)');
+    if (!node || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const mark = node.querySelector('.roadmap-stage-status svg') || node.querySelector('svg');
+    if (!mark?.animate) return;
+    const box = mark.getBoundingClientRect();
+    const lock = mark.cloneNode(true);
+    Object.assign(lock.style, { position: 'fixed', left: box.left + 'px', top: box.top + 'px',
+      width: box.width + 'px', height: box.height + 'px', zIndex: '20', color: '#ad4f13', pointerEvents: 'none' });
+    lock.setAttribute('aria-hidden', 'true');
+    document.body.append(lock);
+    const fall = lock.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(32px) rotate(22deg)', opacity: 0 }], { duration: 300, easing: 'ease-in' });
+    fall.onfinish = fall.oncancel = () => lock.remove();
+  }, true);
   mountCharacters();
   mountPresentation();
   mountCourseSearch();
@@ -209,7 +225,7 @@ export function renderShell(view, state, stats, html, rewards) {
   main.classList.toggle('dashboard-main', view === 'discover');
   main.classList.toggle('inside-main', view !== 'discover');
   main.dataset.page = view;
-  document.body.classList.toggle('is-learning', ['lesson', 'learning-plan', 'recap', 'return-review'].includes(view));
+  document.body.classList.toggle('is-learning', ['lesson', 'learning-plan', 'task-preview', 'recap', 'return-review'].includes(view));
   document.body.classList.toggle('is-guided', guided);
   document.body.classList.add('quiet-shell');
   document.body.classList.toggle('has-course-home', html.includes('class="course-home"'));
@@ -238,7 +254,7 @@ export function renderShell(view, state, stats, html, rewards) {
   expandedPanels.forEach(selector => { const panel = main.querySelector(selector); if (panel) panel.open = true; });
   syncLessonFlow(main);
   restoreQuizFocus(main, quizFocus);
-  const titles = { discover: t('Learn','Обучение','Оқу'), courses: t('My courses','Мои курсы','Курстарым'), practice: t('Practice','Практика','Жаттығу'), path: t('My learning path','Мой маршрут','Оқу жолым'), lesson: courseNames[id], 'learning-plan': t('My lesson','Моё занятие','Сабағым'), recap: t('A quick refresh','Повторение','Қайталау'), certificate: t('Your certificate','Твой сертификат','Сертификатың'), result: t('You did it','Готово','Дайын'), work: t('My work','Мои работы','Жұмыстарым'), achievements: t('Milestones','Достижения','Жетістіктер'), community: t('Community','Сообщество','Қауымдастық'), profile: t('Profile','Профиль','Профиль') };
+  const titles = { discover: t('Learn','Обучение','Оқу'), courses: t('My courses','Мои курсы','Курстарым'), practice: t('Practice','Практика','Жаттығу'), path: t('My learning path','Мой маршрут','Оқу жолым'), lesson: courseNames[id], 'learning-plan': t('My lesson','Моё занятие','Сабағым'), recap: t('A quick refresh','Повторение','Қайталау'), certificate: t('Your certificate','Твой сертификат','Сертификатың'), result: t('You did it','Готово','Дайын'), work: t('My projects','Мои проекты','Жобаларым'), achievements: t('Milestones','Достижения','Жетістіктер'), community: t('Community','Сообщество','Қауымдастық'), profile: t('Profile','Профиль','Профиль') };
   const roadmapTitles = { roadmap: t('My learning path','Мой путь обучения','Оқу жолым'), 'course-path': t('My learning path','Мой путь обучения','Оқу жолым'), 'builtin-path': t('My learning path','Мой путь обучения','Оқу жолым'), quests: t('Daily quests','Задания дня','Күндік тапсырмалар'), shop: t('Gem shop','Магазин алмазов','Алмас дүкені'), 'return-review': t('A quick refresh','Повторение','Қайталау') };
   document.title = `${titles[view] || roadmapTitles[view] || 'Learn'} · Mindora`;
 }

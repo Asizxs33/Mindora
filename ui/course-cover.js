@@ -24,7 +24,7 @@ export function courseIllustration(course, defaultIcon = 'book', size = 22) {
   if (cover === 'social-media' && /аудитори|audience|стратеги|strategy/i.test(course.title || '')) {
     cover = 'communication';
   }
-  const math = /\bmath(?:ematics)?\b|математик|алгебр|геометри/i.test(subject);
+  const math = /\bmath(?:ematics)?\b|logarith|логар|логор|математик|алгебр|геометри/i.test(subject);
   const code = /\bprogramming\b|программирован|бағдарламалау/i.test(subject);
   const fallback = math ? 'chart' : code ? 'code' : defaultIcon;
   return cover

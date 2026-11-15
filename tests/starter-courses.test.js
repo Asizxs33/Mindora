@@ -11,7 +11,7 @@ const wrong = { 'ai-prompts': 0, 'python-basics': 'Hello', 'everyday-english': [
 
 test('all four ready courses in all three languages restore through the production v3 schema', () => {
   for (const language of ['en', 'ru', 'kk']) {
-    const metadata = starterCourses(language);
+    const metadata = starterCourses(language).filter(course => ids.includes(course.id));
     assert.deepEqual(metadata.map(course => course.id), ids);
     for (const card of metadata) {
       const saved = getStarterCourse(card.id, language);
@@ -75,10 +75,10 @@ test('each start is an independent fresh copy and unsupported IDs cannot open a 
   assert.equal(new Set(['en', 'ru', 'kk'].map(language => getStarterCourse('ai-prompts', language).plan.title)).size, 3);
 });
 
-test('all 36 variants contain the selected duration and distinct, valid lessons', () => {
+test('all 63 variants contain the selected duration and distinct, valid lessons', () => {
   for (const language of ['en', 'ru', 'kk']) for (const minutes of STARTER_DURATIONS) {
     const cards = starterCourses(language, minutes);
-    assert.equal(cards.length, 4);
+    assert.equal(cards.length, 7);
     for (const card of cards) {
       const saved = getStarterCourse(card.id, language, minutes);
       assert.ok(saved, `${card.id}/${language}/${minutes}`);

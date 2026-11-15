@@ -143,7 +143,7 @@ test('both direction selection and path generation stay within the available pra
       assert.match(prompt, /Other programming languages support writing code, an expected result and an explanation only/);
       assert.match(prompt, /Numeric practice supports a result, calculation steps and units/);
       assert.match(prompt, /exactly three color roles \(background, text, accent\), a headline and a written rationale/);
-      assert.match(prompt, /Do not promise freehand drawing, arbitrary page layouts, image editing, file or screenshot uploads/);
+      assert.match(prompt, /Do not promise arbitrary page layouts, image editing, file or screenshot uploads/);
       assert.match(prompt, /Writing and other subjects use a text response with a concrete deliverable/);
       assert.deepEqual(JSON.parse(messages[1].content), data);
       return Response.json({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(response) } }] });

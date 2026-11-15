@@ -1,3 +1,4 @@
+import { getLabCourse, labCourseCards } from './lab-courses.js';
 import { languageCode } from './language.js';
 import { PLAN_DURATIONS, restorePlan } from './learning-plan.js';
 
@@ -735,14 +736,16 @@ export const STARTER_DURATIONS = Object.freeze([5, 10, 20]);
 export function starterCourses(language = 'en', minutes = 5) {
   if (!STARTER_DURATIONS.includes(minutes)) return [];
   const lang = languageCode(language);
-  return courses.map(course => ({
+  return [...courses.map(course => ({
     id: course.id, title: course[lang].title, description: course[lang].description,
     minutes, durations: [...STARTER_DURATIONS], stepCount: PLAN_DURATIONS[minutes].length,
     mentor: course.mentor, topic: course.topic, icon: course.icon,
-  }));
+  })), ...labCourseCards(lang, minutes)];
 }
 
 export function getStarterCourse(id, language = 'en', minutes = 5) {
+  const lab = getLabCourse(id, language, minutes);
+  if (lab) return lab;
   const course = courses.find(item => item.id === id);
   if (!course || !STARTER_DURATIONS.includes(minutes)) return null;
   const lang = languageCode(language), copy = course[lang];

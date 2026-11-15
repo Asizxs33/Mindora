@@ -133,7 +133,7 @@ test('syllabus is one continuous path with milestone headings and the current gl
   assert.deepEqual(milestones.filter(marker => marker.classList.contains('is-current')).map(marker => marker.dataset.roadmapMilestone), ['2']);
   assert.deepEqual([...doc.querySelectorAll('.roadmap-stage-node')].map(button => Number(button.dataset.roadmapStage)), Array.from({ length: 24 }, (_, index) => index));
   assert.equal(doc.querySelector('[data-roadmap-stage="8"]').hasAttribute('disabled'), false);
-  assert.equal(doc.querySelector('[data-roadmap-stage="9"]').hasAttribute('disabled'), true);
+  assert.equal(doc.querySelector('[data-roadmap-stage="9"]').hasAttribute('disabled'), false);
   assert.equal(doc.querySelector('[aria-current="step"] [data-roadmap-stage]').dataset.roadmapStage, '8');
   assert.equal(doc.querySelectorAll('.roadmap-stage-connector').length, 23);
   assert.equal(paths[0].querySelectorAll('.roadmap-stage-text h3').length, 24);

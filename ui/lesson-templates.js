@@ -1,6 +1,7 @@
 import { escapeHtml as esc } from '../core/engine.js';
 import { LESSON_ASSESSMENT_LIMITS } from '../core/lesson-assessment.js';
 import { mentorScene } from './mentor-scenes.js';
+export { mentorForTopic } from '../core/subject-mentor.js';
 export { mentorScene } from './mentor-scenes.js';
 import { icon } from './icons.js';
 import { t } from './language.js';
@@ -20,16 +21,6 @@ export const LESSON_TEMPLATES = Object.freeze({
   practice: { label: 'Make something', fields: ['body', 'criterion'] },
   recap: { label: 'Remember & continue', fields: ['points'] },
 });
-
-export function mentorForTopic(topic = '') {
-  const subject = String(topic).toLowerCase();
-  if (/\b(code|coding|python|javascript|programming|html|css|sql|spreadsheet|budget)\b|программ|код|бағдарлам|таблиц|кесте/.test(subject)) return 'sam';
-  if (/\b(design|layout|poster|typography|figma)\b|дизайн|плакат/.test(subject)) return 'mia';
-  if (/\b(art|draw|drawing|paint|painting)\b|рисова|сурет/.test(subject)) return 'artist';
-  if (/\b(smm|social|marketing|instagram)\b|маркет|соцсет/.test(subject)) return 'smm';
-  if (/\b(write|writing|copywriting|story|text|grammar|language)\b|писат|текст|жазу|граммат/.test(subject)) return 'copywriter';
-  return 'mino';
-}
 
 function safeImage(value) {
   if (typeof value !== 'string') return '';

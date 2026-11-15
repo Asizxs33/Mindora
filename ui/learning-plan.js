@@ -8,6 +8,8 @@ import { message } from './messages.js';
 import { mentorForTopic, mentorScene, renderLessonTemplate } from './lesson-templates.js';
 import { sceneForTopic } from './learning-scenes.js';
 import { practiceEditor, practiceResult } from './lesson-practice.js';
+import { isLogarithmTopic } from '../core/subject-mentor.js';
+import { logExplorer } from './learning-labs.js';
 import { renderLessonVisual } from './lesson-visual.js';
 
 if (typeof document !== 'undefined' && !document.getElementById('mindora-template-styles')) {
@@ -20,6 +22,13 @@ if (typeof document !== 'undefined' && !document.getElementById('mindora-templat
   practiceStyles.rel = 'stylesheet';
   practiceStyles.href = new URL('./lesson-practice.css', import.meta.url).href;
   document.head.append(practiceStyles);
+}
+
+export function taskPreviewView(screen) {
+  return `<div class="learning-plan ai-lesson has-course"><div class="reader-toolbar">
+    <button class="icon-button ai-lesson-exit" type="button" data-view="course-path" aria-label="${t('Back to course', 'К курсу', 'Курсқа оралу')}">${icon('close', 21)}</button>
+    <strong>${t('Practice preview', 'Пробный режим', 'Сынап көру')}</strong>
+  </div>${screenView(screen.saved, screen.busy, screen.reviewError, true)}</div>`;
 }
 
 const pageName = page => ({
@@ -54,7 +63,7 @@ function resultView({ plan, answers, reviews }, onRoadmap, nextStage) {
   const finalTask = plan.steps.at(-1);
   const review = reviews.at(-1);
   return `<section class="ai-lesson-result learning-result" lang="${esc(plan.language)}">
-    ${mentorView('mino', 'applause', `<span class="ai-lesson-result-icon" aria-hidden="true">${icon('check', 24)}</span><h2 id="learning-plan-complete" tabindex="-1" lang="${esc(currentLanguage())}">${t('Lesson complete', 'Занятие завершено', 'Сабақ аяқталды')}</h2><p lang="${esc(currentLanguage())}">${t('You put it into practice. Here is what you made.', 'Ты применил знания на практике. Вот твоя работа.', 'Біліміңді іс жүзінде қолдандың. Міне, жұмысың.')}</p>`, 'ai-lesson-mentor-result')}
+    ${mentorView(lessonMentor(plan), 'celebrate', `<span class="ai-lesson-result-icon" aria-hidden="true">${icon('check', 24)}</span><h2 id="learning-plan-complete" tabindex="-1" lang="${esc(currentLanguage())}">${t('Lesson complete', 'Занятие завершено', 'Сабақ аяқталды')}</h2><p lang="${esc(currentLanguage())}">${t('You put it into practice. Here is what you made.', 'Ты применил знания на практике. Вот твоя работа.', 'Біліміңді іс жүзінде қолдандың. Міне, жұмысың.')}</p>`, 'ai-lesson-mentor-result')}
     <h3 lang="${esc(currentLanguage())}">${t('Your independent work', 'Твоя самостоятельная работа', 'Өздік жұмысың')}</h3>
     <p>${esc(finalTask.task)}</p>
     <div class="ai-lesson-submission learning-answer">${practiceResult(finalTask.practice, answers.at(-1))}</div>
@@ -98,7 +107,7 @@ function illustrationView(step) {
 
 function exampleView(teaching, mentor, topic) {
   const codeExample = /\b(python|javascript|programming|coding|html|css|sql)\b|программ|бағдарлам/i.test(topic);
-  return renderLessonVisual(teaching.example.visual) + renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output, explanation: teaching.example.explanation, sceneFrame: sceneForTopic(topic), codeExample,
+  return (isLogarithmTopic(topic) ? logExplorer() : '') + renderLessonVisual(teaching.example.visual) + renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output, explanation: teaching.example.explanation, sceneFrame: sceneForTopic(topic), codeExample,
     ...(codeExample ? { beforeLabel: t('Code', 'Код', 'Код'), afterLabel: t('Output', 'Результат', 'Нәтиже') } : {}),
   }, {}, { external: true, mentor });
 }
@@ -166,67 +175,57 @@ function practiceView(step, answer, review, busy, reviewError, last, mentor, use
       <p id="learning-review-status" role="status" tabindex="-1" lang="${esc(currentLanguage())}">${busy === 'review' ? t('Checking your answer…', 'Проверяем ответ…', 'Жауабың тексеріліп жатыр…') : esc(message(reviewError))}</p>`}`;
 }
 
-function screenView(saved, busy, reviewError) {
+function screenView(saved, busy, reviewError, preview = false) {
   const { plan, answers, reviews, completed } = saved;
   const step = plan.steps[completed];
   const last = completed === plan.steps.length - 1;
   const pages = lessonPages(step, last);
   const study = saved.study?.[completed] ?? { page: 0, choice: null, checked: false };
-  const pageIndex = Math.max(0, Math.min(study.page, pages.length - 1));
-  const page = pages[pageIndex];
   const { teaching } = step;
   const assessment = teaching?.assessment;
   const response = assessment ? normalizeAssessmentResponse(assessment, study.response) : null;
   const canCheck = assessment ? isAssessmentReady(assessment, response) : Number.isInteger(study.choice);
   const checkedCorrect = study.checked && (assessment ? isAssessmentCorrect(assessment, response) : study.choice === teaching?.checkpoint?.correctIndex);
   const mentor = lessonMentor(plan);
-  let content;
-  switch (page) {
-    case 'explain': content = explanationView(step, mentor); break;
-    case 'illustration': content = illustrationView(step); break;
-    case 'example': content = exampleView(teaching, mentor, `${plan.goal || ''} ${plan.title}`); break;
-    case 'check': content = assessment
-      ? assessmentView(assessment, response, study.checked, checkedCorrect, busy, mentor)
-      : checkpointView(teaching, study, busy, mentor); break;
-    case 'recap': content = recapView(teaching, mentor); break;
-    default: content = practiceView(step, answers[completed], reviews[completed], busy, reviewError, last, mentor, plan.formatVersion === 3);
-  }
-  const phaseIcon = { explain: 'book', illustration: 'image', example: 'layers', check: 'target', recap: 'leaf', practice: 'edit' }[page];
-  return `<section class="ai-lesson-reader" data-lesson-phase="${page}" aria-label="${t('Current lesson task', 'Текущее задание', 'Ағымдағы тапсырма')}" lang="${esc(plan.language)}" aria-busy="${Boolean(busy)}">
-    <div class="ai-lesson-task-meta" lang="${esc(currentLanguage())}"><span>${t(`Task ${completed + 1} of ${plan.steps.length}`, `Задание ${completed + 1} из ${plan.steps.length}`, `${plan.steps.length} тапсырманың ${completed + 1}-і`)}</span><span>${icon('clock', 16)} ${t(`${step.minutes} min`, `${step.minutes} мин`, `${step.minutes} мин`)}</span></div>
-    <ol class="ai-lesson-stages${pages.length > 4 ? ' is-expanded' : ''}" aria-label="${t('Task screens', 'Экраны задания', 'Тапсырма экрандары')}" lang="${esc(currentLanguage())}">${pages.map((name, index) => `<li class="${index === pageIndex ? 'is-current' : index < pageIndex ? 'is-done' : ''}"${index === pageIndex ? ' aria-current="step"' : ''}><span class="ai-lesson-stage-dot" aria-hidden="true">${index < pageIndex ? icon('check', 12) : index + 1}</span><span>${pageName(name)}</span></li>`).join('')}</ol>
-    <article class="ai-lesson-page">
-      <header class="ai-lesson-page-heading">
-        <span class="ai-lesson-phase-symbol" aria-hidden="true">${icon(phaseIcon, 23)}</span>
-        ${page === 'explain' ? '' : `<p class="ai-lesson-context">${esc(step.title)}</p>`}
-        <h2 id="learning-page-title" tabindex="-1"${page === 'explain' ? '' : ` lang="${esc(currentLanguage())}"`}>${page === 'explain' ? esc(step.title) : last && page === 'practice' ? t('Independent task', 'Самостоятельная работа', 'Өздік жұмыс') : pageName(page)}</h2>
-      </header>
-      ${content}
-    </article>
-    <nav class="ai-lesson-page-navigation" aria-label="${t('Lesson navigation', 'Навигация по занятию', 'Сабақ бойынша навигация')}" lang="${esc(currentLanguage())}">
-      <button class="secondary" type="button" data-learning-page="back"${busy || pageIndex === 0 ? ' disabled' : ''}>${icon('back', 18)} ${t('Back', 'Назад', 'Артқа')}</button>
-      <span class="ai-lesson-page-count">${t(`Screen ${pageIndex + 1} of ${pages.length}`, `Экран ${pageIndex + 1} из ${pages.length}`, `${pages.length} экранның ${pageIndex + 1}-і`)}${pages[pageIndex + 1] ? `<small>${t('Up next', 'Далее', 'Келесі')}: ${pageName(pages[pageIndex + 1])}</small>` : ''}</span>
-      ${page === 'practice' ? '' : page === 'check' && !checkedCorrect ? `<button type="button" data-learning-page="next" disabled hidden aria-hidden="true" tabindex="-1">${t('Continue', 'Продолжить', 'Жалғастыру')}</button><button class="primary ai-lesson-check-button" type="button" data-learning-page="check"${busy || !canCheck ? ' disabled' : ''}>${study.checked && !assessment ? t('Check again', 'Проверить ещё раз', 'Қайта тексеру') : t('Check answer', 'Проверить ответ', 'Жауапты тексеру')}</button>` : `<button class="primary" type="button" data-learning-page="next"${busy ? ' disabled' : ''}>${page === 'recap' || (page === 'check' && !assessment) ? t('Try it yourself', 'Перейти к практике', 'Өзің орындау') : t('Next', 'Дальше', 'Әрі қарай')} ${icon('arrow', 18)}</button>`}
-    </nav>
-  </section>`;
+  const checkIndex = pages.indexOf('check');
+  const visible = checkIndex >= 0 && !checkedCorrect ? pages.slice(0, checkIndex + 1) : pages;
+  const sections = visible.map((page, index) => {
+    let content;
+    switch (page) {
+      case 'explain': content = explanationView(step, mentor); break;
+      case 'illustration': content = illustrationView(step); break;
+      case 'example': content = exampleView(teaching, mentor, `${plan.goal || ''} ${plan.title}`); break;
+      case 'check': content = assessment
+        ? assessmentView(assessment, response, study.checked, checkedCorrect, busy, mentor)
+        : checkpointView(teaching, study, busy, mentor); break;
+      case 'recap': content = recapView(teaching, mentor); break;
+      default: content = practiceView(step, answers[completed], reviews[completed], busy, reviewError, last, mentor, plan.formatVersion === 3);
+    }
+    const title = page === 'explain' || (last && page === 'practice') ? step.title : pageName(page);
+    const checkButton = page === 'check' && !checkedCorrect
+      ? `<button class="primary stream-check" type="button" data-learning-page="check"${busy || !canCheck ? ' disabled' : ''}>${t('Check answer', 'Проверить ответ', 'Жауапты тексеру')}</button>` : '';
+    return `<section class="reader-section" data-reader-section="${index}" data-lesson-phase="${page}">
+      <h2 tabindex="-1"${index === study.page ? ' id="learning-page-title"' : ''} lang="${esc(page === 'explain' || last ? plan.language : currentLanguage())}">${esc(title)}</h2>
+      ${content}${checkButton}
+    </section>`;
+  });
+  return `<div class="ai-lesson-reader lesson-stream" data-reader-step="${completed}" data-reader-cursor="${study.page}" tabindex="0" role="region" aria-label="${esc(step.title)}" lang="${esc(plan.language)}">
+    ${preview ? '' : historyView(saved)}
+    <article class="ai-lesson-page">${sections.join('')}</article>
+  </div>`;
 }
 
-function lessonView(saved, busy, reviewError, onRoadmap, rewards, nextStage) {
+function lessonView(saved, busy, reviewError, onRoadmap, nextStage) {
   const { plan, completed } = saved;
-  return `<header class="ai-lesson-heading" lang="${esc(plan.language)}">
-    <h1>${esc(plan.title)}</h1>
-    <div class="ai-lesson-heading-meta" lang="${esc(currentLanguage())}">
-      <span>${icon('clock', 16)} ${t(`${plan.minutes} minutes`, `${plan.minutes} минут`, `${plan.minutes} минут`)}</span>
-      ${rewards ? `<span class="ai-lesson-life-count">${icon('heart', 18)} ${t(`${rewards.hearts}/${rewards.maxHearts} lives`, `Жизни ${rewards.hearts}/${rewards.maxHearts}`, `Өмір ${rewards.hearts}/${rewards.maxHearts}`)}</span>` : ''}
-    </div>
-    <div class="ai-lesson-overall" lang="${esc(currentLanguage())}">
-      <span>${t('Lesson progress', 'Прогресс занятия', 'Сабақ барысы')}</span>
-      <strong>${t(`${completed} of ${plan.steps.length} tasks`, `${completed} из ${plan.steps.length} заданий`, `${plan.steps.length} тапсырманың ${completed}-і`)}</strong>
-      <progress max="${plan.steps.length}" value="${completed}" aria-label="${t('Completed tasks', 'Выполненные задания', 'Орындалған тапсырмалар')}"></progress>
-    </div>
-  </header>
-  ${completed === plan.steps.length ? resultView(saved, onRoadmap, nextStage) : screenView(saved, busy, reviewError)}
-  ${historyView(saved)}`;
+  const lengths = plan.steps.map((step, i) => lessonPages(step, i === plan.steps.length - 1).length);
+  const base = lengths.slice(0, completed).reduce((total, n) => total + n, 0);
+  const total = lengths.reduce((sum, n) => sum + n, 0);
+  const value = base + (saved.study?.[completed]?.page || 0);
+  return `<div class="reader-toolbar">
+    <button type="button" class="icon-button ai-lesson-exit" data-view="${onRoadmap ? 'my-path' : 'course-path'}" aria-label="${t('Save and leave', 'Сохранить и выйти', 'Сақтап шығу')}">${icon('close', 21)}</button>
+    <progress class="reader-progress" data-reader-base="${base}" max="${total}" value="${value}" aria-label="${t('Lesson progress', 'Прогресс занятия', 'Сабақ барысы')}"></progress>
+  </div>
+  ${completed === plan.steps.length ? resultView(saved, onRoadmap, nextStage) + historyView(saved) : screenView(saved, busy, reviewError)}`;
 }
 
 function goalForm({ goal, minutes, busy, error }) {
@@ -242,13 +241,10 @@ function goalForm({ goal, minutes, busy, error }) {
 }
 
 export function learningPlanView(screen) {
-  const { saved, busy, error, reviewError, accountSaved, onRoadmap, rewards } = screen;
+  const { saved, busy, error, reviewError, onRoadmap } = screen;
   return `<div class="learning-plan ai-lesson${saved ? ' has-course' : ''}">
-    <button type="button" class="icon-button ai-lesson-exit" data-view="${onRoadmap ? 'my-path' : saved ? 'course-path' : 'discover'}" aria-label="${t('Save and leave', 'Сохранить и выйти', 'Сақтап шығу')}">${icon('close',22)}</button>
-    ${saved ? lessonView(saved, busy, reviewError, onRoadmap, rewards, screen.nextStage) : `<header class="ai-lesson-welcome"><p class="ai-lesson-eyebrow">${t('A little time. A new skill.', 'Немного времени. Новый навык.', 'Аз уақыт. Жаңа дағды.')}</p><h1>${t('What will we learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</h1>${mentorView('mino', busy === 'plan' ? 'waiting' : 'listening', `<p>${t('Tell me your goal. We’ll learn one idea, see an example, then try it together.', 'Расскажи о своей цели. Разберём идею, посмотрим пример и попробуем вместе.', 'Мақсатыңды айт. Бір ойды түсініп, мысалды қарап, бірге орындап көреміз.')}</p>`)}</header>`}
-    ${saved ? `<details class="ai-lesson-settings"${busy === 'plan' || error ? ' open' : ''}>
-      <summary>${icon('target', 19)}<span>${onRoadmap ? t('Lesson goal', 'Цель занятия', 'Сабақ мақсаты') : t('Goal and settings', 'Цель и настройки', 'Мақсат пен баптаулар')}</span>${icon('chevron', 17)}</summary>
-      <div class="ai-lesson-settings-body"><p lang="${esc(saved.plan.language)}">${esc(saved.plan.outcome)}</p>${onRoadmap ? '' : goalForm(screen)}<p class="small-note">${accountSaved ? t('You can continue on another device after saving.', 'После сохранения можно продолжить на другом устройстве.', 'Сақтағаннан кейін басқа құрылғыда жалғастыра аласың.') : t('Answers and feedback stay in this browser.', 'Ответы и разборы сохраняются в этом браузере.', 'Жауаптар мен талдау осы браузерде сақталады.')}</p></div>
-    </details>` : onRoadmap ? '' : `<section class="game-card simple-panel">${goalForm(screen)}</section>`}
+    ${saved ? '' : `<button type="button" class="icon-button ai-lesson-exit" data-view="${onRoadmap ? 'my-path' : 'discover'}" aria-label="${t('Save and leave', 'Сохранить и выйти', 'Сақтап шығу')}">${icon('close',22)}</button>`}
+    ${saved ? lessonView(saved, busy, reviewError, onRoadmap, screen.nextStage) : `<header class="ai-lesson-welcome"><p class="ai-lesson-eyebrow">${t('A little time. A new skill.', 'Немного времени. Новый навык.', 'Аз уақыт. Жаңа дағды.')}</p><h1>${t('What will we learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</h1>${mentorView('mino', busy === 'plan' ? 'waiting' : 'listening', `<p>${t('Tell me your goal. We’ll learn one idea, see an example, then try it together.', 'Расскажи о своей цели. Разберём идею, посмотрим пример и попробуем вместе.', 'Мақсатыңды айт. Бір ойды түсініп, мысалды қарап, бірге орындап көреміз.')}</p>`)}</header>`}
+    ${saved || onRoadmap ? '' : `<section class="game-card simple-panel">${goalForm(screen)}</section>`}
   </div>`;
 }

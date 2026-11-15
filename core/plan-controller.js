@@ -45,6 +45,56 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
     }
   }
 
+  // The study cursor uses the same phase indices as previously saved lessons.
+  // Scroll changes the reading position. Completing a task still requires an answer.
+  let mountedReader = null;
+  function mountReader(previous, previousTop) {
+    const reader = document.querySelector('.lesson-stream');
+    const lesson = currentLesson();
+    if (!reader || !lesson) { mountedReader = null; return; }
+    const sections = Array.from(reader.querySelectorAll('[data-reader-section]'));
+    const progress = document.querySelector('.reader-progress');
+    const paint = index => {
+      for (const [i, section] of sections.entries()) {
+        section.classList.toggle('is-reading', i === index);
+        const heading = section.firstElementChild;
+        if (i === index) heading.id = 'learning-page-title';
+        else heading.removeAttribute('id');
+      }
+      if (progress) progress.value = Number(progress.dataset.readerBase) + index;
+    };
+    const select = index => {
+      if (!reader.isConnected || !isOpen() || state.learningPlan !== lesson.saved || !sections[index]) return;
+      if (lesson.study.page !== index) {
+        lesson.study.page = index;
+        save();
+      }
+      paint(index);
+    };
+    const current = mountedReader;
+    const index = Math.min(lesson.study.page, sections.length - 1);
+    if (previous && current?.saved === lesson.saved && current.index === lesson.index) {
+      reader.scrollTop = previousTop;
+    } else if (index > 0 || lesson.index > 0) {
+      reader.scrollTop = sections[index].getBoundingClientRect().top - reader.getBoundingClientRect().top + reader.scrollTop;
+    }
+    paint(index);
+    mountedReader = { saved: lesson.saved, index: lesson.index };
+    reader.addEventListener('scroll', () => {
+      const line = reader.getBoundingClientRect().top + Math.min(140, reader.clientHeight * .27);
+      const atEnd = reader.scrollHeight > reader.clientHeight && reader.scrollTop + reader.clientHeight >= reader.scrollHeight - 2;
+      const visible = sections.findLastIndex(section => section.getBoundingClientRect().top <= line);
+      select(atEnd ? sections.length - 1 : Math.max(0, visible));
+    }, { passive: true });
+    const selectTarget = event => {
+      const section = event.target.closest('[data-reader-section]');
+      if (section) select(Number(section.dataset.readerSection));
+    };
+    for (const type of ['focusin', 'pointerdown', 'click', 'input', 'change', 'submit']) {
+      reader.addEventListener(type, selectTarget, true);
+    }
+  }
+
   function currentLesson() {
     const saved = state.learningPlan;
     const index = saved?.completed;
@@ -315,5 +365,5 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
     }
   });
 
-  return { generate, reset, screen: () => ({ goal, minutes, busy, error, reviewError: activeReviewError(), saved: state.learningPlan }) };
+  return { generate, reset, mountReader, screen: () => ({ goal, minutes, busy, error, reviewError: activeReviewError(), saved: state.learningPlan }) };
 }

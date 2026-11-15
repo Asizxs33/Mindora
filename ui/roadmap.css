@@ -248,6 +248,9 @@
 @keyframes roadmap-bubble-nod { 0%,100% { transform:translate(-50%,0); } 50% { transform:translate(-50%,-3px); } }
 .roadmap-stage-text .roadmap-stage-objective { margin: 8px auto 0; max-width: 27ch; color: #726052; font-size: 12px; line-height: 1.55; font-weight: 500; }
 .roadmap-stage:has(.roadmap-stage-objective) { padding-bottom: 70px; }
+.roadmap-tutor .roadmap-guide.character-human { --character-height: 155px; height: 155px; }
+.roadmap-stage.is-locked .roadmap-stage-node:hover { border-color: #cd793e; background: #fff3e4; cursor: pointer; }
+.roadmap-stage.is-locked .roadmap-stage-node:active .roadmap-stage-status { transform: translateY(7px) rotate(-18deg); opacity: .3; transition: transform .18s, opacity .18s; }
 @media(prefers-reduced-motion:no-preference) {
   html:not([data-character-animations='off']) .roadmap-start-bubble { animation:roadmap-bubble-nod 3s ease-in-out 2; }
 }

@@ -4,7 +4,7 @@ import { timeOptions } from './budget-session.js';
 
 export function mobileProfileView(state, stats) {
   const tools = [
-    ['work', 'work', t('My work', 'Мои работы', 'Жұмыстарым')],
+    ['work', 'work', t('My projects', 'Мои проекты', 'Жобаларым')],
     ['practice', 'edit', t('Practice', 'Практика', 'Жаттығу')],
     ['achievements', 'trophy', t('Milestones', 'Достижения', 'Жетістіктер')],
     ['quests', 'gift', t('Rewards', 'Награды', 'Марапаттар')],

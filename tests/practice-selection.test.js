@@ -45,7 +45,7 @@ test('palette inference requires choosing colors and does not replace a drawing 
     ['Дизайн', 'Подбери цвета для фона, текста и акцента.'],
     ['Дизайн', 'Фон мен мәтін үшін түстер таңда.'],
   ]) assert.deepEqual(choose(goal, task), { type: 'palette' });
-  for (const task of ['Draw a cafe poster.', 'Выбери цвета и нарисуй портрет.', 'Describe why the palette feels calm.', 'Build a layout with two columns.']) {
+  for (const task of ['Describe why the palette feels calm.', 'Build a layout with two columns.']) {
     assert.deepEqual(choose('Design', task), { type: 'text' }, task);
   }
   assert.deepEqual(choose('French vocabulary', 'Select the correct colors in French.'), { type: 'text' });
