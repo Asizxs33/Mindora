@@ -1,16 +1,14 @@
 .certificate-page { max-width: 850px; margin: 0 auto; padding-bottom: 24px; }
 .certificate-back { margin-bottom: 24px; }
-.certificate-heading { text-align: center; margin-bottom: 28px; }
-.certificate-success { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; margin-bottom: 14px; border-radius: 99px; background: #e9f7ed; color: #25613a; font-size: 13px; font-weight: 700; }
+.certificate-heading { text-align: center; margin-bottom: 24px; }
 .certificate-heading h1 { font-size: clamp(32px, 5vw, 42px); }
-.certificate-heading p { margin-top: 10px; color: var(--muted, #6b647c); }
+.certificate-heading p { margin-top: 8px; color: var(--muted, #675649); overflow-wrap: anywhere; }
 .certificate-preview { margin: 0; }
-.certificate-preview > svg { display: block; width: 100%; height: auto; aspect-ratio: 297 / 210; border-radius: 15px; box-shadow: 0 8px 30px #3928830d; }
-.certificate-preview figcaption { margin-top: 12px; text-align: center; color: var(--muted, #6b647c); font-size: 14px; overflow-wrap: anywhere; }
+.certificate-preview > svg { display: block; width: 100%; height: auto; aspect-ratio: 297 / 210; border: 1px solid #e7d4bf; border-radius: 12px; box-shadow: 0 7px 24px #53331815; }
 .certificate-details { display: flex; justify-content: space-between; gap: 20px; padding: 21px 0; border-bottom: 1px solid var(--line, #e7e4ee); font-size: 13px; }
 .certificate-details p { display: grid; gap: 3px; min-width: 0; }
 .certificate-details p:last-child { text-align: right; }
-.certificate-details span { color: var(--muted, #6b647c); }
+.certificate-details span { color: var(--muted, #675649); }
 .certificate-details strong { font-weight: 600; overflow-wrap: anywhere; }
 .certificate-personalize { max-width: 440px; margin: 27px auto 23px; }
 .certificate-personalize .field { margin-bottom: 7px; }
@@ -33,6 +31,5 @@
   body:has(.certificate-page) * { visibility: hidden; }
   .certificate-preview, .certificate-preview > svg, .certificate-preview > svg * { visibility: visible !important; }
   .certificate-preview { position: absolute; left: 0; top: 0; width: 297mm; height: 210mm; margin: 0; }
-  .certificate-preview > svg { width: 297mm; height: 210mm; box-shadow: none; border-radius: 0; }
-  .certificate-preview figcaption { display: none; }
+  .certificate-preview > svg { width: 297mm; height: 210mm; box-shadow: none; border: 0; border-radius: 0; }
 }

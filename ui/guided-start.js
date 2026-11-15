@@ -5,6 +5,7 @@ import { character } from './characters.js';
 import { escapeHtml as esc } from '../core/engine.js';
 import { t, languagePicker, courseLanguageField } from './language.js';
 import { icon } from './icons.js';
+import { courseCertificateButton } from './certificate.js';
 import { lessonNames } from './dashboard.js';
 import { landingView } from './landing.js';
 
@@ -39,7 +40,7 @@ export function guidedStartView({ step = 0, name = '', topic = '', goal = '', mi
   </section>`;
 }
 
-export function quietHomeView(state) {
+export function quietHomeView(state, { onRoadmap = false } = {}) {
   const saved = state.lastLearningType === 'builtin' && state.active ? null : state.learningPlan, id = state.active;
   const steps = saved ? saved.plan.steps.map(step => step.title) : lessonNames[id];
   if (!steps?.length) return '';
@@ -64,6 +65,6 @@ export function quietHomeView(state) {
       const final = index === steps.length - 1;
       return `<li class="${passed ? 'is-done' : current ? 'is-current' : 'is-available'}">${final ? '' : '<span class="learning-hub-connector" aria-hidden="true"></span>'}<div class="learning-hub-stop">${current ? `<span class="learning-hub-start" aria-hidden="true">${currentLabel}</span>` : ''}<button type="button" class="learning-hub-node" ${current ? resumeAction : saved ? `data-explore-task="${index}"` : `data-step="${index}" data-id="${id}"`} ${current ? 'aria-current="step"' : ''} aria-label="${current ? `${currentLabel} — ` : ''}${esc(label)}${passed ? ` — ${t('completed','пройдено','аяқталды')}` : current ? '' : ` — ${t('tap to open','нажми, чтобы открыть','басып аш')}`}">${icon(passed ? 'check' : current ? 'play' : final ? 'trophy' : 'book',32)}</button><span class="learning-hub-label"${saved ? ` lang="${esc(saved.plan.language)}"` : ''}>${esc(label)}</span></div></li>`;
     }).join('')}</ol><aside class="learning-hub-guide"><div class="guided-dialogue"><p>${done ? t('All steps complete. Your result is ready.', 'Все шаги пройдены. Можно посмотреть результат.', 'Барлық қадам аяқталды. Нәтижең дайын.') : t('Take a break anytime. You can pick up where you left off.', 'Можно сделать паузу и продолжить с того же места.', 'Үзіліс жасап, тоқтаған жерден жалғастыра аласың.')}</p></div>${character(saved ? mentorForTopic(`${saved.plan.goal} ${saved.plan.title}`) : id === 'design' ? 'mia' : 'sam', done ? 'celebrate' : 'explaining', 'quiet-mentor')}</aside></div>
-    <div class="learning-hub-actions"><button type="button" class="primary" ${resumeAction}>${done ? t('See my result','Мой результат','Нәтижем') : hasStarted ? t('Continue learning','Продолжить','Жалғастыру') : t('Start lesson','Начать урок','Сабақты бастау')}${icon('arrow',20)}</button><button type="button" class="text-link" data-view="courses">${t('Ready mini-courses','Готовые мини-курсы','Дайын мини-курстар')}</button></div>
+    <div class="learning-hub-actions">${done && saved && !onRoadmap ? courseCertificateButton('lesson') : ''}<button type="button" class="${done && saved && !onRoadmap ? 'secondary' : 'primary'}" ${resumeAction}>${done ? t('See my result','Мой результат','Нәтижем') : hasStarted ? t('Continue learning','Продолжить','Жалғастыру') : t('Start lesson','Начать урок','Сабақты бастау')}${icon('arrow',20)}</button><button type="button" class="text-link" data-view="courses">${t('Ready mini-courses','Готовые мини-курсы','Дайын мини-курстар')}</button></div>
   </section>`;
 }

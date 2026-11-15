@@ -2,6 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { certificateSvg, certificateDate, downloadCertificate } from '../core/certificate.js';
 import { certificateView } from '../ui/certificate.js';
+import { learningPlanView } from '../ui/learning-plan.js';
+import { roadmapView } from '../ui/roadmap.js';
+import { getStarterCourse } from '../core/starter-courses.js';
+import { restorePlan } from '../core/learning-plan.js';
+import { restoreRoadmap, roadmapStageStatuses } from '../core/roadmap-model.js';
+import { validateBuiltinWorkspace } from '../backend/builtin-workspace.js';
 
 const completion = { name: 'Alex Morgan', courseTitle: 'Your first poster', completedAt: '2026-11-14T18:30:00.000Z', certificateId: 'MINDORA-DESIGN-20261114' };
 
@@ -49,4 +55,42 @@ test('account input and certificate strings are escaped in the UI without removi
 
 test('download does not attempt browser work during server-side use', () => {
   assert.throws(() => downloadCertificate(completion), /available in the browser/);
+});
+
+test('SQL keeps its saved certificate only after the real final submission', () => {
+  const { courseTitle, ...record } = completion;
+  const course = getStarterCourse('sql-tables', 'en', 5);
+  const pending = { ...course, completed: course.plan.steps.length, certificate: record };
+  assert.equal(restorePlan(pending).certificate, undefined);
+  assert.doesNotMatch(learningPlanView({ saved: restorePlan(pending), certificateKind: 'lesson' }), /data-certificate-kind/);
+  const saved = restorePlan({ ...pending, answers: ['First SQL submission', 'Final SQL submission'] });
+  assert.deepEqual(saved.certificate, record);
+  assert.match(learningPlanView({ saved, certificateKind: 'lesson' }), /data-certificate-kind="lesson"/);
+  assert.doesNotMatch(learningPlanView({ saved, onRoadmap: true }), /data-certificate-kind/);
+});
+
+test('the full roadmap and the weekly report retain their certificates in the workspace', () => {
+  const { courseTitle, ...record } = completion;
+  const stages = ['Setup', 'Practice', 'Review', 'Project'].map(title => ({ title, objective: 'Complete the activity.' }));
+  const path = {
+    goal: 'Organize weekly work in a spreadsheet', title: 'Weekly spreadsheet workflow', minutes: 5, language: 'en',
+    level: 'beginner', levelReason: 'A course for someone starting out.', outcome: 'Share a weekly spreadsheet.',
+    stages, progress: stages.map((_, i) => ({ courseId: `00000000-0000-4000-8000-00000000000${i}`, completed: i < 3 })),
+    certificate: record,
+  };
+  const pending = restoreRoadmap(path);
+  assert.equal(pending.certificate, undefined);
+  assert.doesNotMatch(roadmapView({ roadmap: pending, active: roadmapStageStatuses(pending) }), /data-certificate-kind/);
+  path.progress[3].completed = true;
+  const saved = validateBuiltinWorkspace({ learningRoadmap: path, certificates: { 'weekly-report': record } });
+  assert.deepEqual(saved.learningRoadmap.certificate, record);
+  assert.deepEqual(saved.certificates['weekly-report'], record);
+  assert.match(roadmapView({ roadmap: saved.learningRoadmap, active: roadmapStageStatuses(saved.learningRoadmap) }), /data-certificate-kind="roadmap"/);
+});
+
+test('localized SVG uses the matching title and date without assigning a date to older completions', () => {
+  const svg = certificateSvg({ ...completion, language: 'ru', completedAt: null });
+  assert.match(svg, /xml:lang="ru"/);
+  assert.match(svg, /Сертификат об окончании/);
+  assert.match(svg, /Дата окончания недоступна/);
 });
