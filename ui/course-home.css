@@ -237,7 +237,7 @@ body.quiet-shell.has-course-home:not(.is-guided) #main { max-width: 800px; paddi
 }
 
 .phone-course-nav { display:none; }
-.course-home-method { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; list-style: none; padding: 0; margin: 20px 0 26px; }
+.course-home-method { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; width: 100%; max-width: 550px; list-style: none; padding: 0; margin: 20px auto 26px; }
 .course-home-method > li { display: flex; align-items: center; justify-content: center; gap: 8px; color: #706359; font-size: 12px; line-height: 1.5; text-align: left; }
 .course-home-method svg { flex-shrink: 0; color: #9d531f; }
 .course-home-method > li:nth-child(2) svg { color: #4d7562; }
