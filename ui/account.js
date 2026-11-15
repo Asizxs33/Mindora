@@ -7,6 +7,7 @@ const topics = ['Design', 'Coding', 'Languages', 'Spreadsheets', 'Writing', 'Mar
 const genders = [['', 'Choose, if you like'], ['woman', 'Woman'], ['man', 'Man'], ['nonbinary', 'Non-binary'], ['other', 'Another identity'], ['prefer_not_to_say', 'Prefer not to say']];
 const emptyDraft = () => ({ name: '', age: '', gender: '', interests: [], email: '', password: '', confirm: '', custom: '' });
 let mounted = false, dialog, returnFocus, sessionPromise, sessionVersion = 0;
+let accountViewport, dialogConfirmation, pageConfirmation, confirmationTimer;
 let session = { available: null, user: null, profile: null };
 // Keep only onboarding fields while email verification or profile saving is pending.
 // Bind them to the signup email so another account can never inherit the draft.
@@ -17,6 +18,29 @@ let view = { mode: 'signup', step: 0, pending: false, error: '', notice: '', sho
 function emitSession(reason) {
   window.dispatchEvent(new CustomEvent('mindora:account-changed', { detail: { user: session.user, profile: session.profile, reason } }));
 }
+
+function clearConfirmation() {
+  clearTimeout(confirmationTimer);
+  dialogConfirmation.textContent = '';
+  pageConfirmation.textContent = '';
+}
+
+function showConfirmation(message) {
+  clearConfirmation();
+  const region = dialog.open ? dialogConfirmation : pageConfirmation;
+  region.textContent = message;
+  confirmationTimer = setTimeout(clearConfirmation, 4800);
+}
+
+function confirmationRegion(className) {
+  const region = document.createElement('div');
+  region.className = className;
+  region.setAttribute('role', 'status');
+  region.setAttribute('aria-atomic', 'true');
+  return region;
+}
+
+const profileSaved = () => t('Your profile is saved.', 'Профиль сохранён.', 'Профиль сақталды.');
 
 async function api(method = 'GET', body) {
   const controller = new AbortController();
@@ -83,6 +107,7 @@ async function loadSession() {
 
 export function closeAccount() {
   if (!dialog) return;
+  if (dialog.open) clearConfirmation();
   view.draft.password = '';
   view.draft.confirm = '';
   view.showPassword = false;
@@ -162,7 +187,7 @@ function content() {
 function render(focus = true) {
   const old = document.activeElement;
   const previous = old && dialog.contains(old) ? { id: old.id, interest: old.dataset.accountInterest, selection: old.selectionStart } : null;
-  dialog.innerHTML = `<div class="account-viewport"><header class="account-header"><a class="account-brand" href="#discover" data-account-action="close" aria-label="${t('Back to Mindora', 'Вернуться в Mindora', 'Mindora-ға оралу')}"><img src="${new URL('./assets/brand-mark.svg', import.meta.url).href}" width="38" height="38" alt=""><span>mindora<span>.</span></span></a><button type="button" class="account-close" data-account-action="close" aria-label="${t('Close account window', 'Закрыть окно аккаунта', 'Аккаунт терезесін жабу')}">${cross}</button></header><main class="account-panel">${content()}</main></div>`;
+  accountViewport.innerHTML = `<header class="account-header"><a class="account-brand" href="#discover" data-account-action="close" aria-label="${t('Back to Mindora', 'Вернуться в Mindora', 'Mindora-ға оралу')}"><img src="${new URL('./assets/brand-mark.svg', import.meta.url).href}" width="38" height="38" alt=""><span>mindora<span>.</span></span></a><button type="button" class="account-close" data-account-action="close" aria-label="${t('Close account window', 'Закрыть окно аккаунта', 'Аккаунт терезесін жабу')}">${cross}</button></header><main class="account-panel">${content()}</main>`;
   if (!dialog.open) return;
   if (focus) {
     dialog.scrollTop = 0;
@@ -233,6 +258,7 @@ function addInterest() {
 
 async function submit() {
   if (view.pending) return;
+  clearConfirmation();
   // Password managers can fill a field without firing an input event.
   for (const input of dialog.querySelectorAll('input[name],select[name]')) {
     if (Object.hasOwn(view.draft, input.name) && input.name !== 'interests') view.draft[input.name] = input.value;
@@ -287,6 +313,14 @@ async function submit() {
       closeAccount();
       view = { ...view, draft: emptyDraft() };
       emitSession('signup-complete');
+      if (mode === 'profile') showConfirmation(profileSaved());
+      return;
+    }
+    if (mode === 'signin' && !data.profilePending && !pendingUserProfile()) {
+      closeAccount();
+      view.draft = emptyDraft();
+      emitSession();
+      showConfirmation(t('You’re signed in.', 'Вход выполнен.', 'Аккаунтқа кірдіңіз.'));
       return;
     }
     emitSession(pendingProfile?.signup && pendingUserProfile() ? 'signup-profile-pending' : undefined);
@@ -294,8 +328,9 @@ async function submit() {
     view.showPassword = false; view.showConfirm = false;
     view.mode = 'profile'; view.step = 0;
     view.draft = profileDraft();
-    view.notice = data.profilePending ? '' : pendingUserProfile() ? 'You’re signed in. Your details are still here. Choose Save profile to finish setting up your profile.' : mode === 'profile' ? 'Your profile is saved.' : 'You’re signed in. Welcome back!';
+    view.notice = data.profilePending ? '' : pendingUserProfile() ? 'You’re signed in. Your details are still here. Choose Save profile to finish setting up your profile.' : '';
     view.error = data.profilePending ? 'Your account is ready, but your profile wasn’t saved. Please try Save profile again.' : '';
+    if (mode === 'profile' && !data.profilePending) showConfirmation(profileSaved());
   } catch (error) {
     if (mode === 'profile' && session.user) rememberProfile(session.user.email, profile, finishingSignup);
     view.error = error.message;
@@ -370,7 +405,12 @@ export function mountAccount() {
   stylesheet.id = 'mindora-account-styles'; document.head.append(stylesheet);
   dialog = document.createElement('dialog');
   dialog.id = 'mindora-account'; dialog.className = 'account-dialog'; dialog.setAttribute('aria-labelledby', 'account-heading');
-  document.body.append(dialog);
+  accountViewport = document.createElement('div');
+  accountViewport.className = 'account-viewport';
+  dialogConfirmation = confirmationRegion('account-confirmation');
+  pageConfirmation = confirmationRegion('account-confirmation account-confirmation-page');
+  dialog.append(dialogConfirmation, accountViewport);
+  document.body.append(pageConfirmation, dialog);
   mountCharacters();
   dialog.addEventListener('cancel', event => { event.preventDefault(); closeAccount(); });
   dialog.addEventListener('close', () => { document.body.classList.remove('account-open'); });

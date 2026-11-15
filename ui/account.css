@@ -76,6 +76,30 @@ dialog.account-dialog { --account-orange: #c34b00; --account-orange-dark: #a93f0
 .account-error,.account-notice,.account-service-note { padding: 14px 16px; margin-bottom: 23px; border-radius: 12px; font-size: 15px; line-height: 1.55; overflow-wrap: anywhere; }
 .account-error { background: #fff0f1; color: #a13242; border: 1px solid #f2cdd3; }
 .account-notice { background: #eaf7ee; color: #267c40; }
+.account-confirmation {
+  position: fixed;
+  z-index: 151;
+  top: calc(env(safe-area-inset-top) + 16px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(420px, calc(100% - 32px));
+  padding: 12px 20px;
+  box-sizing: border-box;
+  border: 1px solid #b9ddc7;
+  border-radius: 14px;
+  background: #eaf7ee;
+  color: #1e6037;
+  box-shadow: 0 4px 16px #193b2921;
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+.account-confirmation:empty { opacity: 0; }
+@media (max-width: 600px) {
+  .account-confirmation { top: calc(env(safe-area-inset-top) + 66px); }
+}
 .account-service-note { background: #faf5ef; color: #71665d; }
 .account-dialog .account-email-label { padding: 13px 16px; margin: 0 0 25px; border-radius: 12px; background: #faf6f2; font-size: 15px; color: #696568; overflow-wrap: anywhere; }
 .account-section-title { font-size: 21px; margin: 28px 0 17px; font-weight: 750; letter-spacing: -.3px; }
