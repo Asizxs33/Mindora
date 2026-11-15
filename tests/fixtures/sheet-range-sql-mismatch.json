@@ -1,0 +1,120 @@
+{
+  "formatVersion": 3,
+  "title": "Reading a Range Like B2:B5: Which Rows Does It Cover?",
+  "outcome": "You can look at a range such as B2:B5, name its start cell and end cell, list every row it includes, and use it inside =SUM() and =AVERAGE() to check a small weekly expense report.",
+  "guided": [
+    {
+      "title": "A range names its first and last cell",
+      "instruction": "A cell address combines a column letter with a row number, so B2 means column B, row 2. A range like B2:B5 uses A1 notation: the cell before the colon is the start (top) cell and the cell after it is the end (bottom) cell. The range includes BOTH ends and every row between them. So B2:B5 covers rows 2, 3, 4 and 5 in column B — four cells, not three. In a formula you type the range inside the brackets, for example =SUM(B2:B5), which adds those four cells, and =AVERAGE(B2:B5), which divides their total by how many cells hold numbers.",
+      "task": "In the sheet, the header is row 1 and expenses sit in column B from row 2 down to row 5. Read the range B2:B5, then in the Run box write a query that shows only the amount column and produces the same result as =SUM(B2:B5). Then answer the question.",
+      "criterion": "Your query selects only the amount values for rows 2–5 and returns the sum of exactly those four cells.",
+      "teaching": {
+        "why": "Most spreadsheet mistakes are range mistakes: one row left out or a header row counted in. Naming the start and end cells lets you check the range before you trust the total.",
+        "example": {
+          "input": "Column B holds weekly expenses: B1 is the header \"amount\", then B2 = 420, B3 = 180, B4 = 95, B5 = 105. A colleague writes =SUM(B2:B5).",
+          "output": "The formula adds 420 + 180 + 95 + 105 = 800. The range B2:B5 covers rows 2, 3, 4 and 5 — four cells — and starts at B2, ends at B5. The header in B1 is excluded because the range begins at row 2.",
+          "explanation": "The colon means \"from this cell through that cell.\" Both endpoints are included, so the count of cells is the end row minus the start row plus one: 5 − 2 + 1 = 4. Starting at row 2 skips the text header, which a sum cannot add anyway.",
+          "visual": {
+            "type": "table",
+            "label": "Weekly expense report (amounts in column B)",
+            "columns": [
+              "cell",
+              "amount"
+            ],
+            "rows": [
+              [
+                "B2 Rent",
+                420
+              ],
+              [
+                "B3 Groceries",
+                180
+              ],
+              [
+                "B4 Transport",
+                95
+              ],
+              [
+                "B5 Utilities",
+                105
+              ]
+            ]
+          }
+        },
+        "takeaway": "B2:B5 means \"start at B2, end at B5, include both and everything between\" — four cells.",
+        "assessment": {
+          "type": "choice",
+          "question": "Which cells does the range B2:B5 include?",
+          "explanation": "Both the start cell B2 and the end cell B5 are included, plus every row between: rows 2, 3, 4, 5. B1 is above the start, so it is outside the range.",
+          "options": [
+            "B2, B3, B4 only",
+            "B1, B2, B3, B4 and B5",
+            "B2, B3, B4 and B5",
+            "B2 and B5 only"
+          ],
+          "answer": 2
+        }
+      },
+      "practice": {
+        "type": "sql",
+        "table": "weekly_expenses",
+        "columns": [
+          "item",
+          "amount"
+        ],
+        "rows": [
+          [
+            "Rent",
+            420
+          ],
+          [
+            "Groceries",
+            180
+          ],
+          [
+            "Transport",
+            95
+          ],
+          [
+            "Utilities",
+            105
+          ]
+        ]
+      },
+      "sourceId": 0,
+      "imageIds": []
+    }
+  ],
+  "final": {
+    "title": "Check a new weekly report with a range",
+    "instruction": "Independent practice",
+    "task": "A new week's expenses are in column B again, with the header in B1 and four amounts in B2 through B5. Start at B2 and decide the end cell, then confirm what the range covers. Use the sheet: write a query that shows only the amount values for exactly those four cells, and a second figure equal to =AVERAGE(B2:B5). In your notes, state the start cell, the end cell, the number of cells in the range, the total and the average, and show the arithmetic for the average.",
+    "criterion": "Notes name B2 as start, B5 as end and 4 cells; the total and average match the four amounts, and the average is shown as total ÷ 4.",
+    "practice": {
+      "type": "sql",
+      "table": "expenses_week2",
+      "columns": [
+        "item",
+        "amount"
+      ],
+      "rows": [
+        [
+          "Cleaning",
+          60
+        ],
+        [
+          "Internet",
+          45
+        ],
+        [
+          "Books",
+          25
+        ],
+        [
+          "Coffee",
+          70
+        ]
+      ]
+    }
+  }
+}

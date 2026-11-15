@@ -12,6 +12,7 @@ import { enrichLearningVisualSources } from './learning-visual-sources.js';
 import { lessonTopic, topicVisualSchema } from './lesson-topic.js';
 import { isLessonTaskUsable } from './lesson-task-quality.js';
 import { lessonTableFactIssues } from './lesson-table-facts.js';
+import { isSpreadsheetLesson, lessonPracticeIssues } from './lesson-practice-quality.js';
 
 const LESSON_TOKEN_LIMITS = Object.freeze({ 5: 3500, 10: 5000, 20: 6500 });
 const CHATGPT_WEB_SEARCH_GUIDE = 'https://help.openai.com/en/articles/9237897-searching-the-web-with-chatgpt';
@@ -162,6 +163,7 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
   const assessmentLimits = LESSON_ASSESSMENT_LIMITS;
   const visualTopic = `${roadmapStage?.originalGoal || ""} ${roadmapStage?.goal || ""} ${stageTopic}`;
   const subject = lessonTopic(visualTopic);
+  const spreadsheetLesson = isSpreadsheetLesson(input);
   const visualSchema = topicVisualSchema(visualTopic) || (/python|javascript|программир/iu.test(visualTopic) ? null
     : /палитр|цвет|контраст|palette|colou?r|contrast|түстер/iu.test(visualTopic)
       ? { type: "palette", background: "#FFF4E6", foreground: "#302018", accent: "#B74700", headline: "Use the headline from your example" }
@@ -183,6 +185,8 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
     'Teach one focused lesson, not a full course or a chat conversation. Explain in your own words, with a concrete worked example before the learner attempts practice. Write original exercises rather than copying the material.',
     'Mindora provides a practical workspace. Set practice on every guided step and the final task. Choose {"type":"code","language":"python","starter":"short incomplete code, at most 500 characters"} for Python, {"type":"code","language":"actual language name"} for other code writing, {"type":"palette"} for color selection/composition with a three-color preview, {"type":"calculation"} for a numeric result and written working, or {"type":"drawing"} for freehand drawing, diagrams and simple compositions made with brush, line, rectangle and circle tools; or {"type":"text"} for writing and other subjects. For graph tasks about y=a*x, y=a*x² or y=a^x, use {"type":"calculation","visual":"graph"}; the explorer supports a=2..5 and x=0..3. For logarithm calculations, use {"type":"calculation","visual":"logarithm"}; a live graph explorer accompanies the result and working fields. For beginner algorithm tasks that explicitly guide Mino through a grid, use {"type":"code","language":"capy","starter":"forward(1)"}. This safe teaching language supports forward(n), left(), right(), repeat(n) { ... }, at most 80 expanded actions and 3 nested repeats. The 4x4 board starts at (0,3) facing right, target (3,0), walls at (1,1) and (2,1). Specify those constraints in the task and do not call this Python. These are reusable workspace templates; choose the tool that fits the concrete task, not the course title alone. Python and the small capy teaching language have in-browser Run buttons; bounded SQL SELECT queries run in the SQL table editor described below. Other code editors are for writing and explaining code. Do not claim code execution unless the supplied work contains output evidence. Drawing submissions contain bounded vector strokes and a written explanation; assess only what that evidence supports. The palette workspace has three colors (background, text and accent) plus a written rationale. Color palette tasks must fit those controls. Freehand drawing tasks use the drawing workspace, not the palette editor. Do not request file or screenshot uploads.',
     'Structured hands-on practice editors: for beginner SQL SELECT and spreadsheet data work, use an actual mini-table in practice, with 1-4 unique column labels and 1-6 equal-length rows of short strings or JSON numbers. For SQL use {"type":"sql","table":"sales","columns":["item","amount"],"rows":[["Tea",12],["Milk",20]]}; table/column names are ASCII identifiers. The learner can run SELECT * or a column list FROM the table, with an optional column alias using AS and an optional single WHERE column comparison to a number or single-quoted string. For example: SELECT amount AS quantity FROM sales WHERE amount > 12. Keep practice tasks and reference queries within this syntax. For a spreadsheet use {"type":"sheet","columns":["Item","Amount"],"rows":[["Tea",12],["Milk",20]]}. Row 1 is the header, data start at row 2; supported formula functions SUM, AVERAGE, MIN, MAX take a rectangular range. Use these editors for fitting topics in the very first lesson. State a concrete target in the task using the actual dataset. For SQL or sheet, include optional target with a valid reference query/formula that produces exactly the requested result; this enables instant local comparison. Use fresh values for the independent task. For more advanced or unrelated topics pick another suitable workspace.',
+    'SQL and spreadsheets are different workspaces. SQL does NOT support aggregate functions (SUM, AVG, COUNT, MIN, MAX), GROUP BY, JOIN, ORDER BY or calculations. Never request those operations in SQL practice. The sheet editor accepts exactly one formula of the form =SUM(B2:B5), =AVERAGE(B2:B5), =MIN(B2:B5) or =MAX(B2:B5) against the provided table. It cannot run COUNT, IF, arithmetic expressions, multiple formulas or SQL queries. For an unsupported operation, teach a self-contained manual calculation in a calculation/text workspace instead, clearly describing that limitation; do not claim it runs in the sheet editor.',
+    ...(spreadsheetLesson ? ['This selected lesson is about spreadsheets such as Google Sheets or Excel, NOT SQL. Use practice.type="sheet" with actual columns and rows for formula/range practice, and a valid target formula when one specific result is requested. Keep all task instructions about spreadsheet cells and formulas. Do not use a SQL workspace, SELECT, queries or a SQL Run box as a substitute. Ask for only one supported formula per task. The sheet editor submits the formula and computed result; do not request a separate written response in this editor.'] : []),
     'To build a bar chart from stated numeric data, use {"type":"bar-chart","labels":["Mon","Tue"],"max":60}; give the learner 2-5 actual values in the task, integers from 0 to max (max up to 1000). To design a process use {"type":"flow","labels":["Input","Decision","Next step"]}; supply 2-5 short field labels, ask learners to construct their own diagram. For language or communication, use {"type":"conversation","turns":["A customer asks for help.", "They ask for the next step."]}; give 1-3 distinct partner lines and ask the learner to write their replies in the target language. Localize labels and prompts, keep data consistent with the task. Adapt the format to the skill; prefer a working editor in the first guided step whenever it fits. Do not include scripts, markup or URLs in these schemas.',
     'When teaching text contrast, explain relative luminance and use the workspace contrast checker. Never compare HEX strings numerically or claim that a larger HEX number is necessarily lighter. Explain 4.5:1 for normal text and 3:1 for large text only when supported by the opened source. Do not invent exact contrast ratios.',
     'For Python write small runnable programs with print statements and literal sample data. Avoid input(), installing packages, file access, network calls and framework setup. Starter code should leave a meaningful action for the learner. For calculations require working and units, not just the answer. For color tasks provide a specific audience and communication purpose, then ask the learner to choose a palette and justify contrast and hierarchy.',
@@ -225,14 +229,15 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
     'Each guided step must include title, instruction, task, criterion, practice, teaching, sourceId and imageIds. Every teaching object needs why, example with input/output/explanation, a valid assessment using one of the original supported shapes, and takeaway. Follow all original field limits and cite at least one of the supplied sources in guided.',
     `The final object must contain its own nonempty title (up to ${PLAN_TEXT_LIMITS.title} characters), task (up to ${PLAN_TEXT_LIMITS.task}), criterion (up to ${PLAN_TEXT_LIMITS.criterion}) and practice. Write a fresh self-contained independent task with concrete input data and an observable result. Do not substitute the worked example or invent source URLs. Check all required objects and strings before returning.`,
   ].join('\n');
-  let factCorrection = '';
+  let contentCorrection = '';
   // Research is reused. At most two content attempts (each completeJson has
   // its own bounded parsing retry) share the original 50-second deadline.
   for (let attempt = 0; attempt < 2; attempt++) {
     signal.throwIfAborted();
-    const requestMessages = attempt === 0 ? messages : [...messages, { role: 'user', content: correction + factCorrection }];
+    const requestMessages = attempt === 0 ? messages : [...messages, { role: 'user', content: correction + contentCorrection }];
     const raw = await completeJson(requestMessages, LESSON_TOKEN_LIMITS[input.minutes], apiKey, fetcher, signal);
     const guided = Array.isArray(raw?.guided) ? raw.guided.slice(0, durations.length - 1) : [];
+    const practiceIssues = [...new Set([...guided, raw?.final].flatMap(step => lessonPracticeIssues(step, input)))];
     const steps = guided.map((step, index) => {
       const useIllustratedGuide = illustratedGuide && index === 0;
       const material = useIllustratedGuide ? illustratedGuide : Number.isInteger(step?.sourceId) ? materials[step.sourceId] : null;
@@ -250,17 +255,20 @@ export async function generateDeepSeekPlan(input, apiKey, fetcher = fetch, { rea
     steps.push({ ...raw?.final, practice: selectLessonPractice(raw?.final, input) ?? raw?.final?.practice, instruction: 'Independent practice', sourceUrl: null });
     const plan = normalizePlan({ ...raw, formatVersion: 3, steps }, lessonInput, sources);
     const factIssues = plan ? [...new Set(plan.steps.flatMap(lessonTableFactIssues))] : [];
-    if (plan?.steps.slice(0, -1).some(step => step.resource) && plan.steps.every(step => isLessonTaskUsable(step, subject)) && !factIssues.length) {
+    if (plan?.steps.slice(0, -1).some(step => step.resource) && plan.steps.every(step => isLessonTaskUsable(step, subject)) && !factIssues.length && !practiceIssues.length) {
       for (const step of plan.steps) {
         if (step.teaching) mixStartingOrder(step.teaching.assessment);
       }
       return plan;
     }
-    factCorrection = factIssues.length
-      ? '\nA deterministic table check found inconsistent cell references, quiz answers or numeric results. Recompute them from each exact table: header row 1, first data row 2. Ensure the cell-address quiz includes and marks the correct option. Recalculate formula results. Regenerate a consistent complete lesson; do not repeat an unverified result.' : '';
+    contentCorrection = [
+      factIssues.length ? 'A deterministic table check found inconsistent cell references, quiz answers or numeric results. Recompute them from each exact table: header row 1, first data row 2. Ensure the cell-address quiz includes and marks the correct option. Recalculate formula results. Regenerate a consistent complete lesson; do not repeat an unverified result.' : '',
+      practiceIssues.length ? 'The practice workspace does not support the requested task or target. Regenerate the complete task, criterion, dataset and practice together. Spreadsheet goals need a sheet workspace, not SQL; request one supported SUM/AVERAGE/MIN/MAX range formula and include its valid target. SQL supports only SELECT column lists with optional AS and one WHERE comparison, never aggregate functions. Do not remove a target to hide an unsupported task.' : '',
+    ].filter(Boolean).map(message => '\n' + message).join('');
     console.warn('Mindora lesson response validation', {
       attempt: attempt + 1,
       factIssues,
+      practiceIssues,
       title: raw?.title?.length,
       outcome: raw?.outcome?.length,
       steps: steps.map(step => ({
