@@ -1,0 +1,73 @@
+.mino-walk {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  inline-size: var(--mino-walk-size, 52px);
+  aspect-ratio: 1;
+  vertical-align: middle;
+}
+
+.mino-walk::before {
+  position: absolute;
+  inset: 87.5% 29% auto;
+  height: 4%;
+  border-radius: 50%;
+  background: #d7bca6;
+  opacity: .48;
+  content: '';
+}
+
+.mino-walk-sprite {
+  position: absolute;
+  inset: 0;
+  background: url('./assets/characters/mino-scenes/walking-frames.webp') 6.3% 1.6% / 200% 200% no-repeat;
+}
+
+.mino-wait-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 24px;
+  background: #fffaf5;
+  color: var(--ink);
+  text-align: center;
+}
+
+.mino-wait-screen .mino-walk { --mino-walk-size: clamp(126px, 22svh, 168px); }
+.mino-wait-title { margin: 5px 0 0; color: #934311; font: 900 1.17rem/1.35 var(--font-display); }
+.mino-wait-tip { max-width: 35ch; margin: 8px 0 0; color: #66574e; font-size: .98rem; line-height: 1.55; text-wrap: pretty; }
+.mino-wait-inline { display: flex; align-items: center; gap: 8px; }
+.mino-wait-inline .mino-walk { --mino-walk-size: 44px; }
+
+body:has(.mino-wait-screen) { overflow: hidden; }
+body:has(.mino-wait-screen) :is(.topbar, .sidebar, .mobile-navigation, .phone-course-nav, .desktop-study-rail) { visibility: hidden; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-character-animations='off']) .mino-walk-sprite {
+    animation: mino-walk-frames .84s steps(1, end) infinite, mino-walk-step .42s ease-in-out infinite;
+  }
+  html:not([data-character-animations='off']) .mino-walk::before {
+    animation: mino-walk-shadow .42s ease-in-out infinite;
+  }
+  html[data-character-page-hidden='true'] .mino-walk-sprite,
+  html[data-character-page-hidden='true'] .mino-walk::before { animation-play-state: paused; }
+}
+
+@keyframes mino-walk-frames {
+  25% { background-position: 101.1% 2.1%; }
+  50% { background-position: 5.9% 99.4%; }
+  75% { background-position: 100.9% 99.4%; }
+}
+
+@keyframes mino-walk-step {
+  50% { transform: translateY(-1.6%); }
+}
+
+@keyframes mino-walk-shadow {
+  50% { opacity: .35; transform: scaleX(.91); }
+}
