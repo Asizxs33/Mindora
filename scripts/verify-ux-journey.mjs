@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { browser, fixture, workspace, sizes, errors, key } from './browser-fixtures.mjs';
+import { browser, fixture, sizes, errors, key } from './browser-fixtures.mjs';
 
 try {
  for(const language of ['en','ru','kk']){
@@ -48,16 +48,23 @@ try {
   await p.locator('.header-rewards .roadmap-gem').click();
   assert.ok(await p.locator('.reward-tabs [data-view="shop"][aria-current]').isVisible());
   await p.setViewportSize(sizes[0]);
+  assert.equal(new URL(p.url()).hash, '#shop');
+  await p.reload();
+  await p.locator('.shop-wallet').waitFor();
   await p.evaluate(key=>{const saved=JSON.parse(localStorage.getItem(key));saved.progress.design=3;saved.sessions.design.cursor.step=3;localStorage.setItem(key,JSON.stringify(saved));},key);
-  await p.reload();await p.waitForSelector('.learning-hub-node[aria-current="step"]');
+  await p.goto(new URL('/',p.url()).href);await p.waitForSelector('.learning-hub-node[aria-current="step"]');
   await p.waitForFunction(()=>{const box=document.querySelector('.learning-hub-node[aria-current="step"]').getBoundingClientRect(),nav=document.querySelector('#mobile-navigation').getBoundingClientRect();return box.top>64&&box.bottom<nav.top;}).catch(async e=>{console.log(await p.evaluate(()=>({scrollY,node:document.querySelector('.learning-hub-node[aria-current="step"]').getBoundingClientRect().toJSON(),nav:document.querySelector('#mobile-navigation').getBoundingClientRect().toJSON()})));throw e;});
   await p.locator('.learning-hub-node[aria-current="step"]').click();await p.waitForSelector('.lesson-flow');
   await p.locator('.lesson-exit').click();await p.waitForSelector('.learning-hub');
   assert.equal(await p.locator('.course-path').count(),0,'Exit returns the same map');
   await p.locator('#mobile-navigation [data-view="courses"]').click();
-  const title=await p.locator('.course-row h2').first().innerText();await p.locator('#course-search').fill(title);
+  const started=p.locator('.mini-enrollments [data-course="design"]');
+  const title=(await started.locator('strong').first().textContent()).trim();
+  assert.equal(await p.locator('.course-saved-section [data-course="design"]').count(),0);
   const waiting=f.holdNextLibrary();await p.locator('[data-learning-refresh]').click();await waiting;
-  await p.locator('#course-search').focus();await p.locator('#course-search').press('Home');f.releaseLibrary();
+  await p.locator('#course-search').fill(title);
+  assert.ok(await started.isVisible(),'Searching reveals the started mini-course');
+  await p.locator('#course-search').press('Home');f.releaseLibrary();
   await p.waitForFunction(()=>document.querySelector('.learning-library')?.getAttribute('aria-busy')==='false');
   assert.equal(await p.locator('#course-search').inputValue(),title);
   assert.ok(await p.locator('#course-search').evaluate(e=>e===document.activeElement));
@@ -71,7 +78,8 @@ try {
  await p.locator('#mobile-navigation [data-view="courses"]').click();
  assert.equal(await p.locator('.learning-library-gate').count(),0,'A studying guest is not told to sign in to start');
  assert.equal(await p.locator('.ready-course:visible').count(),0);
- assert.ok(await p.locator('.course-row').first().isVisible());
+ await p.locator('.phone-catalog summary').click();
+ assert.ok(await p.locator('.mini-enrollments [data-course="design"]').isVisible());
  await guest.context.close();
  assert.deepEqual(errors,[]);
  console.log('PASS UX journey 320/390/640/768/1024/1440/1920, EN/RU/KK, API fixtures explicitly.');

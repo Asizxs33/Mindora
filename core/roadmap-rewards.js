@@ -11,7 +11,10 @@ const QUESTS = Object.freeze([
   { id: 'correct-check', field: 'correct', target: 2, reward: 8 },
 ]);
 const SHOP = Object.freeze([
+  { id: 'one-heart', cost: 4 },
   { id: 'hearts', cost: 12 },
+  { id: 'mistake-shield', cost: 4 },
+  { id: 'lesson-bonus', cost: 8 },
   { id: 'freeze', cost: 25 },
 ]);
 
@@ -30,6 +33,8 @@ const freshDaily = (day = null) => ({ day, lessons: 0, correct: 0, claimed: [] }
 export function normalizeRewards(raw) {
   if (!raw || !integer(raw.hearts, 0, MAX_HEARTS) || !validGems(raw.gems)
     || !integer(raw.heartAt, 0, 8_640_000_000_000_000) || !integer(raw.freezes, 0, 1)
+    || (raw.shields !== undefined && !integer(raw.shields, 0, 1))
+    || (raw.bonusLessons !== undefined && !integer(raw.bonusLessons, 0, 3))
     || !validCount(raw.streak) || !validCount(raw.lessons)
     || (raw.lastDay === null ? raw.streak !== 0 : !validDay(raw.lastDay) || raw.streak === 0)
     || !Array.isArray(raw.lessonIds) || raw.lessonIds.length > LEDGER_LIMIT || raw.lessonIds.length > raw.lessons
@@ -52,6 +57,7 @@ export function normalizeRewards(raw) {
     || Array.from(daily.claimed).some(id => !QUESTS.some(quest => quest.id === id && daily[quest.field] >= quest.target))) return null;
   return {
     hearts: raw.hearts, heartAt: raw.heartAt, gems: raw.gems, freezes: raw.freezes,
+    shields: raw.shields ?? 0, bonusLessons: raw.bonusLessons ?? 0,
     streak: raw.streak, lastDay: raw.lastDay, lessons: raw.lessons, lessonIds, checks,
     daily: { day: daily.day, lessons: daily.lessons, correct: daily.correct, claimed: [...daily.claimed] },
   };
@@ -59,7 +65,7 @@ export function normalizeRewards(raw) {
 
 export function restoreRewards(raw) {
   return normalizeRewards(raw) ?? {
-    hearts: MAX_HEARTS, heartAt: 0, gems: 20, freezes: 0, streak: 0, lastDay: null,
+    hearts: MAX_HEARTS, heartAt: 0, gems: 20, freezes: 0, shields: 0, bonusLessons: 0, streak: 0, lastDay: null,
     lessons: 0, lessonIds: [], checks: [], daily: freshDaily(),
   };
 }
@@ -76,6 +82,12 @@ function stateAt(raw, now) {
   return { state, day };
 }
 
+function unavailableReason(id, state) {
+  if ((id === 'one-heart' || id === 'hearts') && state.hearts === MAX_HEARTS) return 'full';
+  if (id === 'freeze' && state.freezes || id === 'mistake-shield' && state.shields || id === 'lesson-bonus' && state.bonusLessons) return 'owned';
+  return '';
+}
+
 export function rewardScreen(raw, now = Date.now()) {
   const { state, day } = stateAt(raw, now);
   const elapsed = state.lastDay === null ? Infinity : day - state.lastDay;
@@ -86,11 +98,12 @@ export function rewardScreen(raw, now = Date.now()) {
     const claimed = daily.claimed.includes(id);
     return { id, target, progress, reward, claimed, claimable: !claimed && progress === target };
   });
-  const items = SHOP.map(({ id, cost }) => ({
-    id, cost, available: state.gems >= cost && (id === 'hearts' ? state.hearts < MAX_HEARTS : state.freezes === 0),
-  }));
+  const items = SHOP.map(({ id, cost }) => {
+    const reason = unavailableReason(id, state) || (state.gems < cost ? 'insufficient' : '');
+    return { id, cost, available: !reason, reason };
+  });
   return {
-    hearts: state.hearts, maxHearts: MAX_HEARTS, gems: state.gems, streak, freezes: state.freezes,
+    hearts: state.hearts, maxHearts: MAX_HEARTS, gems: state.gems, streak, freezes: state.freezes, shields: state.shields, bonusLessons: state.bonusLessons,
     lessons: state.lessons, correct: daily.correct, quests, items,
   };
 }
@@ -101,7 +114,8 @@ export function recordLessonReward(raw, value, now = Date.now()) {
   if (!courseId || state.lessonIds.includes(courseId)) return state;
   state.lessonIds = [...state.lessonIds, courseId].slice(-LEDGER_LIMIT);
   state.lessons = Math.min(MAX_COUNT, state.lessons + 1);
-  state.gems = Math.min(MAX_GEMS, state.gems + 5);
+  state.gems = Math.min(MAX_GEMS, state.gems + 5 + (state.bonusLessons > 0 ? 4 : 0));
+  if (state.bonusLessons > 0) state.bonusLessons--;
   if (state.daily.day === day) state.daily.lessons = Math.min(MAX_COUNT, state.daily.lessons + 1);
   if (state.lastDay === null || day > state.lastDay) {
     const elapsed = state.lastDay === null ? Infinity : day - state.lastDay;
@@ -125,6 +139,10 @@ export function recordCheckReward(raw, value, stepIndex, correct, now = Date.now
     else state.checks = [...state.checks, { courseId, mask: bit }].slice(-LEDGER_LIMIT);
     if (state.daily.day === day) state.daily.correct = Math.min(MAX_COUNT, state.daily.correct + 1);
   } else if (state.hearts > 0) {
+    if (state.shields) {
+      state.shields--;
+      return state;
+    }
     if (state.hearts === MAX_HEARTS) state.heartAt = now;
     state.hearts--;
   }
@@ -143,14 +161,16 @@ export function claimDailyQuest(raw, questId, now = Date.now()) {
 export function buyRewardItem(raw, itemId, now = Date.now()) {
   const { state } = stateAt(raw, now);
   const item = SHOP.find(entry => entry.id === itemId);
-  if (!item || state.gems < item.cost) return state;
-  if (itemId === 'hearts') {
-    if (state.hearts === MAX_HEARTS) return state;
-    state.hearts = MAX_HEARTS;
-    state.heartAt = 0;
-  } else {
-    if (state.freezes) return state;
-    state.freezes = 1;
+  if (!item || state.gems < item.cost || unavailableReason(itemId, state)) return state;
+  switch (itemId) {
+    case 'one-heart':
+      state.hearts++;
+      if (state.hearts === MAX_HEARTS) state.heartAt = 0;
+      break;
+    case 'hearts': state.hearts = MAX_HEARTS; state.heartAt = 0; break;
+    case 'freeze': state.freezes = 1; break;
+    case 'mistake-shield': state.shields = 1; break;
+    case 'lesson-bonus': state.bonusLessons = 3; break;
   }
   state.gems -= item.cost;
   return state;

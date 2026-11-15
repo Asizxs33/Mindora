@@ -197,10 +197,10 @@ export function renderShell(view, state, stats, html, rewards) {
     rewards, minutes: state.minutes, signedIn,
     studyDays: state.studyDays, lastLessonDay: state.learningRewards?.lastDay,
   });
-  $('#navigation').innerHTML = brandNav(icon, view, 'side', signedIn);
-  $('#top-navigation').innerHTML = brandNav(icon, view, 'top', signedIn);
+  $('#navigation').innerHTML = brandNav(icon, view, 'side');
+  $('#top-navigation').innerHTML = brandNav(icon, view, 'top');
   $('#mobile-navigation').classList.remove('has-roadmap');
-  $('#mobile-navigation').innerHTML = brandNav(icon, view, 'bottom', signedIn);
+  $('#mobile-navigation').innerHTML = brandNav(icon, view, 'bottom');
   $('#top-actions').classList.toggle('has-reward-balance', Boolean(rewards));
   $('#top-actions').innerHTML = guided ? '' : `${rewardBalance(rewards)}${languagePicker({ compact: Boolean(rewards) && !desktopLayout.matches })}<button class="header-account" data-account-entry data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>`;
   $('.brand').setAttribute('aria-label', t('Mindora home','Главная Mindora','Mindora басты беті'));
@@ -253,6 +253,6 @@ export function renderShell(view, state, stats, html, rewards) {
     }
   }
   const titles = { welcome: t('Welcome','Добро пожаловать','Қош келдіңіз'), discover: t('Learn','Обучение','Оқу'), courses: t('My courses','Мои курсы','Курстарым'), practice: t('Practice','Практика','Жаттығу'), path: t('My learning path','Мой маршрут','Оқу жолым'), lesson: courseNames[id], 'learning-plan': t('My lesson','Моё занятие','Сабағым'), recap: t('A quick refresh','Повторение','Қайталау'), certificate: t('Your certificate','Твой сертификат','Сертификатың'), result: t('You did it','Готово','Дайын'), work: t('My projects','Мои проекты','Жобаларым'), achievements: t('Milestones','Достижения','Жетістіктер'), community: t('Community','Сообщество','Қауымдастық'), profile: t('Profile','Профиль','Профиль') };
-  const roadmapTitles = { 'weekly-report': t('Weekly report','Еженедельный отчёт','Апталық есеп'), membership: 'Mindora Plus', 'new-course': t('Create a course','Создать курс','Курс жасау'), 'task-preview': t('Practice preview','Пробный режим','Сынап көру'), roadmap: t('My learning path','Мой путь обучения','Оқу жолым'), 'course-path': t('My learning path','Мой путь обучения','Оқу жолым'), 'builtin-path': t('My learning path','Мой путь обучения','Оқу жолым'), quests: t('Daily quests','Задания дня','Күндік тапсырмалар'), shop: t('Gem shop','Магазин алмазов','Алмас дүкені'), 'return-review': t('A quick refresh','Повторение','Қайталау') };
+  const roadmapTitles = { 'weekly-report': t('Weekly report','Еженедельный отчёт','Апталық есеп'), membership: 'Mindora Plus', 'new-course': t('Create a course','Создать курс','Курс жасау'), 'task-preview': t('Practice preview','Пробный режим','Сынап көру'), roadmap: t('My learning path','Мой путь обучения','Оқу жолым'), 'course-path': t('My learning path','Мой путь обучения','Оқу жолым'), 'builtin-path': t('My learning path','Мой путь обучения','Оқу жолым'), quests: t('Daily quests','Задания дня','Күндік тапсырмалар'), shop: t('Shop','Магазин','Дүкен'), 'return-review': t('A quick refresh','Повторение','Қайталау') };
   document.title = `${titles[view] || roadmapTitles[view] || titles.discover} · Mindora`;
 }

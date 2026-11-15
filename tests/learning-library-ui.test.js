@@ -5,7 +5,10 @@ import { learningLibraryView, learningSyncView, loginRequiredView } from '../ui/
 import { setLanguage } from '../ui/language.js';
 
 test('a guest who can study sees local courses without a contradictory login gate', () => {
-  assert.equal(learningLibraryView({ user: null }, { guest: true }), '');
+  const guest = documentFor(learningLibraryView({ courses: [course] }, { guest: true }));
+  assert.equal(guest.querySelector('[data-account-open]'), null);
+  assert.equal(guest.querySelector('[data-learning-open]').getAttribute('data-learning-open'), course.id);
+  assert.ok(documentFor(learningLibraryView({}, { guest: true })).querySelector('.learning-library-empty'));
   assert.match(learningLibraryView({ user: null }), /data-account-open="signup"/);
 });
 

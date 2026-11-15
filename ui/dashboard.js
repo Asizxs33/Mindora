@@ -7,7 +7,7 @@ import { icon } from './icons.js';
 import { courseIllustration } from './course-cover.js';
 import { timeOptions } from './budget-session.js';
 import { character } from './characters.js';
-import { t, currentLanguage, courseLanguageField } from './language.js';
+import { t, currentLanguage, courseLanguageField, languageName } from './language.js';
 
 export const courseNames = {
   get design() { return t('Your first poster','Твой первый постер','Алғашқы постерің'); },
@@ -24,7 +24,7 @@ export function badge(icon, name, color, size = 22) {
   return `<span class="game-icon ${color}">${icon(name, size)}</span>`;
 }
 
-export function brandNav(icon, view, place, signedIn = false) {
+export function brandNav(icon, view, place) {
   const mobile = place === 'bottom';
   const profile = ['profile', 'user', t('Profile','Профиль','Профиль')];
   const pathViews = ['path', 'builtin-path', 'course-path', 'roadmap', 'lesson', 'learning-plan', 'recap', 'return-review', 'result', 'certificate'];
@@ -34,7 +34,7 @@ export function brandNav(icon, view, place, signedIn = false) {
     ['discover', 'home', t('Learn','Обучение','Оқу')],
     courses,
     ['work', 'work', t('My projects','Мои проекты','Жобаларым')],
-    ...(signedIn ? [['quests', 'gift', t('Rewards','Награды','Марапаттар')]] : []),
+    ['shop', 'store', t('Shop','Магазин','Дүкен')],
     profile,
   ];
   let activeView = view;
@@ -44,8 +44,8 @@ export function brandNav(icon, view, place, signedIn = false) {
     activeView = 'discover';
   } else if (['new-course', 'membership'].includes(view)) {
     activeView = 'courses';
-  } else if (view === 'shop') {
-    activeView = 'quests';
+  } else if (view === 'quests') {
+    activeView = 'shop';
   } else if (profileViews.includes(view)) {
     activeView = 'profile';
   }
@@ -74,8 +74,8 @@ export function phoneCourseLibrary(libraryHtml, readyHtml, weeklyReport) {
   return `<section class="phone-library course-library"><header class="course-library-heading"><h1>${t('My courses', 'Мои курсы', 'Курстарым')}</h1><button type="button" class="secondary course-library-create" data-view="new-course">${icon('plus', 18)} ${t('Create a course', 'Создать курс', 'Курс жасау')}</button></header>
     <div class="course-library-search"><label class="visually-hidden" for="course-search">${t('Find a course', 'Найти курс', 'Курс іздеу')}</label>${icon('search',20)}<input id="course-search" type="search" data-course-search placeholder="${t('Find a course', 'Найти курс', 'Курс іздеу')}" autocomplete="off"><button type="button" class="icon-button" data-course-search-clear aria-label="${t('Clear search', 'Очистить поиск', 'Іздеуді тазалау')}" hidden>${icon('close',18)}</button></div>
     <p class="course-search-status" role="status" data-course-search-status></p>
-    <section class="course-saved-section"><h2 class="course-section-title">${t('Continue learning', 'Продолжить обучение', 'Оқуды жалғастыру')}</h2><div data-course-library>${libraryHtml}</div></section>
-    ${miniCourseShelf(reportEntry(weeklyReport) + readyHtml)}
+    <section class="course-saved-section"><h2 class="course-section-title">${t('Personal courses', 'Личные курсы', 'Жеке курстар')}</h2><div data-course-library>${libraryHtml}</div></section>
+    ${miniCourseShelf(`<div data-mini-list>${readyHtml}</div>` + reportEntry(weeklyReport))}
   </section>`;
 }
 
@@ -97,7 +97,7 @@ export function courseHomeView(state, { current = null, libraryHtml = '', readyH
       <input id="goal-input" name="goal" value="${escapeHtml(state.homeGoal || '')}" placeholder="${t('For example, use AI to draft a Friday update', 'Например, подготовить отчёт за неделю с ИИ', 'Мысалы, ЖИ көмегімен апталық есеп жазу')}" minlength="3" maxlength="180" required autocomplete="off" enterkeyhint="go">
       <div class="course-home-form-actions">${courseLanguageField(state.courseDraftLanguage)}<label class="course-home-time" for="time-select"><span>${t('Per lesson', 'На занятие', 'Бір сабаққа')}</span><select id="time-select" name="minutes">${[5, 10, 20].map(value => `<option value="${value}"${value === state.minutes ? ' selected' : ''}>${value} ${t('min', 'мин', 'мин')}</option>`).join('')}</select></label><button type="submit" class="primary">${guest ? t('Build my free course','Создать бесплатный курс','Тегін курсымды құру') : t('Create a path', 'Создать путь', 'Оқу жолын құру')}${icon('arrow', 18)}</button></div>
     </form>
-    <p class="course-price-note">${t('First personal course free.', 'Первый личный курс бесплатно.', 'Бірінші жеке курс тегін.')}</p>
+    <p class="course-price-note">${t('First personal course free.', 'Первый личный курс бесплатно.', 'Бірінші жеке курс тегін.')} <button type="button" class="text-link" data-view="membership">${t('Plus plans', 'Тарифы Plus', 'Plus тарифтері')} ${icon('arrow', 14)}</button></p>
 
     ${composerOnly ? '' : reportEntry(state.weeklyReport)}
     ${composerOnly ? '' : `<div class="course-home-shortcuts topic-shortcuts">
@@ -107,7 +107,7 @@ export function courseHomeView(state, { current = null, libraryHtml = '', readyH
     ${guest ? `<button type="button" class="secondary" data-view="courses">${icon('book',18)} ${t('Explore courses','Открыть курсы','Курстарды көру')}</button><p class="home-account-link">${t('New here?', 'Впервые здесь?', 'Алғаш рет келдің бе?')} <button type="button" class="text-link" data-account-open="signup">${t('Create account', 'Создать аккаунт', 'Аккаунт ашу')}</button></p>` : ''}
     ${current ? `<section class="course-home-current" aria-labelledby="course-home-current-title"><div class="course-home-current-heading"><span class="course-home-current-icon" aria-hidden="true">${icon('path', 25)}</span><div><span class="course-home-eyebrow">${completed === total ? t('Completed', 'Пройдено', 'Аяқталды') : t('Your next step', 'Твой следующий шаг', 'Келесі қадамың')}</span><h2 id="course-home-current-title">${escapeHtml(current.title)}</h2></div><span class="course-home-percent">${percent}%</span></div>${current.subtitle ? `<p class="course-home-next">${escapeHtml(current.subtitle)}</p>` : ''}<div class="course-home-progress"><progress max="${total}" value="${completed}" aria-label="${t('Course progress', 'Прогресс курса', 'Курс барысы')}"></progress><span>${completed}/${total}</span></div><div class="course-home-current-actions"><button type="button" class="primary course-home-resume" ${current.resumeAttributes || 'data-view="my-path"'}>${completed === total ? t('See result', 'Результат', 'Нәтижені көру') : t('Continue', 'Продолжить', 'Жалғастыру')}${icon('play', 17)}</button><button type="button" class="secondary course-home-path" ${current.pathAttributes || 'data-view="my-path"'}>${icon('path', 18)}${t('Learning path', 'Путь обучения', 'Оқу жолы')}</button></div></section>` : ''}
     ${libraryHtml ? `<details class="course-home-library"><summary>${icon('folder', 20)}<span>${t('Saved courses', 'Сохранённые курсы', 'Сақталған курстар')}</span>${icon('chevron', 18)}</summary><div data-course-library>${libraryHtml}</div></details>` : ''}
-    ${readyHtml ? `<div class="course-home-ready">${miniCourseShelf(readyHtml)}</div>` : ''}
+    ${readyHtml ? `<div class="course-home-ready">${miniCourseShelf(`<div data-mini-list>${readyHtml}</div>`)}</div>` : ''}
   </section>`;
 }
 
@@ -180,14 +180,36 @@ export function dashboard(state) {
     : `${goalBanner(state.minutes)}${pathLink}`;
 }
 
-export function readyCoursesView(extraCourses = [], minutes = 10) {
-  const courses = [
-    { id: 'design', title: courseNames.design, description: t('Build a poster with a clear headline.', 'Собери постер с выразительным заголовком.', 'Түсінікті тақырыбы бар постер жаса.'), minutes, mentor: 'Mia', icon: 'palette', builtin: true },
-    { id: 'budget', title: courseNames.budget, description: t('Track expenses with your first formula.', 'Посчитай расходы с помощью формулы.', 'Формула арқылы шығындарыңды есепте.'), minutes, mentor: 'Sam', icon: 'sheet', builtin: true },
-    ...extraCourses,
-  ];
-  const mentorNames = { mino: 'Mino', mia: 'Mia', sam: 'Sam', artist: 'Ari', copywriter: 'Nora', smm: 'Zoe' };
-  return `<section class="ready-courses" aria-labelledby="ready-courses-title"><h2 id="ready-courses-title">${t('Ready mini-courses', 'Готовые мини-курсы', 'Дайын шағын курстар')}</h2><fieldset class="course-pace"><legend>${t('Time for your next lesson','Время на новое занятие','Келесі сабаққа арналған уақыт')}</legend><div>${[5,10,20].map(value => `<button type="button" data-course-minutes="${value}" aria-pressed="${minutes === value}"><strong>${value}</strong> ${t('min','мин','мин')}</button>`).join('')}</div></fieldset><p class="course-pace-note">${t('A little learning, at your pace. Your unfinished lessons stay saved.', 'Учись в своём темпе. Начатые занятия остаются сохранёнными.', 'Өз қарқыныңмен үйрен. Бастаған сабақтарың сақталады.')}</p><div class="ready-course-grid">${courses.map(course => `<button type="button" class="ready-course" data-course-topic="${escapeHtml(course.topic || course.id)}" ${course.builtin ? `data-course="${escapeHtml(course.id)}" data-course-path` : `data-starter-course="${escapeHtml(course.id)}" data-starter-minutes="${course.minutes}"`}><span class="ready-course-symbol" aria-hidden="true">${courseIllustration(course, course.id === 'everyday-english' ? 'globe' : course.id === 'ai-prompts' ? 'message' : course.id === 'clear-writing' ? 'document' : course.icon, 32)}</span><span class="ready-course-copy"><strong>${escapeHtml(course.title)}</strong><span>${escapeHtml(course.description || '')}</span></span><span class="ready-course-meta"><span>${icon('clock', 14)} ${course.minutes} ${t('min', 'мин', 'мин')}<span class="ready-course-mentor"> · ${escapeHtml(mentorNames[course.mentor] || course.mentor)}</span></span>${icon('arrow', 17)}</span></button>`).join('')}</div></section>`;
+function miniCourseButton(course) {
+  const local = course.savedId === 'local';
+  let action;
+  if (course.builtin) action = `data-course="${escapeHtml(course.id)}" data-course-path`;
+  else if (local) action = 'data-view="course-path"';
+  else if (course.savedId) action = `data-learning-open="${escapeHtml(course.savedId)}"`;
+  else action = `data-starter-course="${escapeHtml(course.id)}" data-starter-minutes="${course.minutes}"`;
+  const started = Number.isInteger(course.completed);
+  const meta = started ? [`${course.completed}/${course.totalSteps}`, languageName(course.language)].filter(Boolean).join(' · ') : '';
+  return `<button type="button" class="ready-course${started ? ' has-progress' : ''}" data-course-topic="${escapeHtml(course.topic || course.id)}" ${action}>
+    <span class="ready-course-symbol" aria-hidden="true">${courseIllustration(course, course.icon, 32)}</span>
+    <span class="ready-course-copy"><strong lang="${escapeHtml(course.language || currentLanguage())}">${escapeHtml(course.title)}</strong><span>${escapeHtml(started ? meta : course.description || '')}</span></span>
+    <span class="ready-course-meta">${icon('clock', 15)} ${course.minutes} ${t('min','мин','мин')} ${icon(started ? 'play' : 'arrow', 17)}</span></button>`;
+}
+
+export function readyCoursesView(extraCourses = [], minutes = 10, { state, minis = [] } = {}) {
+  const builtins = [
+    { id: 'design', title: courseNames.design, description: t('Design a poster.', 'Сделай постер.', 'Постер жаса.'), icon: 'palette' },
+    { id: 'budget', title: courseNames.budget, description: t('Add up your expenses.', 'Посчитай расходы.', 'Шығындарыңды есепте.'), icon: 'sheet' },
+  ].map(course => ({ ...course, minutes, builtin: true, language: currentLanguage(),
+    ...(state && startedCourses(state).includes(course.id) ? { completed: state.progress[course.id], totalSteps: 4 } : {}) }));
+  const saved = minis.map(course => ({ ...course, savedId: course.id, id: course.templateId,
+    sameEdition: course.language === currentLanguage() && course.minutes === minutes }));
+  const currentEditions = new Set(saved.filter(course => course.sameEdition).map(course => course.id));
+  const started = [...saved, ...builtins.filter(course => Number.isInteger(course.completed))];
+  const available = [...builtins.filter(course => !Number.isInteger(course.completed)), ...extraCourses.filter(course => !currentEditions.has(course.id))];
+  return `<section class="ready-courses" aria-labelledby="ready-courses-title"><h2 id="ready-courses-title">${t('Mini-courses', 'Мини-курсы', 'Шағын курстар')}</h2>
+    ${started.length ? `<div class="mini-enrollments"><h3>${t('Your mini-courses', 'Начатые мини-курсы', 'Бастаған шағын курстарың')}</h3><div class="ready-course-grid">${started.map(miniCourseButton).join('')}</div></div>` : ''}
+    <fieldset class="course-pace"><legend>${t('Lesson time','Время занятия','Сабақ уақыты')}</legend><div>${[5,10,20].map(value => `<button type="button" data-course-minutes="${value}" aria-pressed="${minutes === value}"><strong>${value}</strong> ${t('min','мин','мин')}</button>`).join('')}</div></fieldset>
+    <div class="ready-course-grid">${available.map(miniCourseButton).join('')}</div></section>`;
 }
 
 export function coursesPage(state, { showHeading = true, showCurrentLesson = true, showReadyCourses = false, readyCourses = [] } = {}) {

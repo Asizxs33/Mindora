@@ -1,0 +1,48 @@
+.mindora-shop .shop-heading, .shop-wallet, .plus-actions {
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.shop-heading { justify-content:space-between; }
+.shop-heading h1 { margin:0; }
+.mindora-shop .shop-return { margin-block:20px; }
+.mindora-shop .shop-wallet { font-size:1.1rem; margin:26px 0 16px; }
+.shop-wallet span { display:inline-flex; align-items:center; gap:6px; color:#90400d; font-variant-numeric:tabular-nums; }
+.plus-shop { margin:24px 0 12px; min-width:0; }
+.plus-shop h2 { margin:0 0 10px; font-size:clamp(1.45rem,3vw,1.9rem); }
+.plus-shop p { margin:8px 0 16px; max-width:52ch; color:var(--muted); line-height:1.55; }
+.plus-shop p[role=status] svg { vertical-align:middle; color:#317054; }
+.plus-offers { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:22px 0 10px; }
+button.plus-offer {
+  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 8px; align-content:start;
+  width:100%; padding:18px; border:1px solid var(--line); border-radius:18px; text-align:start;
+  background:#fff; color:var(--ink); font:inherit; cursor:pointer;
+  transition:background-color .16s, border-color .16s, transform .16s;
+}
+button.plus-offer:hover:enabled, button.plus-offer:focus-visible { background:#fff7ee; border-color:#c66c28; }
+button.plus-offer:active:enabled { transform:translateY(2px); }
+.plus-plan-icon { display:grid; place-items:center; width:44px; height:44px; border-radius:13px; background:#fff0df; color:#9b4510; margin-bottom:5px; }
+.plus-offer[data-demo-select=annual] .plus-plan-icon { background:#e7f1e8; color:#31604b; }
+.plus-offer > strong, .plus-offer .plus-amount, .plus-offer .plus-detail { grid-column:1/-1; }
+.plus-offer > svg { grid-column:2; grid-row:1; align-self:center; color:#98562a; }
+.plus-amount { font:800 clamp(1.25rem,3.3vw,1.9rem)/1.2 var(--font-display); font-variant-numeric:tabular-nums; }
+.plus-amount small, .plus-detail, .plus-caption { font:inherit; font-size:.85rem; color:var(--muted); }
+.plus-caption { display:block; line-height:1.5; margin:12px 0; }
+.checkout-lines { margin:16px 0; }
+.checkout-lines div { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
+.checkout-lines dd { margin:0; text-align:end; font-weight:750; }
+.plus-actions { margin-top:15px; }
+.plus-practice { display:grid; gap:10px; justify-items:start; margin:16px 0; }
+.plus-practice input { width:8rem; }
+.course-price-note .text-link { display:inline-flex; align-items:center; min-height:32px; padding:2px 5px; font:inherit; font-weight:700; }
+@media(max-width:480px) {
+  .plus-offers { gap:8px; }
+  button.plus-offer { padding:12px; gap:5px; }
+  .plus-offer .plus-amount small { display:block; margin-top:2px; }
+  .plus-actions .primary, .plus-practice button { width:100%; }
+  .plus-shop { margin-top:18px; }
+  .shop-heading .text-link { padding-inline:0; }
+}
+@media (prefers-reduced-motion:no-preference) {
+  .plus-shop { animation:shop-appear .18s ease-out; }
+  @keyframes shop-appear { from { opacity:.6; transform:translateY(3px); } to { opacity:1; transform:translateY(0); } }
+}
+@media(prefers-reduced-motion:reduce) { button.plus-offer { transition:none; } }

@@ -12,6 +12,7 @@ const covers = [
   ['presentation', /presentation|презентаци|powerpoint/i],
   ['photography', /photograph|фотограф|фотосъ[её]м|фото түсір/i],
   ['video-editing', /video edit|edit a video|видеомонтаж|монтаж видео|монтировать видео|бейне өңде/i],
+  ['communication', /management|negotiat|leadership|коммуникац|переговор|басқару|келіссөз/iu],
   ['copywriting', /copywriting|clear-writing|копирайт|писать текст|пиши понятно/i],
   ['ai-literacy', /ai[- ]prompts?|chatgpt|нейросет|искусственн|жасанды интеллект|промпт|запрос\s+(?:к|для)\s+ИИ|ЖИ[- ]?ге/iu],
 ];
@@ -26,8 +27,9 @@ export function courseIllustration(course, defaultIcon = 'book', size = 22) {
   }
   const math = /\bmath(?:ematics)?\b|logarith|логар|логор|математик|алгебр|геометри/i.test(subject);
   const code = /\bprogramming\b|программирован|бағдарламалау/i.test(subject);
-  const fallback = math ? 'chart' : code ? 'code' : defaultIcon;
-  return cover
+  const database = /\bsql\b|postgres|mysql|database|баз[а-я]* данн|дерекқор/iu.test(subject);
+  const fallback = database ? 'database' : math ? 'chart' : code ? 'code' : defaultIcon;
+  return cover && !database
     ? `<img src="${new URL(`./assets/design-pack/course-${cover}.png`, import.meta.url).href}" width="72" height="72" alt="" loading="lazy" decoding="async">`
-    : icon(fallback, size);
+    : `<span class="course-glyph glyph-${fallback}">${icon(fallback, size)}</span>`;
 }

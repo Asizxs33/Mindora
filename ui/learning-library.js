@@ -8,6 +8,7 @@ function courseCard(course, loading, isRoadmap) {
   const total = Number.isInteger(course.totalSteps) && course.totalSteps > 0 ? course.totalSteps : 0;
   const completed = Number.isInteger(course.completed) ? Math.min(total, Math.max(0, course.completed)) : 0;
   const done = total > 0 && completed === total;
+  const action = course.id === 'local' ? 'data-view="course-path"' : `${isRoadmap ? 'data-learning-roadmap' : 'data-learning-open'}="${esc(course.id)}"`;
   const pathLabel = t('Open path', 'Открыть путь', 'Оқу жолын ашу');
   const progressLabel = isRoadmap ? t('Completed lessons', 'Пройденные занятия', 'Аяқталған сабақтар') : t('Completed tasks', 'Выполненные задания', 'Орындалған тапсырмалар');
   return `<li class="learning-library-card">
@@ -18,7 +19,7 @@ function courseCard(course, loading, isRoadmap) {
       ${Number.isFinite(course.minutes) ? `<p class="learning-library-duration">${course.minutes} ${isRoadmap ? t('min per lesson', 'мин на занятие', 'мин сабаққа') : t('min', 'мин', 'мин')}${languageName(course.language) ? ` · <span lang="${esc(course.language)}">${languageName(course.language)}</span>` : ''}</p>` : ''}</div>
     </div>
     ${total ? `<div class="learning-library-progress"><progress max="${total}" value="${completed}" aria-label="${progressLabel}"></progress><span>${done ? t('Completed', 'Завершено', 'Аяқталды') : `${completed}/${total}`}</span></div>` : ''}</div>
-    <button type="button" class="secondary" ${isRoadmap ? 'data-learning-roadmap' : 'data-learning-open'}="${esc(course.id)}"${loading ? ' disabled' : ''}>${pathLabel} ${icon('arrow', 18)}</button>
+    <button type="button" class="secondary" ${action}${loading ? ' disabled' : ''}>${pathLabel} ${icon('arrow', 18)}</button>
   </li>`;
 }
 
@@ -34,7 +35,7 @@ export function loginRequiredView({ available = true } = {}) {
 }
 
 export function learningLibraryView({ user, available = true, loading = false, error = '', courses = [], roadmaps = [], hasLocalLesson = false, hasLocalBuiltin = false } = {}, { primaryHeading = false, showEmpty = true, guest = false } = {}) {
-  if (!user) return guest ? '' : loginRequiredView({ available });
+  if (!user && !guest) return loginRequiredView({ available });
 
   const heading = primaryHeading ? 'h1' : 'h2';
   return `<section class="learning-library${primaryHeading ? ' learning-library-primary' : ''}" aria-labelledby="learning-library-title" aria-busy="${Boolean(loading)}">

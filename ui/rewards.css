@@ -1,3 +1,5 @@
+@import url('./shop.css');
+
 .gem-outline { fill:#ffdab0; stroke:#ad490e; stroke-width:1.8; }
 .gem-facets { fill:none; stroke:#ad490e; stroke-width:1.4; }
 .flame-outline { fill:#ffb45f; stroke:#ad490e; stroke-width:1.8; }
@@ -36,14 +38,8 @@
   padding:4px 9px 4px 5px; column-gap:8px; row-gap:1px; border:0; border-radius:10px;
   background:transparent; color:#33271e;
 }
-.header-rewards .roadmap-flame { --reward-tint:#fff1dc; }
-.header-rewards .roadmap-gem { --reward-tint:#e6f3ef; }
-.header-rewards .roadmap-heart { --reward-tint:#f9e9e8; }
-.header-rewards .gem-outline { fill:#bde3d9; stroke:#22675a; }
-.header-rewards .gem-facets { stroke:#22675a; }
-.header-rewards .heart-outline { fill:#f2b7b1; stroke:#9f423b; }
 .header-rewards .roadmap-metrics.is-compact .roadmap-metric > svg {
-  width:34px; height:34px; padding:6px; background:var(--reward-tint); border-radius:10px;
+  width:34px; height:34px; padding:4px; background:transparent;
 }
 .header-rewards .roadmap-metrics.is-compact .roadmap-metric > strong { font-family:var(--font-display); font-size:19px; font-weight:900; }
 .header-rewards .roadmap-metrics.is-compact .roadmap-metric > span { display:block; font-size:12px; white-space:nowrap; }
@@ -60,9 +56,19 @@
   .top-actions.has-reward-balance .header-account { display:none; }
   .header-rewards .roadmap-metrics.is-compact { gap:0; padding:0; border:0; background:none; }
   .header-rewards .roadmap-metrics.is-compact .roadmap-metric { display:flex; align-items:center; justify-content:center; gap:3px; padding:4px 2px; min-width:44px; min-height:44px; }
-  .header-rewards .roadmap-metrics.is-compact .roadmap-metric > svg { width:23px; height:23px; padding:3px; border-radius:7px; }
+  .header-rewards .roadmap-metrics.is-compact .roadmap-metric > svg { width:23px; height:23px; padding:2px; }
   .header-rewards .roadmap-metrics.is-compact .roadmap-metric > strong { font-size:13px; }
   .header-rewards .roadmap-metrics.is-compact .roadmap-metric > span { display:none; }
+  @media (max-width: 350px) {
+    body.quiet-shell .topbar:has(.header-rewards) { padding-inline: 6px; gap: 4px; }
+    .topbar .brand { gap: 3px; }
+    .topbar .brand-mark { width: 27px; height: 27px; }
+    .topbar .brand-wordmark { font-size: 20px; }
+    .top-actions.has-reward-balance { gap: 3px; }
+    .header-rewards .roadmap-metrics.is-compact .roadmap-metric { flex-direction: column; padding: 2px; gap: 0; line-height: 1; }
+    .header-rewards .roadmap-metrics.is-compact .roadmap-metric > svg { width: 20px; height: 20px; }
+    .header-rewards .roadmap-metrics.is-compact .roadmap-metric > strong { font-size: 12px; line-height: 1.15; }
+  }
   .roadmap-metrics, .roadmap-rewards > .roadmap-metrics { gap:8px; }
   .roadmap-metrics:not(.is-compact) .roadmap-metric {
     grid-template-columns:1fr; grid-template-rows:auto auto auto; justify-items:center;
