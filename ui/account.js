@@ -319,7 +319,7 @@ async function submit() {
     if (mode === 'signin' && !data.profilePending && !pendingUserProfile()) {
       closeAccount();
       view.draft = emptyDraft();
-      emitSession();
+      emitSession('signin');
       showConfirmation(t('You’re signed in.', 'Вход выполнен.', 'Аккаунтқа кірдіңіз.'));
       return;
     }

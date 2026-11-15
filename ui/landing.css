@@ -68,6 +68,7 @@ body.quiet-shell.is-guided .app-shell:has(.mindora-landing) { max-width: none; }
   text-wrap: balance;
 }
 .mindora-landing .landing-start { background: var(--landing-orange); color: #fff; box-shadow: 0 4px 0 #863208; }
+.mindora-landing a.landing-start { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .mindora-landing .landing-start:hover { background: #9f3a0d; }
 .mindora-landing .landing-start:active { transform: translateY(2px); box-shadow: 0 2px 0 #863208; }
 .mindora-landing .landing-signin { border: 2px solid #e8e0da; background: #fff; color: #933c16; box-shadow: 0 3px 0 #e8e0da; }

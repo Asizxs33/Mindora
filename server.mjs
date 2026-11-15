@@ -40,7 +40,7 @@ http.createServer(async (req, res) => {
       res.end(Buffer.from(await response.arrayBuffer()));
       return;
     }
-    const publicPath = pathname === '/' ? '/index.html' : pathname;
+    const publicPath = ['/', '/welcome', '/welcome/'].includes(pathname) ? '/index.html' : pathname;
     const file = resolve(root, '.' + publicPath);
     if (!file.startsWith(root + sep) || !/^\/(index\.html$|core\/|ui\/)/.test(publicPath)
       || publicPath.split('/').some(part => part.startsWith('.'))) {

@@ -16,12 +16,14 @@ const topics = () => [
   ['copywriting', t('Clear writing', 'Ясные тексты', 'Анық мәтін'), 'data-starter-course="clear-writing"'],
 ];
 
-function startButton(text) {
+function startButton(text, canResume) {
+  if (canResume) return `<a class="primary landing-start" href="/">${text}</a>`;
   return `<button type="button" class="primary landing-start" data-view="new-course">${text}</button>`;
 }
 
-export function landingView() {
-  const start = t('Build my free course', 'Создать бесплатный курс', 'Тегін курсымды құру');
+export function landingView({ canResume = false, signedIn = false } = {}) {
+  const start = canResume ? t('Continue learning', 'Продолжить обучение', 'Оқуды жалғастыру')
+    : t('Build my free course', 'Создать бесплатный курс', 'Тегін курсымды құру');
   const courses = t('Mini-courses', 'Мини-курсы', 'Шағын курстар');
   const method = t('How it works', 'Как это работает', 'Қалай жұмыс істейді');
   const signIn = t('I already have an account', 'У меня уже есть аккаунт', 'Менде аккаунт бар');
@@ -30,10 +32,10 @@ export function landingView() {
     ['target', t('Check your understanding', 'Проверь себя', 'Өзіңді тексер'), t('Try a short exercise and get feedback on your answer.', 'Реши короткое упражнение и получи разбор ответа.', 'Қысқа жаттығу орындап, жауабыңа кері байланыс ал.')],
     ['edit', t('Make it your own', 'Сделай что-то своё', 'Өз жұмысыңды жаса'), t('Design a poster, write a short program, or try a different project.', 'Сделай постер, напиши короткую программу или попробуй другой проект.', 'Постер жаса, шағын бағдарлама жаз немесе басқа жобаны байқап көр.')],
   ];
-  return `<div class="mindora-landing" data-guided-step="0">
+  return `<div class="mindora-landing" id="landing-top" data-guided-step="0">
     <header class="landing-header">
       <div class="landing-container landing-header-inner">
-        <a class="brand landing-brand" href="#discover" data-home aria-label="Mindora"><img src="${brand}" width="42" height="42" alt=""><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
+        <a class="brand landing-brand" href="#landing-top" aria-label="Mindora"><img src="${brand}" width="42" height="42" alt=""><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
         <div class="landing-language">${languagePicker()}</div>
       </div>
     </header>
@@ -43,7 +45,7 @@ export function landingView() {
       </div>
       <div class="landing-hero-copy">
         <h1 id="landing-title">${workHeadline()}</h1>
-        <div class="landing-actions">${startButton(start)}<button type="button" class="secondary landing-signin" data-account-open="signin">${signIn}</button></div>
+        <div class="landing-actions">${startButton(start, canResume)}${signedIn ? '' : `<button type="button" class="secondary landing-signin" data-account-open="signin">${signIn}</button>`}</div>
       </div>
     </section>
     <section class="landing-topics" id="landing-topics" aria-labelledby="landing-topics-title">
@@ -71,12 +73,12 @@ export function landingView() {
     </section>
     <section class="landing-finish" aria-labelledby="landing-finish-title"><div class="landing-container landing-finish-inner">
       <img src="${media('landing/mino-ready.webp')}" width="440" height="550" alt="" decoding="async" loading="lazy">
-      <div><h2 id="landing-finish-title">${t('What will you learn first?', 'Чему научишься первым делом?', 'Алдымен нені үйренесің?')}</h2>${startButton(start)}<p class="course-price-note">${priceLine()}</p>${reportEntry()}</div>
+      <div><h2 id="landing-finish-title">${t('What will you learn first?', 'Чему научишься первым делом?', 'Алдымен нені үйренесің?')}</h2>${startButton(start, canResume)}<p class="course-price-note">${priceLine()}</p>${reportEntry()}</div>
     </div></section>
     <footer class="landing-container landing-footer">
-      <a class="brand" href="#discover" data-home aria-label="Mindora"><img src="${brand}" width="32" height="32" alt=""><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
+      <a class="brand" href="#landing-top" aria-label="Mindora"><img src="${brand}" width="32" height="32" alt=""><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
       <nav class="landing-nav" aria-label="${t('Explore Mindora', 'О Mindora', 'Mindora туралы')}"><a href="#landing-topics">${courses}</a><a href="#landing-method">${method}</a></nav>
-      <button class="text-link" type="button" data-account-open="signin">${t('Sign in', 'Войти', 'Кіру')}</button>
+      ${signedIn ? '' : `<button class="text-link" type="button" data-account-open="signin">${t('Sign in', 'Войти', 'Кіру')}</button>`}
     </footer>
   </div>`;
 }
