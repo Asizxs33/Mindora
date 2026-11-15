@@ -195,7 +195,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
       if (view === 'certificate') elements.get('#certificate-name').value = html.args[0].name;
     },
     phoneCourseLibrary: screen('course-library'), courseHomeView: screen('course-home'), readyCoursesView: () => '', coursesPage: screen('courses'), sidePage: screen('side'),
-    guidedStartView: screen('guided-start'), quietHomeView: screen('quiet-home'), returnReviewView: screen('return-review'),
+    membershipView: screen('membership'), guidedStartView: screen('guided-start'), quietHomeView: screen('quiet-home'), returnReviewView: screen('return-review'),
     pathView: screen('path'), lesson: screen('lesson'), result: screen('result'), workView: screen('work'),
     recapView: screen('recap'), certificateView: screen('certificate'),
     refreshCertificatePreview() {},
@@ -633,7 +633,8 @@ test('a saved roadmap stays selected on the home path and opens without its setu
   run.click({ view: 'roadmap' });
   assert.equal(run.saved().lastLearningType, 'roadmap');
   run.click({ roadmapAction: 'setup' });
-  assert.ok(run.current.html.args[0].wizard);
+  assert.equal(run.current.view, 'membership');
+  assert.deepEqual(run.roadmapRequests, []);
   run.click({ view: 'discover' });
   assert.equal(run.current.html.kind, 'roadmap');
   assert.equal(run.current.html.args[0].roadmap.title, roadmap.title);

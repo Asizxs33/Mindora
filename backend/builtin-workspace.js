@@ -1,3 +1,4 @@
+import { reportProgress } from '../core/weekly-report.js';
 import { budgetDraftKey, SESSION_MINUTES } from '../core/budget-session.js';
 import { restoreRoadmap, restoreRoadmapArchive } from '../core/roadmap-model.js';
 import { normalizeRewards } from '../core/roadmap-rewards.js';
@@ -109,6 +110,7 @@ export function validateBuiltinWorkspace(input) {
   if (!learningRoadmaps || (input.learningRoadmap != null && !learningRoadmap) || (input.learningRewards != null && !learningRewards)) return null;
   return { minutes, active, goals, progress: { design: 0, budget: 0, ...progress }, drafts, works, notes, sessions,
     certificates, practiceCount, studyDays: [...new Set(studyDays)], budgetQuiz, ...(budgetActivity ? { budgetActivity } : {}),
+    ...(input.weeklyReport && plain(input.weeklyReport) ? { weeklyReport: reportProgress(input.weeklyReport) } : {}),
     ...(learningRoadmap ? { learningRoadmap } : {}),
     ...(learningRoadmaps.length ? { learningRoadmaps } : {}),
     ...(learningRewards ? { learningRewards } : {}) };

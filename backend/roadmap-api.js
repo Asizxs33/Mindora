@@ -1,3 +1,4 @@
+import { personalCourseQuota, quotaIdentity } from './personal-course-quota.js';
 import { LANGUAGES } from '../core/language.js';
 import { ROADMAP_LEVELS, ROADMAP_LIMITS, clarificationInput, normalizeClarification, normalizeRoadmap, roadmapInput } from '../core/roadmap-model.js';
 import { accountSession, allowedOrigin, isGuestLearningRequest, cloudSettings, json, matchesLearningAccount, readBody } from './cloud-api.js';
@@ -75,6 +76,7 @@ export async function roadmapApi(request, {
   session = accountSession,
   generate = generateDeepSeekRoadmap,
   clarify = generateDeepSeekClarification,
+  quota = personalCourseQuota,
 } = {}) {
   if (request.method !== 'POST') return json({ error: 'Метод недоступен.' }, 405);
   if (!allowedOrigin(request)) return json({ error: 'Источник запроса не разрешён.' }, 403);
@@ -89,6 +91,7 @@ export async function roadmapApi(request, {
       return json({ error: 'Аккаунт изменился. Войди снова.', code: 'ACCOUNT_CHANGED' }, 401, cookies);
     }
     const body = await readBody(request, 8192);
+    const owner = quotaIdentity(request, current.user, cookies);
     if (body?.action === 'clarify') {
       const input = clarificationInput(body);
       if (!input) return json({ error: 'Проверь тему и время занятия.', code: 'INVALID_ROADMAP_INPUT' }, 400, cookies);
@@ -103,9 +106,13 @@ export async function roadmapApi(request, {
     const input = roadmapInput(body);
     if (!input) return json({ error: 'Проверь цель и ответы на вопросы.', code: 'INVALID_ROADMAP_INPUT' }, 400, cookies);
     if (!apiKey) return json(unavailable, 503, cookies);
-    const roadmap = normalizeRoadmap(await generate(input, apiKey), input);
-    if (!roadmap) throw Object.assign(new Error('Invalid generated roadmap'), { name: 'RoadmapContentInvalid' });
-    return json({ roadmap }, 200, cookies);
+    const result = await quota(settings).run(owner, input, async () => {
+      const roadmap = normalizeRoadmap(await generate(input, apiKey), input);
+      if (!roadmap) throw Object.assign(new Error('Invalid generated roadmap'), { name: 'RoadmapContentInvalid' });
+      return roadmap;
+    });
+    if (result.code) return json(result, result.code === 'COURSE_LIMIT' ? 402 : 409, cookies);
+    return json(result, 200, cookies);
   } catch (error) {
     console.warn('Mindora roadmap generation failed', error.name, Number(error.providerStatus) || '');
     if (error.providerStatus === 429) return json({ error: 'ИИ занят. Попробуй немного позже.', code: 'RATE_LIMITED' }, 429, cookies);

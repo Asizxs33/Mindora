@@ -328,25 +328,14 @@ try {
   assert.equal((await state(j)).learningRoadmap.progress[1].courseId !== null, true);
   await j.locator('.ai-lesson-exit').click();
   await j.waitForSelector('.roadmap-stage.is-active');
-  // A second personal course keeps the first path and its generated lessons.
+  // The paid gate leaves the free course and all its lessons available.
   const firstPath = (await state(j)).learningRoadmap;
   const generated = lessonRequests.length;
   await j.locator('.phone-course-nav [data-view="new-course"]').click();
-  await j.locator('#goal-input').fill('Build a weekly report');
-  await j.locator('#goal-form button[type="submit"]').click();
-  await j.locator('[name="direction"][value="0"]').check();
-  await j.locator('#roadmap-form button[type="submit"]').click();
-  await j.locator('[name="diagnosticUnknown"]').check();
-  await j.locator('input[name="experience"][value="some"]').check();
-  await j.locator('#roadmap-form button[type="submit"]').click();
-  await j.locator('input[name="motivation"][value="work"]').check();
-  await j.locator('#roadmap-form button[type="submit"]').click();
-  await j.locator('input[name="minutes"][value="5"]').check();
-  await j.locator('#roadmap-form button[type="submit"]').click();
-  await j.waitForSelector('.roadmap-layout');
-  assert.equal(lessonRequests.length, generated, 'a new outline does not eagerly generate lessons');
-  await nav(j, 'courses').click();
-  assert.equal(await j.locator('[data-learning-roadmap]').count(), 2);
+  await j.getByRole('heading', { name: 'Mindora Plus' }).waitFor();
+  assert.match(await j.locator('#main').innerText(), /\$9\.99/);
+  await j.locator('.report-page [data-view="courses"]').click();
+  assert.equal(await j.locator('[data-learning-roadmap]').count(), 1);
   await j.locator(`[data-learning-roadmap="${firstPath.id}"]`).click();
   await j.waitForSelector('.roadmap-layout');
   assert.equal((await state(j)).learningRoadmap.progress[0].completed, true);
@@ -356,7 +345,7 @@ try {
   await j.waitForSelector('.roadmap-layout');
   await j.locator('[data-roadmap-stage="1"]').click();
   await j.waitForSelector('.ai-lesson-reader');
-  assert.equal(lessonRequests.length, generated, 'opening an archived lesson loads its saved copy');
+  assert.equal(lessonRequests.length, generated, 'opening the first course loads its saved lesson');
   await journey.ctx.close();
   assert.deepEqual(errors, []);
   console.log('PASS: responsive greeting/path, guest greeting → lesson, interrupted recall, low-score repair, saved cursor/drafts, 5/10/20-minute courses, mobile signout → greeting → signin, personalized roadmap → completion → unlock → reload → next lesson. API mocked explicitly.');

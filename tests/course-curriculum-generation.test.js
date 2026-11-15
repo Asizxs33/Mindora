@@ -38,7 +38,7 @@ test('daily 5, 10 and 20 minute choices create a whole syllabus with lazy lesson
       method: 'POST', headers: { origin: 'https://mindora.test', 'content-type': 'application/json', 'X-Mindora-Account': 'account-a' }, body: JSON.stringify(data),
     });
     const response = await roadmapApi(request, {
-      apiKey: 'test-only', settings: { databaseUrl: 'test-only' }, session: async () => ({ user: { id: 'account-a' }, cookies: [] }), generate: run.generate,
+      quota: () => ({ run: async (_owner, _input, build) => ({ roadmap: await build() }) }), apiKey: 'test-only', settings: { databaseUrl: 'test-only' }, session: async () => ({ user: { id: 'account-a' }, cookies: [] }), generate: run.generate,
     });
     assert.equal(response.status, 200);
     const { roadmap } = await response.json();

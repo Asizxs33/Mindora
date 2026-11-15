@@ -1,3 +1,5 @@
+import { reportProgress, checkWeeklyReport } from './weekly-report.js';
+import { weeklyReportView, membershipView } from '../ui/work-skills.js';
 import { COURSES, DESIGN_QUIZ, evaluatePoster } from './engine.js';
 import { budgetCsv, budgetSession, budgetDraftKey, createBudgetDraft, evaluateBudgetSession, normalizeMinutes, readBudgetQuiz, readBudgetResume } from './budget-session.js';
 import { createCloudDrafts } from './cloud-drafts.js';
@@ -83,9 +85,14 @@ let library;
 let builtins;
 let roadmapWizard = null;
 let roadmapOperation = null;
+let reportChecks = null;
+function weeklyWorkspace() {
+  const progress = reportProgress(state.weeklyReport);
+  return { progress, save: () => { state.weeklyReport = progress; save(); } };
+}
 let roadmapError = '';
 let pendingRoadmapPrefill = null;
-const builtinFields = ['minutes', 'active', 'goals', 'progress', 'drafts', 'works', 'notes', 'sessions', 'certificates', 'practiceCount', 'studyDays', 'budgetQuiz', 'budgetActivity', 'learningRoadmap', 'learningRoadmaps', 'learningRewards'];
+const builtinFields = ['minutes', 'active', 'goals', 'progress', 'drafts', 'works', 'notes', 'sessions', 'certificates', 'practiceCount', 'studyDays', 'budgetQuiz', 'budgetActivity', 'learningRoadmap', 'learningRoadmaps', 'learningRewards', 'weeklyReport'];
 const builtinData = source => Object.fromEntries(builtinFields.filter(key => source[key] !== undefined).map(key => [key, source[key]]));
 let builtinSnapshot = JSON.stringify(builtinData(state));
 const plans = createPlanController({ state, save: saveLearning, render, isOpen: () => view === 'learning-plan' && canStudy(),
@@ -433,6 +440,7 @@ function modal(type, data) {
 function go(next, cursor = null, newCourse = false) {
   if (next === 'courses' && !accountOwner) ensureLearning();
   if (next === 'my-path') { roadmapWizard = null; return openMyPath(); }
+  if (next === 'new-course' && savedRoadmaps().length) next = 'membership';
   if (next === 'new-course') { roadmapWizard = null; if (!accountOwner) ensureLearning(); }
   if (['path', 'builtin-path', 'course-path', 'lesson', 'learning-plan', 'return-review', 'result', 'work', 'certificate', 'roadmap', 'quests', 'shop'].includes(next)
     && !ensureLearning(() => go(next, cursor, newCourse))) return;
@@ -440,6 +448,10 @@ function go(next, cursor = null, newCourse = false) {
   if (['path', 'builtin-path'].includes(next) && !Object.hasOwn(COURSES, state.active)) return go('courses');
   if (next === 'learning-plan' && !newCourse && view !== next && reviewLearningPlan()) return;
   if (view === 'learning-plan' && next !== view && next !== 'return-review') { rememberLearningVisit(); saveLocal(); }
+  if (next === 'weekly-report' || window.location?.hash === '#weekly-report') {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search + (next === 'weekly-report' ? '#weekly-report' : ''));
+    reportChecks = null;
+  }
   view = next;
   if (next !== 'discover') startingNew = false;
   if (next === 'roadmap' && state.learningRoadmap) { state.lastLearningType = 'roadmap'; saveLocal(); }
@@ -592,6 +604,8 @@ function render() {
       if (!canStudy() || startingNew) html = guidedStartView({ ...introduction, signedIn: Boolean(accountOwner) });
       else html = phoneLayout?.matches || selectedHomeKind() ? phonePath(roadmapProps) : homeScreen();
       break;
+    case 'weekly-report': html = weeklyReportView(weeklyWorkspace().progress, reportChecks); break;
+    case 'membership': html = membershipView(); break;
     case 'new-course': html = courseHomeView(state, { composerOnly: true }); break;
     case 'courses':
       html = canStudy()
@@ -777,6 +791,7 @@ function changeMinutes(value) {
 
 function beginRoadmap(goal = '', minutes = state.minutes) {
   if (roadmapOperation) return;
+  if (savedRoadmaps().length) return go('membership');
   roadmapWizard = {
     step: goal ? 1 : 0, goal, originalGoal: goal, minutes, experience: '', evidence: '', motivation: '',
     clarification: null, direction: '', customGoal: '', directionConfirmed: false,
@@ -944,6 +959,7 @@ function submitRoadmap(form) {
     }
     if (!isCurrent()) return;
     if (response.status === 401) { expiredSession(); return; }
+    if (response.status === 402) { roadmapWizard = null; go('membership'); return; }
     if (!response.ok) throw new Error(roadmapErrorText('roadmap'));
     const data = await response.json().catch(() => null);
     if (!isCurrent()) return;
@@ -1005,6 +1021,18 @@ function startRoadmapStage(index) {
 }
 
 document.addEventListener('submit', event => {
+  if (event.target.id === 'weekly-report-form') {
+    event.preventDefault();
+    const { progress, save } = weeklyWorkspace();
+    const draft = progress.days[progress.day];
+    for (const [field, value] of new FormData(event.target)) draft[field] = String(value).slice(0, 80);
+    reportChecks = checkWeeklyReport(progress.day, draft);
+    draft.completed = Object.values(reportChecks).every(Boolean);
+    save();
+    render();
+    if (!draft.completed) $('#weekly-report-form [name="' + Object.keys(reportChecks).find(key => !reportChecks[key]) + '"]')?.focus();
+    return;
+  }
   if (event.target.id === 'intro-name-form') { event.preventDefault(); advanceIntroduction(); return; }
   if (event.target.id === 'roadmap-form') {
     event.preventDefault();
@@ -1107,6 +1135,12 @@ function updateBudgetDraft(field, value) {
 
 document.addEventListener('input', event => {
   const input = event.target;
+  if (view === 'weekly-report' && input.form?.id === 'weekly-report-form' && ['formula','total','decision'].includes(input.name)) {
+    const { progress, save } = weeklyWorkspace();
+    progress.days[progress.day][input.name] = input.value.slice(0, 80);
+    save();
+    return;
+  }
   if (input.id === 'goal-input') {
     state.homeGoal = input.value.slice(0, 180);
     saveLocal();
@@ -1161,6 +1195,14 @@ document.addEventListener('change', event => {
 document.addEventListener('click', event => {
   const button = event.target.closest('button,[data-home]');
   if (!button || button.disabled) return;
+  if (button.dataset.reportNext !== undefined) {
+    const { progress, save } = weeklyWorkspace();
+    if (!progress.days[0].completed) return;
+    progress.day = 1;
+    save();
+    go('weekly-report');
+    return;
+  }
   if (button.dataset.exploreTask !== undefined) return exploreTask(Number(button.dataset.exploreTask));
   if (button.dataset.introAction) {
     const action = button.dataset.introAction;
@@ -1382,7 +1424,7 @@ window.addEventListener('mindora:account-changed', event => {
     builtinSnapshot = JSON.stringify(builtinData(state));
     for (const field of ['sessions', 'certificates']) if (!state[field] || typeof state[field] !== 'object' || Array.isArray(state[field])) state[field] = {};
     plans.reset();
-    view = owner && view === 'courses' ? 'courses' : 'discover';
+    view = owner && ['courses', 'weekly-report'].includes(view) ? view : 'discover';
     startingNew = false;
     if (!pendingLearning) introduction = { step: owner ? 2 : 0, name: account.profile?.name || '', topic: '', goal: '', minutes: state.minutes };
     checks = null;
@@ -1431,7 +1473,8 @@ mountReturnReview({
 });
 
 $('#modal').addEventListener('click',e=>{if(e.target===$('#modal')){const r=$('#modal').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('#modal').close();}});
-if (window.location?.hash === '#courses') {
+if (window.location?.hash === '#weekly-report') go('weekly-report');
+else if (window.location?.hash === '#courses') {
   window.history.replaceState(null, '', window.location.pathname + window.location.search);
   go('courses');
 } else if (view === 'return-review' && !restoreOpenReview()) go('discover');

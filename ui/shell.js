@@ -132,6 +132,7 @@ function updateCourseHome(main, html, sameView) {
   const currentNav = main.querySelector('.phone-course-nav');
   const nextNav = template.content.querySelector('.phone-course-nav');
   if (Boolean(currentNav) !== Boolean(nextNav)) return false;
+  if (current.dataset.guestWelcome !== next.dataset.guestWelcome) return false;
   const sameLanguage = current.dataset.language === next.dataset.language;
   if (currentNav && !sameLanguage) currentNav.replaceWith(nextNav);
   const goalValue = current.querySelector('#goal-input')?.value;
