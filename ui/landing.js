@@ -1,5 +1,6 @@
 import { languagePicker, t } from './language.js';
 import { icon } from './icons.js';
+import { plusBadge } from './shop.js';
 import { priceLine, reportEntry, workHeadline } from './work-skills.js';
 
 const media = name => new URL(`./assets/${name}`, import.meta.url).href;
@@ -21,7 +22,8 @@ function startButton(text, canResume) {
   return `<button type="button" class="primary landing-start" data-account-open="signup">${text}</button>`;
 }
 
-export function landingView({ canResume = false, signedIn = false } = {}) {
+export function landingView({ canResume = false, signedIn = false, plusPlan } = {}) {
+  const membership = plusBadge(plusPlan);
   const start = canResume ? t('Continue learning', 'Продолжить обучение', 'Оқуды жалғастыру')
     : t('Build my free course', 'Создать бесплатный курс', 'Тегін курсымды құру');
   const courses = t('Mini-courses', 'Мини-курсы', 'Шағын курстар');
@@ -35,7 +37,7 @@ export function landingView({ canResume = false, signedIn = false } = {}) {
   return `<div class="mindora-landing" id="landing-top" data-guided-step="0">
     <header class="landing-header">
       <div class="landing-container landing-header-inner">
-        <a class="brand landing-brand" href="#landing-top" aria-label="Mindora"><img class="brand-mark" src="${brand}" width="40" height="40" alt=""><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
+        <a class="brand landing-brand" href="#landing-top" aria-label="${membership ? `Mindora · ${t('Plus demo', 'Демо Plus', 'Plus демосы')}` : 'Mindora'}"><img class="brand-mark" src="${brand}" width="40" height="40" alt=""><span class="brand-copy"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span>${membership}</span></a>
         <div class="landing-language">${languagePicker()}</div>
       </div>
     </header>

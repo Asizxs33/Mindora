@@ -78,6 +78,8 @@ async function verifyPlusDemo(width) {
   const shop = page.locator('.plus-shop');
   const plan = name => shop.locator('[data-demo-select="' + name + '"]');
   const action = name => shop.locator('[data-demo-action="' + name + '"]');
+  const badge = page.locator('.topbar .plus-badge');
+  const nav = phone ? '#mobile-navigation' : '#navigation';
   const use = control => phone ? control.tap() : control.click();
   const fits = async () => {
     assert.ok(await page.evaluate(() => {
@@ -92,19 +94,28 @@ async function verifyPlusDemo(width) {
   try {
     // Each size starts in a fresh guest profile. The previous guest's demo must not leak.
     await plan('annual').waitFor();
+    assert.equal(await badge.count(), 0);
     assert.ok(await plan('annual').isEnabled() && await plan('monthly').isEnabled());
     assert.match(await plan('annual').innerText(), /\$99\.99/);
     assert.match(await plan('monthly').innerText(), /\$9\.99/);
     await fits();
     await use(plan('annual'));
+    assert.equal(await badge.count(), 0, 'Pending checkout does not activate Plus');
     const prices = shop.locator('.checkout-lines dd');
     assert.match(await prices.first().textContent(), /\$99\.99/);
     assert.equal(await prices.last().textContent(), '$0.00');
     await fits();
     await use(action('confirm'));
+    await badge.waitFor();
     await page.reload();
     await action('practice').waitFor();
     assert.equal(new URL(page.url()).hash, '#plus');
+    await badge.waitFor();
+    await fits();
+    await use(page.locator(nav + ' [data-view="profile"]'));
+    const membership = page.locator('.plus-profile-status');
+    assert.match(await membership.innerText(), /Demo active · Annual/);
+    await use(membership.locator('[data-view="membership"]'));
     await use(action('practice'));
     const displayed = await shop.locator('.checkout-lines dd').allTextContents();
     const [quantity, unitPrice, discount] = displayed.map(value => Number(value.replace(/[^\d.]/g, '')));
@@ -139,6 +150,17 @@ async function verifyPlusDemo(width) {
     assert.equal(new URL(page.url()).hash, '#plus');
     await use(action('choose'));
     assert.ok(await plan('monthly').isDisabled() && await plan('annual').isEnabled());
+    await use(page.locator(nav + ' [data-view="profile"]'));
+    assert.match(await membership.innerText(), /Demo active · Monthly/);
+    await use(page.locator(nav + ' [data-view="courses"]'));
+    const design = page.locator('.ready-course[data-course="design"]');
+    if (!await design.isVisible()) await use(page.locator('.phone-catalog summary'));
+    await use(design);
+    await use(page.locator('.learning-hub-node[aria-current="step"]'));
+    await page.locator('.lesson-progress-head .plus-badge').waitFor();
+    await fits();
+    await page.goto(new URL('/welcome', base).href);
+    await page.locator('.landing-brand .plus-badge').waitFor();
   } finally {
     await ctx.close();
   }
@@ -146,7 +168,7 @@ async function verifyPlusDemo(width) {
 
 try {
  for (const width of [320, 390, 1440]) await verifyPlusDemo(width);
- console.log('PASS Plus demo checkout, plan switch, invoice correction, saved guest choice and shop routes at 320/390/1440.');
+ console.log('PASS Plus demo checkout, saved status, profile, lesson and landing badges at 320/390/1440.');
  for (const width of [320, 390]) {
   const { ctx, page } = await context({ signedIn: false, width, phone: true });
   try {

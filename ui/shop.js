@@ -8,6 +8,19 @@ const heading = text => `<h2 id="shop-step" tabindex="-1">${text}</h2>`;
 const demoLabel = () => t('Demo checkout', 'Демо-покупка', 'Демо сатып алу');
 const changePlan = () => t('Change demo plan','Сменить демо-тариф','Демо тарифті ауыстыру');
 
+export function plusBadge(active) {
+  return validPlan(active) ? `<span class="plus-badge">Plus <span>· ${t('Demo', 'Демо', 'Демо')}</span></span>` : '';
+}
+
+export function plusProfileStatus(active) {
+  if (!validPlan(active)) return '';
+  return `<section class="plus-profile-status" aria-labelledby="profile-plus-title">
+    <span class="plus-plan-icon" aria-hidden="true">${icon('layers', 22)}</span>
+    <div><h2 id="profile-plus-title">Mindora Plus</h2><p>${t('Demo active', 'Демо-тариф активен', 'Демо тариф белсенді')} · ${name(active)}</p></div>
+    <button type="button" class="text-link" data-view="membership">${t('Manage plan', 'Управлять тарифом', 'Тарифті басқару')} ${icon('arrow', 16)}</button>
+  </section>`;
+}
+
 function offer(id, active) {
   const annual = id === 'annual';
   const detail = annual
@@ -44,7 +57,7 @@ export function plusShopView({ active, pending, choose, round, result }) {
       <div class="plus-actions"><button class="primary" data-demo-action="confirm">${t('Confirm demo purchase','Подтвердить демо-покупку','Демо сатып алуды растау')}</button><button class="text-link" data-demo-action="choose">${t('Back to plans','К тарифам','Тарифтерге оралу')}</button></div>`;
   } else if (validPlan(active) && !choose) {
     content = round ? roundView(round, result) : `${heading(t('Your Plus demo','Твой демо-тариф Plus','Сенің Plus демо тарифің'))}
-      <p role="status">${icon('check',18)} ${name(active)} · ${t('$0 charged','$0 списано','$0 алынды')}</p>
+      <p role="status">${icon('check',18)} ${t('Demo active', 'Демо-тариф активен', 'Демо тариф белсенді')} · ${name(active)} · ${t('$0 charged','$0 списано','$0 алынды')}</p>
       <p>${t('Try a fresh invoice exercise. This preview is saved on this device.', 'Попробуй сверить счёт с новыми данными. Демо сохранено на этом устройстве.', 'Жаңа дерекпен шотты тексеріп көр. Демо осы құрылғыда сақталды.')}</p>
       <div class="plus-actions"><button class="primary" data-demo-action="practice">${t('Try the exercise','Начать практику','Тапсырманы бастау')} ${icon('arrow',18)}</button>
       <button class="text-link" data-demo-action="choose">${changePlan()}</button></div>`;

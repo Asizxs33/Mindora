@@ -696,7 +696,7 @@ function render() {
     busy: roadmapOperation?.kind, error: roadmapError, rewards, quests: rewards?.quests ?? [], items: rewards?.items ?? [] };
   let html;
   switch (view) {
-    case 'welcome': html = landingView({ canResume: canStudy(), signedIn: Boolean(accountOwner) }); break;
+    case 'welcome': html = landingView({ canResume: canStudy(), signedIn: Boolean(accountOwner), plusPlan: state.demoPlusPlan }); break;
     case 'discover':
       if (!canStudy() || startingNew) html = guidedStartView({ ...introduction, courseLanguage: state.courseDraftLanguage, signedIn: Boolean(accountOwner) });
       else if (phoneLayout?.matches || selectedHomeKind()) html = phonePath(roadmapProps);
