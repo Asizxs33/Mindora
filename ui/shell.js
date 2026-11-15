@@ -1,5 +1,4 @@
 import { brandNav, courseNames } from './dashboard.js';
-import { mountLandingMotion } from './landing.js';
 import { icon } from './icons.js';
 import { mountCharacters } from './characters.js';
 import { mountPresentation } from './presentation.js';
@@ -98,7 +97,6 @@ export function mountShell() {
   mountLessonFlow();
   mountAccount();
   mountLanguagePicker();
-  mountLandingMotion();
   desktopLayout = window.matchMedia('(min-width: 921px)');
   desktopLayout.addEventListener('change', () => openDesktopLibrary());
   window.addEventListener('mindora:account-changed', updateAccountLinks);
