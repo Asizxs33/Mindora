@@ -89,7 +89,7 @@
 .course-pace legend { font-size: 14px; font-weight: 650; margin-bottom: 10px; }
 .course-pace > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .course-pace button { min-height: 49px; padding: 9px 12px; border: 2px solid #eadfd6; border-bottom-width: 4px; border-radius: 13px; background: #fff; color: #675142; font: inherit; font-size: 14px; cursor: pointer; }
-.course-pace button strong { font-size: 20px; }
+.course-pace button strong { font-family: var(--font-display); font-size: 20px; }
 .course-pace button[aria-pressed=true] { border-color: #c96b27; color: #9b3d00; background: #fff3e7; }
 .course-pace button:focus-visible { outline: 3px solid #b34a00; outline-offset: 3px; }
 .course-pace-note { font-size: 13px; color: var(--muted); line-height: 1.5; margin: 11px 0 18px; }

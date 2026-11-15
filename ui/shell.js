@@ -2,7 +2,7 @@ import { brandNav, courseHomeView, courseNames } from './dashboard.js';
 import { icon } from './icons.js';
 import { mountCharacters } from './characters.js';
 import { mountPresentation } from './presentation.js';
-import { languagePicker, t } from './language.js';
+import { languagePicker, mountLanguagePicker, t } from './language.js';
 import { mountLessonFlow, syncLessonFlow } from './lesson-flow.js';
 import { mountAccount, getAccountState } from './account.js';
 import { rewardBalance } from './roadmap.js';
@@ -95,6 +95,7 @@ export function mountShell() {
   mountCourseSearch();
   mountLessonFlow();
   mountAccount();
+  mountLanguagePicker();
   desktopLayout = window.matchMedia('(min-width: 921px)');
   desktopLayout.addEventListener('change', () => {
     if (resizeGreeting) resizeGreeting();

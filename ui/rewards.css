@@ -28,19 +28,27 @@
 .roadmap-metric:focus-visible { outline:3px solid #ad490e; outline-offset:3px; }
 .header-rewards { flex-shrink:0; }
 .header-rewards .roadmap-metrics.is-compact {
-  display:flex; gap:8px; padding:0; margin:0; border:0;
-  border-radius:0; background:transparent;
+  display:flex; gap:4px; padding:3px; margin:0;
+  border:1px solid #eee2d6; border-radius:14px; background:#fffdfa;
 }
 .header-rewards .roadmap-metrics.is-compact .roadmap-metric {
-  display:grid; grid-template-columns:24px auto; grid-template-rows:auto auto; min-height:44px;
-  padding:4px 6px; column-gap:7px; row-gap:1px; border:0; border-radius:9px;
-  background:transparent;
+  display:grid; grid-template-columns:34px auto; grid-template-rows:auto auto; min-height:44px;
+  padding:4px 9px 4px 5px; column-gap:8px; row-gap:1px; border:0; border-radius:10px;
+  background:transparent; color:#33271e;
 }
-.header-rewards .roadmap-metrics.is-compact .roadmap-metric + .roadmap-metric { border-left:0; border-top-left-radius:0; border-bottom-left-radius:0; }
-.header-rewards .roadmap-metrics.is-compact .roadmap-metric > svg { width:24px; height:24px; padding:0; background:transparent; border-radius:0; }
-.header-rewards .roadmap-metrics.is-compact .roadmap-metric > strong { font-size:16px; }
-.header-rewards .roadmap-metrics.is-compact .roadmap-metric > span { display:block; font-size:10px; white-space:nowrap; }
-.header-rewards .roadmap-metrics.is-compact .roadmap-metric:hover { background:transparent; }
+.header-rewards .roadmap-flame { --reward-tint:#fff1dc; }
+.header-rewards .roadmap-gem { --reward-tint:#e6f3ef; }
+.header-rewards .roadmap-heart { --reward-tint:#f9e9e8; }
+.header-rewards .gem-outline { fill:#bde3d9; stroke:#22675a; }
+.header-rewards .gem-facets { stroke:#22675a; }
+.header-rewards .heart-outline { fill:#f2b7b1; stroke:#9f423b; }
+.header-rewards .roadmap-metrics.is-compact .roadmap-metric > svg {
+  width:34px; height:34px; padding:6px; background:var(--reward-tint); border-radius:10px;
+}
+.header-rewards .roadmap-metrics.is-compact .roadmap-metric > strong { font-family:var(--font-display); font-size:19px; font-weight:900; }
+.header-rewards .roadmap-metrics.is-compact .roadmap-metric > span { display:block; font-size:12px; white-space:nowrap; }
+.header-rewards .roadmap-metrics.is-compact .roadmap-metric:hover { background:#f7f0e8; }
+.header-rewards .roadmap-metrics.is-compact .roadmap-metric:hover > strong { text-decoration:none; }
 .roadmap-rewards-list .roadmap-heart { color:#ad490e; background:#fff1e5; }
 .reward-cost { gap:7px; min-width:74px; font-variant-numeric:tabular-nums; }
 .reward-cost > svg { flex-shrink:0; }
@@ -50,10 +58,9 @@
   body.quiet-shell .topbar:has(.header-rewards) { gap:8px; padding-inline:12px; }
   .top-actions.has-reward-balance { gap:6px; }
   .top-actions.has-reward-balance .header-account { display:none; }
-  .top-actions.has-reward-balance .language-picker .profile-select { width:56px; min-width:0; padding:6px 2px 6px 5px; font-size:12px; min-height:44px; }
-  .header-rewards .roadmap-metrics.is-compact { gap:0; padding:0; border-radius:0; }
+  .header-rewards .roadmap-metrics.is-compact { gap:0; padding:0; border:0; background:none; }
   .header-rewards .roadmap-metrics.is-compact .roadmap-metric { display:flex; align-items:center; justify-content:center; gap:3px; padding:4px 2px; min-width:44px; min-height:44px; }
-  .header-rewards .roadmap-metrics.is-compact .roadmap-metric > svg { width:20px; height:20px; }
+  .header-rewards .roadmap-metrics.is-compact .roadmap-metric > svg { width:23px; height:23px; padding:3px; border-radius:7px; }
   .header-rewards .roadmap-metrics.is-compact .roadmap-metric > strong { font-size:13px; }
   .header-rewards .roadmap-metrics.is-compact .roadmap-metric > span { display:none; }
   .roadmap-metrics, .roadmap-rewards > .roadmap-metrics { gap:8px; }

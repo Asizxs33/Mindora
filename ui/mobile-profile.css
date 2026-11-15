@@ -104,7 +104,6 @@
   .learning-hub .learning-hub-heading > div > span { display: none; }
   .learning-hub .learning-hub-progress { margin-block: 0; }
   .learning-hub .learning-hub-progress > span { font-size: 12px; }
-  .learning-hub .learning-hub-progress > strong { display: none; }
   .learning-hub .learning-hub-journey { display: block; margin-top: 0; }
   .learning-hub .learning-hub-path { --route-row: 132px; --route-node: 66px; padding-top: 37px; }
   .learning-hub .learning-hub-stop { gap: 10px; }

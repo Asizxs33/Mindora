@@ -189,7 +189,7 @@ function screenView(saved, busy, reviewError) {
     default: content = practiceView(step, answers[completed], reviews[completed], busy, reviewError, last, mentor, plan.formatVersion === 3);
   }
   return `<section class="ai-lesson-reader" aria-label="${t('Current lesson task', 'Текущее задание', 'Ағымдағы тапсырма')}" lang="${esc(plan.language)}" aria-busy="${Boolean(busy)}">
-    <div class="ai-lesson-task-meta" lang="${esc(currentLanguage())}"><span>${t(`Task ${completed + 1} of ${plan.steps.length}`, `Задание ${completed + 1} из ${plan.steps.length}`, `${plan.steps.length} тапсырманың ${completed + 1}-і`)}</span><span>${icon('clock', 16)} ${t(`${step.minutes} min`, `${step.minutes} мин`, `${step.minutes} мин`)}</span></div>
+    <div class="ai-lesson-task-meta" lang="${esc(currentLanguage())}"><span>${t(`Task ${completed + 1} of ${plan.steps.length}`, `Задание ${completed + 1} из ${plan.steps.length}`, `${plan.steps.length} тапсырманың ${completed + 1}-і`)}</span><span>${icon('clock', 15)} ${t(`${step.minutes} min`, `${step.minutes} мин`, `${step.minutes} мин`)}</span></div>
     <ol class="ai-lesson-stages${pages.length > 4 ? ' is-expanded' : ''}" aria-label="${t('Task screens', 'Экраны задания', 'Тапсырма экрандары')}" lang="${esc(currentLanguage())}">${pages.map((name, index) => `<li class="${index === pageIndex ? 'is-current' : index < pageIndex ? 'is-done' : ''}"${index === pageIndex ? ' aria-current="step"' : ''}><span class="ai-lesson-stage-dot" aria-hidden="true">${index < pageIndex ? icon('check', 12) : index + 1}</span><span>${pageName(name)}</span></li>`).join('')}</ol>
     <article class="ai-lesson-page">
       <header class="ai-lesson-page-heading">
@@ -214,7 +214,11 @@ function lessonView(saved, busy, reviewError, onRoadmap, rewards, nextStage) {
       <span>${icon('clock', 16)} ${t(`${plan.minutes} minutes`, `${plan.minutes} минут`, `${plan.minutes} минут`)}</span>
       ${rewards ? `<span class="ai-lesson-life-count">${icon('heart', 18)} ${t(`${rewards.hearts}/${rewards.maxHearts} lives`, `Жизни ${rewards.hearts}/${rewards.maxHearts}`, `Өмір ${rewards.hearts}/${rewards.maxHearts}`)}</span>` : ''}
     </div>
-    <div class="ai-lesson-overall"><progress max="${plan.steps.length}" value="${completed}" aria-label="${t('Completed tasks', 'Выполненные задания', 'Орындалған тапсырмалар')}"></progress><span lang="${esc(currentLanguage())}">${t(`${completed} of ${plan.steps.length} tasks complete`, `Выполнено ${completed} из ${plan.steps.length} заданий`, `${plan.steps.length} тапсырманың ${completed} орындалды`)}</span></div>
+    <div class="ai-lesson-overall" lang="${esc(currentLanguage())}">
+      <span>${t('Lesson progress', 'Прогресс занятия', 'Сабақ барысы')}</span>
+      <strong>${t(`${completed} of ${plan.steps.length} tasks`, `${completed} из ${plan.steps.length} заданий`, `${plan.steps.length} тапсырманың ${completed}-і`)}</strong>
+      <progress max="${plan.steps.length}" value="${completed}" aria-label="${t('Completed tasks', 'Выполненные задания', 'Орындалған тапсырмалар')}"></progress>
+    </div>
     ${onRoadmap ? `<button type="button" class="text-link" data-view="my-path">${icon('back', 16)} ${t('My learning path', 'Мой путь обучения', 'Оқу жолым')}</button>` : ''}
   </header>
   ${completed === plan.steps.length ? resultView(saved, onRoadmap, nextStage) : screenView(saved, busy, reviewError)}
@@ -238,6 +242,9 @@ export function learningPlanView(screen) {
   return `<div class="learning-plan ai-lesson${saved ? ' has-course' : ''}">
     <button type="button" class="icon-button ai-lesson-exit" data-view="${onRoadmap ? 'my-path' : saved ? 'course-path' : 'discover'}" aria-label="${t('Save and leave', 'Сохранить и выйти', 'Сақтап шығу')}">${icon('close',22)}</button>
     ${saved ? lessonView(saved, busy, reviewError, onRoadmap, rewards, screen.nextStage) : `<header class="ai-lesson-welcome"><p class="ai-lesson-eyebrow">${t('A little time. A new skill.', 'Немного времени. Новый навык.', 'Аз уақыт. Жаңа дағды.')}</p><h1>${t('What will we learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</h1>${mentorView('mino', busy === 'plan' ? 'waiting' : 'listening', `<p>${t('Tell me your goal. We’ll learn one idea, see an example, then try it together.', 'Расскажи о своей цели. Разберём идею, посмотрим пример и попробуем вместе.', 'Мақсатыңды айт. Бір ойды түсініп, мысалды қарап, бірге орындап көреміз.')}</p>`)}</header>`}
-    ${saved ? `<details class="ai-lesson-settings ai-lesson-details"${busy === 'plan' || error ? ' open' : ''}><summary>${t('Course options', 'Настройки курса', 'Курс баптаулары')}</summary><div class="ai-lesson-settings-body"><p lang="${esc(saved.plan.language)}">${esc(saved.plan.outcome)}</p>${onRoadmap ? '' : goalForm(screen)}<p class="small-note">${accountSaved ? t('Saving status is shown above. You can continue on another device after saving.', 'Статус сохранения показан выше. После сохранения можно продолжить на другом устройстве.', 'Сақтау күйі жоғарыда көрсетілген. Сақтағаннан кейін басқа құрылғыда жалғастыра аласың.') : t('Answers and feedback stay in this browser.', 'Ответы и разборы сохраняются в этом браузере.', 'Жауаптар мен талдау осы браузерде сақталады.')}</p></div></details>` : onRoadmap ? '' : `<section class="game-card simple-panel">${goalForm(screen)}</section>`}
+    ${saved ? `<details class="ai-lesson-settings"${busy === 'plan' || error ? ' open' : ''}>
+      <summary>${icon('target', 19)}<span>${onRoadmap ? t('Lesson goal', 'Цель занятия', 'Сабақ мақсаты') : t('Goal and settings', 'Цель и настройки', 'Мақсат пен баптаулар')}</span>${icon('chevron', 17)}</summary>
+      <div class="ai-lesson-settings-body"><p lang="${esc(saved.plan.language)}">${esc(saved.plan.outcome)}</p>${onRoadmap ? '' : goalForm(screen)}<p class="small-note">${accountSaved ? t('You can continue on another device after saving.', 'После сохранения можно продолжить на другом устройстве.', 'Сақтағаннан кейін басқа құрылғыда жалғастыра аласың.') : t('Answers and feedback stay in this browser.', 'Ответы и разборы сохраняются в этом браузере.', 'Жауаптар мен талдау осы браузерде сақталады.')}</p></div>
+    </details>` : onRoadmap ? '' : `<section class="game-card simple-panel">${goalForm(screen)}</section>`}
   </div>`;
 }
