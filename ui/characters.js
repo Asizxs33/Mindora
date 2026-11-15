@@ -178,6 +178,7 @@ function visibleDialogue(element) {
     ['.course-home-heading', '.course-home-greeting'],
     ['.guided-content,.learning-hub-guide,.quiet-home', '.guided-dialogue'],
     ['.return-review-tutor', '.return-review-speech'],
+    ['.roadmap-intro', '.roadmap-resume > span'],
     ['.roadmap-tutor', '.roadmap-tutor-speech'],
     ['.roadmap-wizard-intro', ':scope > div:last-child'],
     ['.account-guide-scene', '.account-intro-copy'],
@@ -224,7 +225,7 @@ export function mountCharacters() {
       entry.target.dataset.characterVisible = String(entry.isIntersecting);
       syncAnimatedCharacter(entry.target);
     }
-  });
+  }, { rootMargin: '140px 0px' });
   statusElement = document.createElement('div'); statusElement.className = 'character-live-status'; statusElement.setAttribute('role', 'status'); statusElement.setAttribute('aria-live', 'polite'); document.body.append(statusElement);
   function respondOnHome(field) {
     const home = field.closest('.course-home');

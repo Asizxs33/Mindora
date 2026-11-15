@@ -9,7 +9,7 @@
   --radius: 20px; --sidebar: 220px; --header: 76px;
   --page-title: clamp(27px, 2.4vw, 34px);
   --action-height: 48px; --action-type: 16px; --action-radius: 13px;
-  --mentor-inline: clamp(80px, 9vw, 108px); --mentor-feature: clamp(112px, 14vw, 152px);
+  --mentor-inline: clamp(108px, 28vw, 144px); --mentor-feature: clamp(142px, 30vw, 194px);
   --font-text: 'Mindora Source Sans', 'Segoe UI', system-ui, sans-serif;
   --font-display: 'Mindora Nunito', Nunito, var(--font-text);
   font-family: var(--font-text);

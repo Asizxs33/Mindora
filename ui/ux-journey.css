@@ -29,6 +29,13 @@
   .course-library .ready-course-meta > svg { width:16px; height:16px; padding:2px; }
   .course-library .course-pace { margin-bottom:12px; }
 }
+.course-library .phone-catalog { margin-top: 18px; border-block: 1px solid var(--line); }
+.course-library .phone-catalog > summary { padding-inline: 4px; }
+.course-library .phone-catalog[open] { padding-bottom: 16px; }
+.course-home .course-home-greeting.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); }
+@media (min-width: 921px) {
+  .course-home .course-price-note { text-align: center; }
+}
 
 /* Navigation and controls keep their dimensions across the learning workspace. */
 body.quiet-shell #main :is(.primary, .secondary):not(.icon-button),
@@ -61,10 +68,11 @@ body.quiet-shell #main .course-home .course-home-form-actions {
 .guided-content > .course-language-field { width:min(100%,430px); }
 .roadmap-wizard .course-language-field { margin-top:14px; }
 body.quiet-shell #main .course-home-heading .course-home-mino,
-body.quiet-shell #main .page-character, body.quiet-shell #main .roadmap-tutor .roadmap-guide {
+body.quiet-shell #main .page-character, body.quiet-shell #main :is(.roadmap-intro,.roadmap-tutor,.roadmap-wizard-intro) .roadmap-guide {
   --character-size:var(--mentor-inline); --character-height:var(--mentor-inline);
   width:var(--mentor-inline); height:var(--mentor-inline); flex:0 0 var(--mentor-inline);
 }
+body.quiet-shell #main .roadmap-intro .roadmap-guide.character-human { --character-height: clamp(166px, 42vw, 215px); height: var(--character-height); }
 body.quiet-shell #main .empty-character, body.quiet-shell #main .guided-content .guided-mino,
 body.quiet-shell #main .quiet-mentor { --character-size:var(--mentor-feature); --character-height:var(--mentor-feature); }
 @media(min-width:921px) {

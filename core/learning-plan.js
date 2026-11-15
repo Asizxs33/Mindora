@@ -187,5 +187,10 @@ export function restorePlan(saved) {
   const study = plan.steps.map((step, index) => restoreStudy(
     step, saved.study?.[index], lessonPages(step, index === plan.steps.length - 1),
   ));
-  return { plan, answers, reviews, completed, study };
+  const finished = Array.isArray(saved.finished)
+    ? plan.steps.map((_, i) => i).filter(i => saved.finished.includes(i) && answers[i].trim()) : null;
+  const selected = saved.selected;
+  return { plan, answers, reviews, completed: finished?.length ?? completed, study,
+    ...(finished ? { finished } : {}),
+    ...(Number.isInteger(selected) && selected >= 0 && selected < steps.length ? { selected } : {}) };
 }

@@ -1,6 +1,7 @@
 import { paletteContrast, practiceAnswer } from './lesson-practice.js';
 import { mountLearningLabs } from './lab-controller.js';
 import { runPython } from './python-runner.js';
+import { expressionIssue, studioPreview, updateWorkedStudio } from '../ui/studio-practice.js';
 import { t } from '../ui/language.js';
 
 export function createPracticeController({ document, getPractice, onAnswer, executePython = runPython }) {
@@ -19,6 +20,14 @@ export function createPracticeController({ document, getPractice, onAnswer, exec
     if (!answer) return;
     form.elements.answer.value = JSON.stringify(answer);
     onAnswer(form.elements.answer.value);
+    const studio = form.querySelector('[data-studio-preview]');
+    if (studio) {
+      studio.innerHTML = studioPreview(practice, answer);
+      const expression = form.querySelector('[data-practice-field="expression"]');
+      if (expression) {
+        expression.setCustomValidity(expressionIssue(practice, expression.value));
+      }
+    }
     if (practice.type === 'palette') {
       const preview = form.querySelector('[data-practice-preview]');
       preview.style.background = answer.background;
@@ -28,8 +37,21 @@ export function createPracticeController({ document, getPractice, onAnswer, exec
       form.querySelector('[data-practice-contrast]').textContent = paletteContrast(answer.foreground, answer.background);
     }
   }
+  // Browser validation covers live edits. Revalidate restored drafts before a submit as well.
+  document.addEventListener('submit', event => {
+    if (event.target.id !== 'learning-step-form') return;
+    const field = event.target.querySelector?.('[data-practice-field="expression"]');
+    const practice = getPractice();
+    if (!field || !['sql', 'sheet'].includes(practice?.type)) return;
+    field.setCustomValidity(expressionIssue(practice, field.value));
+    if (!field.reportValidity()) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
   document.addEventListener('input', event => {
     const field = event.target;
+    if (field.dataset?.studioExpression !== undefined) return updateWorkedStudio(field);
     if (!field.dataset?.practiceField || field.disabled || field.form?.id !== 'learning-step-form') return;
     const practice = getPractice();
     if (!practice) return;

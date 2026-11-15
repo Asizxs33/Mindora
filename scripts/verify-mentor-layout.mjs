@@ -131,6 +131,26 @@ try {
   assert.match(await page.locator('[data-character-animation]').getAttribute('src'), /\.png$/);
   assert.equal(await page.locator('.mindora-character').getAttribute('data-character-playing'), 'false');
   await geometry(page, 'reduced-motion');
+
+  // Keep one portrait attached to the lesson introduction as the saved reading cursor moves.
+  await page.addStyleTag({ url: '/ui/lesson-practice.css' });
+  await page.evaluate(async saved => {
+    const { learningPlanView } = await import('/ui/learning-plan.js');
+    document.body.className = 'is-learning quiet-shell';
+    document.querySelector('#app').innerHTML = '<main id="main">' + learningPlanView({ saved }) + '</main>';
+  }, getStarterCourse('python-basics', 'en', 10));
+  for (const size of sizes) {
+    await page.setViewportSize(size);
+    const portraits = page.locator('.lesson-stream .mentor-figure:visible');
+    assert.equal(await portraits.count(), 1);
+    const box = await portraits.locator('.mindora-character').boundingBox();
+    assert.ok(box.width >= 108 && box.height >= 170, 'A human tutor stays large enough to recognise.');
+    const sections = page.locator('[data-reader-section]');
+    await sections.last().evaluate(el => { el.classList.add('is-reading'); el.scrollIntoView(); });
+    assert.equal(await portraits.count(), 1);
+    assert.equal(await portraits.evaluate(el => el.closest('section[data-reader-section]').dataset.readerSection), '0');
+    await geometry(page, 'stable reading portrait ' + size.width);
+  }
   await context.close();
 
   const templates = await browser.newPage();

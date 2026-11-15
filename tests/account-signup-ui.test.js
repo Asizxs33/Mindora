@@ -9,7 +9,7 @@ const source = readFileSync(moduleUrl, 'utf8')
   .replace(/^import .*;\r?$/gm, '')
   .replace(/\bexport (?=function )/g, '')
   .replaceAll('import.meta.url', 'moduleUrl');
-const profile = { name: 'Alex', age: 34, gender: '', interests: [] };
+const profile = { name: 'Alex', age: null, gender: '', interests: [] };
 const user = { id: 'learner-1', name: 'Alex', email: 'alex@example.com' };
 const password = 'demo-password';
 const drain = () => new Promise(resolve => setImmediate(resolve));
@@ -53,11 +53,11 @@ async function accountDialog(hash, responses) {
     email.value = user.email;
     Object.defineProperty(email, 'validity', { value: { valid: true } });
     field('password').value = password;
-    if (field('confirm')) field('confirm').value = password;
+    if (field('confirm')) { field('confirm').value = password; field('privacy').checked = true; }
   };
   async function signup() {
     field('name').value = profile.name;
-    field('age').value = String(profile.age);
+    assert.equal(field('age'), null);
     submit();
     submit();
     fillCredentials();
@@ -67,6 +67,20 @@ async function accountDialog(hash, responses) {
   const openProfile = () => vm.runInContext("openAccount('profile')", context);
   return { accountEvents, dialog, document, location, signup, submit, fillCredentials, field, requests, openProfile };
 }
+
+test('signup requires the data notice to be acknowledged, while signin has no checkbox', async () => {
+  const run = await accountDialog('#signup', []);
+  run.field('name').value = profile.name;
+  run.submit(); run.submit();
+  assert.ok(!run.field('privacy').checked);
+  run.fillCredentials();
+  run.field('privacy').checked = false;
+  run.submit();
+  assert.equal(run.requests.filter(request => request.method === 'POST').length, 0);
+  assert.equal(run.field('privacy').getAttribute('aria-invalid'), 'true');
+  const returning = await accountDialog('#signin', []);
+  assert.equal(returning.field('privacy'), null);
+});
 
 test('a confirmed signup closes the account dialog and signals home navigation', async () => {
   const run = await accountDialog('#signup', [{ user, profile }]);
@@ -100,7 +114,7 @@ test('signup waits for email verification and completes after its profile is sav
   run.submit();
   await drain();
   assert.equal(run.dialog.open, true);
-  assert.equal(run.field('age').value, String(profile.age));
+  assert.equal(run.field('age').value, '');
   assert.notEqual(run.accountEvents.at(-1).detail.reason, 'signup-complete');
   run.submit();
   await drain();
@@ -117,7 +131,7 @@ test('signup keeps the draft available until its failed profile write can be ret
   ]);
   await run.signup();
   assert.equal(run.dialog.open, true);
-  assert.equal(run.field('age').value, String(profile.age));
+  assert.equal(run.field('age').value, '');
   assert.notEqual(run.accountEvents.at(-1).detail.reason, 'signup-complete');
   run.submit();
   await drain();

@@ -37,7 +37,7 @@ test('full curricula preserve 24–48 lessons and source/module metadata through
     assert.deepEqual(saved.sources, raw.sources);
     assert.equal(saved.curriculumVersion, 2);
     assert.equal(roadmapStageStatuses(saved)[0].status, 'ready');
-    assert.ok(roadmapStageStatuses(saved).slice(1).every(stage => stage.status === 'locked'));
+    assert.ok(roadmapStageStatuses(saved).slice(1).every(stage => stage.status === 'available'));
   }
 });
 
@@ -81,7 +81,7 @@ test('source evidence must be complete, safe, unique and consistent with its sta
   assert.equal(normalizeRoadmap({ ...course(), sources: [{ title: 'x'.repeat(161), url: course().sources[0].url }] }), null);
 });
 
-test('lesson progression works beyond the fourth lesson without allowing skips or duplicate saved lessons', () => {
+test('lesson progression works beyond the fourth lesson with out-of-order access and unique saved lessons', () => {
   let saved = restoreRoadmap({ ...course(), id: id(1000) });
   for (let index = 0; index < 9; index++) {
     assert.equal(roadmapStageStatuses(saved)[index].status, 'ready');
@@ -92,11 +92,11 @@ test('lesson progression works beyond the fourth lesson without allowing skips o
   saved = restoreRoadmap(JSON.parse(JSON.stringify(saved)));
   assert.ok(saved.progress.slice(0, 9).every(stage => stage.completed));
   assert.equal(roadmapStageStatuses(saved)[9].status, 'ready');
-  assert.equal(updateRoadmapStage(saved, 10, id(20)), saved);
+  assert.equal(updateRoadmapStage(saved, 10, id(20)).progress[10].courseId, id(20));
   assert.equal(updateRoadmapStage(saved, 9, id(1)), saved);
   assert.equal(restoreRoadmap({ ...saved, progress: saved.progress.slice(0, 4) }), null);
   const skipped = structuredClone(saved); skipped.progress[10] = { courseId: id(11), completed: false };
-  assert.equal(restoreRoadmap(skipped), null);
+  assert.deepEqual(restoreRoadmap(skipped), skipped);
   const duplicated = structuredClone(saved); duplicated.progress[1].courseId = id(1);
   assert.equal(restoreRoadmap(duplicated), null);
 });
@@ -137,9 +137,9 @@ test('syllabus is one continuous path with milestone headings and the current gl
   assert.equal(doc.querySelector('[aria-current="step"] [data-roadmap-stage]').dataset.roadmapStage, '8');
   assert.equal(doc.querySelectorAll('.roadmap-stage-connector').length, 23);
   assert.equal(paths[0].querySelectorAll('.roadmap-stage-text h3').length, 24);
-  assert.match(doc.querySelector('.roadmap-course-scale').textContent, /24 daily lessons/);
-  assert.match(doc.querySelector('.roadmap-course-scale').textContent, /10 min a day/);
-  assert.match(doc.querySelector('.roadmap-course-scale').textContent, /4 weeks/);
+  assert.equal(doc.querySelector('.roadmap-course-scale'), null);
+  assert.match(doc.querySelector('.roadmap-about').textContent, /10 min per lesson/);
+  assert.equal(doc.querySelector('[data-unlock]'), null);
   const source = doc.querySelector('.roadmap-sources a');
   assert.equal(source.getAttribute('href'), course().sources[0].url);
   assert.equal(source.getAttribute('rel'), 'noopener noreferrer');
@@ -183,14 +183,14 @@ test('a compact header action opens the current unfinished lesson without scroll
   }
 });
 
-test('course provenance notices remain visible and generated headings are escaped', () => {
+test('course provenance stays accessible in details and generated headings are escaped', () => {
   const raw = { ...course(), title: '<img src=x onerror=alert(1)>', sourceStatus: 'unavailable', sources: [] };
   raw.modules[0].title = '<script>alert(1)</script>';
   const doc = documentFor(roadmapView({ roadmap: restoreRoadmap(raw) }));
   assert.equal(doc.querySelector('script, img[onerror], [onerror]'), null);
   const notice = doc.querySelector('.roadmap-source-notice');
   assert.ok(notice);
-  assert.equal(notice.closest('details'), null);
+  assert.ok(notice.closest('details:not([open])'));
   assert.equal(doc.querySelector('.roadmap-sources a'), null);
 });
 
@@ -198,10 +198,10 @@ test('course scope labels support all interface languages', () => {
   const previousDocument = globalThis.document;
   globalThis.document = { documentElement: {} };
   try {
-    for (const [language, phrase] of [['en', '10 min a day'], ['ru', '10 мин в день'], ['kk', 'Күніне 10 минут']]) {
+    for (const [language, phrase] of [['en', '10 min per lesson'], ['ru', '10 мин на занятие'], ['kk', '10 мин / сабақ']]) {
       setLanguage(language);
       const doc = documentFor(roadmapView({ roadmap: restoreRoadmap(course()) }));
-      assert.ok(doc.querySelector('.roadmap-course-scale').textContent.includes(phrase));
+      assert.ok(doc.querySelector('.roadmap-about').textContent.includes(phrase));
     }
   } finally {
     setLanguage('en');

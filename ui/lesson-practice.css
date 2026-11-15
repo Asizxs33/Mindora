@@ -85,10 +85,46 @@ body.is-learning .ai-lesson.has-course:has(.lesson-stream) {
 .reader-section + .reader-section { border-top: 1px solid #ebdfd3; }
 .reader-section > h2 { margin: 0 0 14px; font-size: clamp(20px, 3vw, 27px); line-height: 1.22; color: #302723; }
 .lesson-stream .reader-section .ai-lesson-instruction { font-size: 16px; line-height: 1.65; }
-.lesson-stream .reader-section .mentor-scene { grid-template-columns: clamp(88px, 24vw, 140px) minmax(0,1fr); align-items: center; }
-.lesson-stream .reader-section .mentor-figure .mindora-character { --character-size: clamp(88px, 24vw, 140px); --character-height: clamp(115px, 31vw, 180px); }
-.lesson-stream .reader-section:not(.is-reading) .mentor-figure { visibility: hidden; }
+.lesson-stream .reader-section .mentor-scene {
+  --tutor-width: clamp(108px, 30vw, 176px);
+  grid-template-columns: var(--tutor-width) minmax(0, 1fr);
+  align-items: center;
+}
+.lesson-stream .reader-section .mentor-figure .mindora-character {
+  --character-size: var(--tutor-width);
+  --character-height: clamp(176px, 50vw, 252px);
+}
+.lesson-stream .reader-section .mentor-figure .character-mino { --character-height: var(--tutor-width); }
+/* The tutor belongs to the first teaching scene, so scrolling never toggles its visibility. */
+.lesson-stream .reader-section:has(.mentor-figure) ~ .reader-section .mentor-scene { grid-template-columns: minmax(0, 1fr); }
+.lesson-stream .reader-section:has(.mentor-figure) ~ .reader-section .mentor-figure,
+.lesson-stream .reader-section:has(.mentor-figure) ~ .reader-section .mentor-dialogue::before { display: none; }
 .lesson-stream .reader-section .mentor-dialogue h3 { font-size: 17px; }
 .lesson-stream .reader-section .mentor-dialogue p { font-size: 15px; }
 .stream-check { margin-top: 12px; }
 @media (max-width: 600px) { .stream-check { width: 100%; } }
+.studio-grid-scroll { max-width:100%; overflow-x:auto; border:1px solid var(--line); border-radius:10px; }
+.studio-grid { border-collapse:collapse; width:100%; font:500 .93rem/1.45 var(--font-text); }
+.studio-grid th,.studio-grid td { padding:6px 10px; text-align:start; overflow-wrap:anywhere; border-bottom:1px solid var(--line); }
+.studio-grid th { background:var(--accent-soft); color:var(--ink); }
+.studio-grid tr:last-child td { border-bottom:0; }
+.studio-table-name { font-family:monospace; }
+.practice-workspace [data-practice-field="expression"] { width:100%; font:500 1rem/1.5 monospace; }
+.studio-live:empty { display:none; }
+.studio-hint { color:var(--muted); font-size:.9rem; }
+.studio-number { display:block; border-left:4px solid var(--accent); padding:4px 12px; font-weight:750; }
+.studio-values { display:flex; flex-wrap:wrap; gap:10px; }
+.studio-values label { flex:1 1 5rem; min-width:0; }
+.studio-values input,.studio-flow input,.studio-chat input { box-sizing:border-box; width:100%; min-height:44px; margin-top:4px; }
+.studio-bars { display:grid; gap:8px; margin:12px 0; }
+.studio-bar-row { display:grid; grid-template-columns:minmax(3rem,1fr) 2fr auto; gap:8px; align-items:center; }
+.studio-bar-row > span { overflow-wrap:anywhere; }
+.studio-bar-row > div { height:12px; border-radius:5px; background:var(--accent-soft); }
+.studio-bar-row i { display:block; height:100%; border-radius:5px; background:var(--accent); }
+.studio-flow,.studio-chat { margin:0; padding:0; list-style:none; display:grid; gap:12px; }
+.studio-flow li,.studio-chat li { padding:12px; background:var(--accent-soft); border-radius:12px; position:relative; overflow-wrap:anywhere; }
+.studio-flow li+li::before { content:"↓"; position:absolute; top:-16px; left:50%; color:var(--accent-dark); font-weight:bold; }
+.studio-chat label { display:grid; gap:4px; }
+.studio-chat input { border-radius:12px 12px 0 12px; }
+.studio-example { display:grid; gap:12px; }
+.studio-example input { width:100%; min-height:44px; font:500 1rem/1.45 monospace; }

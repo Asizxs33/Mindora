@@ -11,7 +11,7 @@ import { restorePlan } from './learning-plan.js';
 import { normalizeClarification, normalizeRoadmap, restoreRoadmap, restoreRoadmapArchive, ROADMAP_LIBRARY_LIMIT, roadmapInput, roadmapStageStatuses, updateRoadmapStage } from './roadmap-model.js';
 import { buyRewardItem, claimDailyQuest, recordCheckReward, recordLessonReward, rewardScreen } from './roadmap-rewards.js';
 import { createWorkspaceStorage } from './workspace-storage.js';
-import { dayKey, dailyCourse, learningStats } from './progress.js';
+import { dayKey, dailyCourse, finishedSteps, nextOpenStep, learningStepIndex, learningStats } from './progress.js';
 import { posterLayout, posterSvg } from './poster.js';
 import { mountShell, renderShell } from '../ui/shell.js';
 import { phoneCourseNav, phoneCourseLibrary, courseHomeView, readyCoursesView, coursesPage, sidePage, courseNames, lessonNames } from '../ui/dashboard.js';
@@ -249,7 +249,7 @@ function pathForLesson(id) {
 const cloud = createCloudDrafts({
   expectedOwner: () => accountOwner,
   getWorkspace() {
-    if (view !== 'lesson' || state.active !== 'budget' || step < 2) return null;
+    if (view !== 'lesson' || state.active !== 'budget' || step < 2 || step > state.progress.budget) return null;
     const drafts = Object.fromEntries(Object.entries(state.drafts).filter(([key]) => key.startsWith('budget-')));
     return { minutes: state.minutes, goal: state.goals.budget || '', step, progress: Math.min(state.progress.budget, 3), drafts };
   },
@@ -301,9 +301,9 @@ function loadLessonState() {
 for (const field of ['sessions', 'certificates']) if (!state[field] || typeof state[field] !== 'object' || Array.isArray(state[field])) state[field] = {};
 
 function rememberPosition(page, touch = true) {
-  if (view !== 'lesson' || !state.active || step > state.progress[state.active]) return;
+  if (view !== 'lesson' || !state.active) return;
   const readingPage = page ?? Number(document.querySelector('[data-learn-deck]')?.dataset.index || 0);
-  state.sessions[state.active] = { lastSeen: touch ? Date.now() : state.sessions[state.active]?.lastSeen, cursor: { step, page: readingPage, minutes: state.minutes, quizIndex, quizChoice, quizFeedback } };
+  state.sessions[state.active] = { ...state.sessions[state.active], lastSeen: touch ? Date.now() : state.sessions[state.active]?.lastSeen, cursor: { step, page: readingPage, minutes: state.minutes, quizIndex, quizChoice, quizFeedback } };
   save();
 }
 
@@ -362,7 +362,7 @@ function reviewLearningPlan() {
     if (!needsReturnReview(lastSeen, learningHasProgress(state.learningPlan))) return false;
     const saved = state.learningPlan;
     state.returnReview = createReturnReview({ key, title: saved.plan.title, mentor: mentorForTopic(`${saved.plan.goal} ${saved.plan.title}`),
-      questions: learningReviewQuestions(saved), reminder: saved.plan.steps[Math.min(saved.completed, saved.plan.steps.length - 1)]?.instruction || saved.plan.outcome });
+      questions: learningReviewQuestions(saved), reminder: saved.plan.steps[Math.min(learningStepIndex(saved), saved.plan.steps.length - 1)]?.instruction || saved.plan.outcome });
   }
   go('return-review');
   saveLocal();
@@ -502,8 +502,25 @@ function go(next, cursor = null, newCourse = false) {
   $('#main').focus({preventScroll:true});
 }
 function selectCourse(id,goal){if(!COURSES[id]||!ensureLearning(()=>selectCourse(id,goal)))return;state.active=id;state.goals[id]=goal||state.goals[id]||(id==='design'?'Сделать постер для кофейни':'Собрать таблицу ежемесячных расходов');save();go('path');}
-function openStep(index){if(!state.active)return go('discover');if(!Number.isInteger(index)||index<0||index>3)return toast('Finish this step to unlock the next one.');resumeCourse(state.active,index);}
-function finishStep(){const id=state.active;if(step>state.progress[id])return go('builtin-path');const days = new Set(Array.isArray(state.studyDays) ? state.studyDays : []);days.add(dayKey());state.studyDays = [...days];state.progress[id]=Math.max(state.progress[id],step+1);rememberPosition();save();if(step===3){state.practiceCount=(Number(state.practiceCount)||0)+1;certificateData(id);save();go('result');}else{openStep(step+1);}}
+function openStep(index){if(!state.active)return go('discover');if(!Number.isInteger(index)||index<0||index>3)return;resumeCourse(state.active,index);}
+function finishStep() {
+  const id = state.active;
+  const session = state.sessions[id] ??= {};
+  const before = finishedSteps(state.progress[id], session.finished);
+  const finished = [...new Set([...before, step])].sort((a, b) => a - b);
+  const firstCompletion = before.length < 4 && finished.length === 4;
+  session.finished = finished;
+  state.progress[id] = finished.length;
+  state.studyDays = [...new Set([...(state.studyDays || []), dayKey()])];
+  rememberPosition();
+  if (firstCompletion) {
+    state.practiceCount = (Number(state.practiceCount) || 0) + 1;
+    certificateData(id);
+  }
+  save();
+  if (finished.length === 4) go('result');
+  else openStep(nextOpenStep(4, finished, step + 1));
+}
 
 function selectedHomeKind() {
   const kind = state.pathKind || (state.lastLearningType === 'ai' ? 'lesson' : state.lastLearningType);
@@ -518,16 +535,16 @@ function currentHomeCourse() {
   const attributes = { resumeAttributes: 'data-action="resume-current"', pathAttributes: 'data-view="my-path"' };
   if (roadmap && (kind === 'roadmap' || (!state.active && !saved))) {
     const completed = roadmap.progress.filter(stage => stage.completed).length;
-    return { ...attributes, title: roadmap.title, subtitle: roadmap.stages[roadmap.progress.findIndex(stage => !stage.completed)]?.title || roadmap.outcome,
+    return { ...attributes, title: roadmap.title, subtitle: roadmap.stages[roadmapStageStatuses(roadmap).findIndex(stage => stage.status === 'active' || stage.status === 'ready')]?.title || roadmap.outcome,
       completed, total: roadmap.stages.length, minutes: roadmap.minutes };
   }
   if (saved && (kind !== 'builtin' || !state.active)) {
-    return { ...attributes, title: saved.plan.title, subtitle: saved.plan.steps[saved.completed]?.title || saved.plan.outcome,
+    return { ...attributes, title: saved.plan.title, subtitle: saved.plan.steps[learningStepIndex(saved)]?.title || saved.plan.outcome,
       completed: saved.completed, total: saved.plan.steps.length, minutes: saved.plan.minutes };
   }
   if (COURSES[state.active]) {
     const completed = state.progress[state.active] || 0;
-    return { ...attributes, title: courseNames[state.active], subtitle: lessonNames[state.active][Math.min(3, completed)],
+    return { ...attributes, title: courseNames[state.active], subtitle: lessonNames[state.active][resumeCursor(state, state.active).step],
       completed, total: 4, minutes: state.minutes };
   }
   return null;
@@ -538,7 +555,7 @@ function resumeCurrentCourse() {
   const kind = selectedHomeKind();
   const roadmap = restoreRoadmap(state.learningRoadmap);
   if (roadmap && (kind === 'roadmap' || (!state.active && !state.learningPlan))) {
-    const index = roadmap.progress.findIndex(stage => !stage.completed);
+    const index = roadmapStageStatuses(roadmap).findIndex(stage => stage.status === 'active' || stage.status === 'ready');
     roadmapWizard = null;
     go('roadmap');
     if (index >= 0) startRoadmapStage(index);
@@ -586,6 +603,12 @@ function phonePath(roadmapProps) {
 function exploreTask(index) {
   const saved = state.learningPlan;
   if (!canStudy() || !saved?.plan.steps[index] || !Number.isInteger(index)) return;
+  if (!finishedSteps(saved.completed, saved.finished).includes(index)) {
+    saved.selected = index;
+    saveLearning();
+    go('learning-plan');
+    return;
+  }
   previewIndex = index;
   previewState.minutes = saved.plan.minutes;
   previewState.learningPlan = structuredClone(saved);
@@ -598,6 +621,8 @@ function exploreTask(index) {
   }
   previewController.reset();
   // In this isolated copy the cursor can visit any task without writing course progress.
+  delete previewState.learningPlan.finished;
+  delete previewState.learningPlan.selected;
   previewState.learningPlan.completed = index;
   go('task-preview');
 }
@@ -653,7 +678,7 @@ function render() {
     default: html = sidePage(view, state);
   }
   if (canStudy() && phoneLayout?.matches && !startingNew) {
-    const section = view === 'roadmap' && roadmapWizard ? 'new-course'
+    const section = view === 'membership' || (view === 'roadmap' && roadmapWizard) ? 'new-course'
       : ['discover', 'path', 'builtin-path', 'course-path', 'roadmap'].includes(view) ? 'my-path'
       : ['courses', 'new-course'].includes(view) ? view : null;
     if (section) html = phoneCourseNav(section) + html;
@@ -694,7 +719,7 @@ function checkWork(){
   if (checks?.passed) {
     const data = structuredClone(d);
     if (state.active === 'budget') data.limit = budgetSession(state.minutes).limit;
-    state.works[state.active] = {data, challenge:step===3, savedAt:new Date().toISOString()};
+    if (step === 3 || !state.works[state.active]?.challenge) state.works[state.active] = {data, challenge:step===3, savedAt:new Date().toISOString()};
     finishStep();
     return;
   }
@@ -719,10 +744,9 @@ function mixPractice() {
     if (view === 'return-review') { state.returnReview.intent = 'practice'; saveLocal(); }
     return;
   }
-  if (!state.active || state.progress[state.active] < 2) {
-    return toast('Пройди урок и ответь на вопросы, чтобы открыть практику.');
-  }
-  step = state.progress[state.active] >= 3 ? 3 : 2;
+  if (!COURSES[state.active]) return go('courses');
+  const finished = finishedSteps(state.progress[state.active], state.sessions?.[state.active]?.finished);
+  step = finished.includes(2) ? 3 : 2;
   const key = draftKey();
   challengeSeed = Math.max(challengeSeed, Number(state.drafts[key]?.seed) || 0) + 1;
   if (state.active === 'budget') {
@@ -757,8 +781,7 @@ function download(id) {
 function startCurrentStep(practice = false, id = state.active || 'design') {
   if (!ensureLearning(() => startCurrentStep(practice, id))) return;
   if (state.active !== id) selectCourse(id);
-  const current = Math.min(state.progress[id], 3);
-  if (practice && current >= 2) mixPractice();
+  if (practice) mixPractice();
   else resumeCourse(id);
 }
 
@@ -1004,8 +1027,8 @@ function startRoadmapStage(index) {
       && pathKey(restoreRoadmap(state.learningRoadmap)) === requestedPath) startRoadmapStage(index);
     else render();
   })) return;
-  if (selected.status === 'locked') {
-    roadmap = { ...roadmap, opened: [...new Set([...(roadmap.opened || []), index])] };
+  if (!roadmap.opened?.length || roadmap.opened.at(-1) !== index) {
+    roadmap = { ...roadmap, opened: [...(roadmap.opened || []).filter(i => i !== index), index] };
     state.learningRoadmap = roadmap;
     save();
   }
@@ -1357,7 +1380,7 @@ document.addEventListener('click', event => {
     }
     case 'about': modal('about'); break;
     case 'close-modal': $('#modal').close(); break;
-    case 'finish-learn': finishStep(); break;
+    case 'finish-learn': if (view === 'lesson' && step === 0) finishStep(); break;
     case 'check-quiz':
       if (view === 'lesson' && step === 1 && quizChoice !== null) {
         quizFeedback = true;
@@ -1417,10 +1440,22 @@ document.addEventListener('input', event => {
     refreshCertificatePreview(certificateData(state.active));
   }
 });
+window.addEventListener('mindora:guest-entry', () => go('new-course'));
 window.addEventListener('mindora:account-changed', event => {
   const account = getAccountState();
   const owner = account.user?.id || null;
   const reason = event.detail?.reason;
+  if (reason === 'initial' && owner) {
+    try { localStorage.setItem('mindora.introduced', '1'); } catch { /* Storage can be unavailable in private browsing. */ }
+  }
+  if (reason === 'initial' && !owner && !canStudy() && view === 'discover' && !welcomePath && !window.location?.hash) {
+    try {
+      if (!localStorage.getItem('mindora.introduced') && !document.querySelector('dialog[open]')) {
+        localStorage.setItem('mindora.introduced', '1');
+        openAccount('signup');
+      }
+    } catch { /* The welcome page also provides the introduction without device storage. */ }
+  }
   if (reason === 'signout') { pendingLearning = null; pendingRoadmapPrefill = null; }
   const signupComplete = reason === 'signup-complete';
   if (owner === accountOwner && accountReady && !signupComplete) { void cloud.init(); return; }

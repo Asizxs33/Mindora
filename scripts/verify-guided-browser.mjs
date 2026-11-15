@@ -70,6 +70,10 @@ async function context({ signedIn = true, saved = null } = {}) {
   await page.waitForTimeout(250);
   return { ctx, page };
 }
+async function openSamples(page) {
+  const shelf = page.locator('.phone-catalog');
+  if (!await shelf.evaluate(el => el.open)) await shelf.locator('summary').first().click();
+}
 const size = page => page.evaluate(() => ({ width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight, vw: innerWidth, vh: innerHeight }));
 const state = page => page.evaluate(key => JSON.parse(localStorage.getItem(key) || localStorage.getItem('mindora.workspace.v1.guest')), key);
 const nav = (page, view) => page.locator(`#navigation [data-view="${view}"], #mobile-navigation [data-view="${view}"]`).filter({ visible: true }).first();
@@ -83,8 +87,10 @@ try {
     assert.equal(bounds.width, bounds.vw);
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator('.landing-hero [data-view="new-course"]').click();
+  await page.locator('#mindora-account[open] #account-name').waitFor();
+  await page.locator('[data-account-action="guest"]').click();
   await page.locator('.phone-course-nav [data-view="courses"]').click();
+  await openSamples(page);
   assert.ok(await page.locator('.phone-catalog .ready-course').first().isVisible());
   await page.locator('[data-course="design"][data-course-path]').click();
   await page.waitForSelector('.learning-hub');
@@ -154,9 +160,12 @@ try {
   const ready = await context({ saved: { ...saved, sessions: {}, progress: { design: 0, budget: 0 } } });
   const p = ready.page;
   await nav(p, 'courses').click();
-  assert.equal(await p.locator('.ready-course').count(), 9);
+  assert.ok(await p.locator('.ready-course').count() >= 9);
+  await openSamples(p);
   assert.ok(await p.locator('.phone-catalog .ready-course').first().isVisible());
+  await openSamples(p);
   await p.locator('[data-course-minutes="5"]').click();
+  await openSamples(p);
   await p.locator('[data-starter-course="python-basics"]').click();
   await p.waitForSelector('.learning-hub').catch(async error => { console.log('Ready course failure:', JSON.stringify({ errors, state: await state(p), body: (await p.locator('#main').innerText()).slice(0,1800) })); throw error; });
   await p.locator('.learning-hub-node[aria-current="step"], .learning-hub-actions [data-view="learning-plan"]:visible').click();
@@ -178,14 +187,18 @@ try {
   assert.equal((await state(p)).progress.design, 0);
   await p.locator('.ai-lesson-exit').click();
   await nav(p, 'courses').click();
+  await openSamples(p);
   assert.ok(await p.locator('.phone-catalog .ready-course').first().isVisible());
   await p.locator('[data-starter-course="python-basics"]').click();
   await p.waitForSelector('.learning-hub');
   assert.equal((await state(p)).learningPlan.completed, 2);
   for (const minutes of [10, 20]) {
     await nav(p, 'courses').click();
+    await openSamples(p);
     assert.ok(await p.locator('.phone-catalog .ready-course').first().isVisible());
+    await openSamples(p);
     await p.locator(`[data-course-minutes="${minutes}"]`).click();
+    await openSamples(p);
     await p.locator('[data-starter-course="python-basics"]').click();
     await p.waitForSelector('.learning-hub');
     assert.equal((await state(p)).learningPlan.plan.minutes, minutes);
@@ -196,8 +209,13 @@ try {
     await p.locator('#learning-step-form textarea').fill('print("My first saved task")');
     await p.locator('#learning-step-form button[type="submit"]').click();
     await p.locator('[data-learning-step="continue"]').click();
-    await p.locator('[data-lesson-phase="example"] > h2').focus();
-    await p.waitForFunction(key => !JSON.parse(localStorage.getItem(key)).learningCourse.dirty, key);
+    const example = p.locator('[data-lesson-phase="example"]');
+    await example.evaluate(section => section.scrollIntoView({ block: 'start', behavior: 'instant' }));
+    await example.locator('h2').click();
+    await p.waitForFunction(key => {
+      const workspace = JSON.parse(localStorage.getItem(key));
+      return workspace.learningPlan.study[1].page === 1 && !workspace.learningCourse.dirty;
+    }, key);
     await p.reload();
     await p.waitForSelector('.learning-hub');
     assert.equal((await state(p)).learningPlan.completed, 1);
@@ -208,23 +226,29 @@ try {
   }
   // Switching duration never erases the completed 5-minute version.
   await nav(p, 'courses').click();
+  await openSamples(p);
   assert.ok(await p.locator('.phone-catalog .ready-course').first().isVisible());
+  await openSamples(p);
   await p.locator('[data-course-minutes="5"]').click();
+  await openSamples(p);
   await p.locator('[data-starter-course="python-basics"]').click();
   await p.waitForSelector('.learning-hub');
   assert.equal((await state(p)).learningPlan.completed, 2);
   assert.equal((await state(p)).learningPlan.plan.minutes, 5);
-  // Explore a locked starter task without changing the course cursor.
+  // Open a later starter task, resume it, then study the first task.
   for (const id of ['capy-code', 'drawing-studio', 'logarithm-lab']) {
     await nav(p, 'courses').click();
+    await openSamples(p);
     await p.locator('[data-course-minutes="5"]').click();
+    await openSamples(p);
     await p.locator(`[data-starter-course="${id}"]`).click();
     await p.locator('[data-explore-task="1"]').click();
-    await p.waitForSelector('#main[data-page="task-preview"]');
+    await p.waitForSelector('#main[data-page="learning-plan"]');
     assert.ok(await p.locator('#learning-step-form').isVisible());
     await p.locator('.ai-lesson-exit').click();
     assert.equal((await state(p)).learningPlan.completed, 0);
-    await p.locator('.learning-hub-node[aria-current="step"]').click();
+    assert.equal((await state(p)).learningPlan.selected, 1);
+    await p.locator('[data-explore-task="0"]').click();
     for (const width of [320,390,1440]) {
       await p.setViewportSize({ width, height: 844 });
       await p.waitForTimeout(100);
@@ -266,6 +290,7 @@ try {
     await p.locator('.ai-lesson-exit').click();
   }
   await nav(p, 'courses').click();
+  await openSamples(p);
   await p.locator('[data-starter-course="python-basics"]').click();
   // Profile logout is directly reachable on the phone and returns to Mino.
   await p.locator('#mobile-navigation [data-view="profile"]').click();
@@ -301,7 +326,7 @@ try {
   await j.locator('input[name="minutes"][value="5"]').check();
   await j.locator('#roadmap-form button[type="submit"]').click();
   await j.waitForSelector('.roadmap-layout');
-  assert.equal(await j.locator('.roadmap-stage.is-locked').count(), 3);
+  assert.equal(await j.locator('.roadmap-stage.is-available').count(), 3);
   await j.locator('[data-roadmap-stage="0"]').click();
   await j.waitForSelector('.ai-lesson-reader');
   await j.locator('[data-learning-gap]').fill('"Hello"');

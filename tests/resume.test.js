@@ -10,13 +10,13 @@ test('return gate uses strictly more than 24 hours and does not modify learning 
   assert.deepEqual(state, before);
   assert.equal(needsRecap(state, 'budget', 1001 + RECAP_AFTER_MS), false);
 });
-test('unfinished reading and quiz position survive; corrupt cursors cannot unlock a step', () => {
+test('unfinished reading and quiz position survive; opening a later step preserves the cursor without granting credit', () => {
   assert.deepEqual(resumeCursor({ progress: { design: 0 }, sessions: { design: { cursor: { step: 0, page: 2 } } } }, 'design'), { step: 0, page: 2, quizIndex: 0, quizChoice: null, quizFeedback: false });
   const state = { progress: { design: 1 }, sessions: { design: { cursor: { step: 1, quizIndex: 2, quizChoice: 1, quizFeedback: true } } } };
   assert.equal(resumeCursor(state, 'design').quizIndex, 2);
   assert.equal(resumeCursor(state, 'design').quizChoice, 1);
   state.sessions.design.cursor = { step: 3, page: 900, quizIndex: -1 };
-  assert.equal(resumeCursor(state, 'design').step, 1);
+  assert.equal(resumeCursor(state, 'design').step, 3);
   assert.equal(resumeCursor(state, 'design').quizIndex, 0);
 });
 test('no reminder for a first visit, invalid clock, or future timestamp', () => {

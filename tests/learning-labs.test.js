@@ -67,7 +67,7 @@ test('opening a later lesson is saved separately from completion and survives re
   assert.equal(roadmapStageStatuses(path)[3].status, 'active');
   assert.equal(path.progress.filter(s => s.completed).length, 0);
   assert.equal(path.progress[0].courseId, null);
-  assert.equal(restoreRoadmap({ ...path, opened: [] }), null, 'a future course must have an explicit recorded opening');
+  assert.deepEqual(restoreRoadmap({ ...path, opened: [] }).progress, path.progress, 'out-of-order course links are valid without a prior unlock');
 });
 
 test('completed course work becomes a downloadable project, while drafts remain private to the lesson', () => {

@@ -521,7 +521,7 @@ test('an explicitly requested roadmap builds a personalized path and starts only
   assert.match(run.roadmapRequests[0].diagnosticQuestion, /SUM/);
   assert.equal(run.current.html.args[0].roadmap.level, 'intermediate');
   assert.equal(run.current.html.args[0].roadmap.originalGoal, 'I want to learn spreadsheet formulas');
-  assert.deepEqual(run.current.html.args[0].active.map(stage => stage.status), ['ready', 'locked', 'locked', 'locked']);
+  assert.deepEqual(run.current.html.args[0].active.map(stage => stage.status), ['ready', 'available', 'available', 'available']);
   run.click({ roadmapAction: 'start', roadmapStage: '0' });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.generations[0].context.roadmapStage.level, 'intermediate');
@@ -883,7 +883,7 @@ test('finishing a roadmap lesson unlocks its next stage and persists one claimab
   run.click({ learningStep: 'continue' });
   assert.equal(run.saved().learningRewards.lessons, 1);
   run.click({ view: 'roadmap' });
-  assert.deepEqual(run.current.html.args[0].active.map(stage => stage.status), ['completed', 'ready', 'locked', 'locked']);
+  assert.deepEqual(run.current.html.args[0].active.map(stage => stage.status), ['completed', 'ready', 'available', 'available']);
   run.click({ roadmapClaim: 'finish-lesson' });
   assert.equal(run.saved().learningRewards.gems, 35);
   run.click({ roadmapClaim: 'finish-lesson' });

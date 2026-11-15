@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { finishedSteps, learningStepIndex } from '../core/progress.js';
 import * as model from '../core/learning-plan.js';
 import * as assessmentModel from '../core/lesson-assessment.js';
 import { createPracticeController } from '../core/practice-controller.js';
@@ -47,7 +48,7 @@ function controller(initial = { plan: plan() }, { confirm = true, fetch: fetchPo
     querySelector: element,
   };
   const context = vm.createContext({
-    ...model, ...assessmentModel, createPracticeController, document, message: value => value,
+    ...model, ...assessmentModel, finishedSteps, learningStepIndex, createPracticeController, document, message: value => value,
     window: { confirm: message => { confirmations.push(message); return confirm; } },
     AbortSignal: { timeout: () => undefined },
     fetch: async (url, options) => {
@@ -335,4 +336,18 @@ test('an old review cannot mutate or show an error on a replacement lesson', asy
     assert.equal(run.screen.reviewError, '');
     assert.equal(run.screen.busy, null);
   }
+});
+
+test('a later task keeps its answer and credit across reload without completing earlier tasks', async () => {
+  const run = controller({ plan: plan(), selected: 2 });
+  assert.equal(learningStepIndex(run.saved), 2);
+  run.submit('My own final mini-project');
+  await flush();
+  run.click({ learningStep: 'continue' });
+  assert.deepEqual([...run.saved.finished], [2]);
+  assert.equal(run.saved.completed, 1);
+  const restored = controller(run.persisted);
+  assert.equal(learningStepIndex(restored.saved), 0);
+  assert.equal(restored.saved.answers[2], 'My own final mini-project');
+  assert.equal(restored.saved.answers[0], '');
 });

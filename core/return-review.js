@@ -1,3 +1,4 @@
+import { finishedSteps, learningStepIndex } from './progress.js';
 import { normalizeAssessment, normalizeAssessmentResponse, isAssessmentReady, isAssessmentCorrect } from './lesson-assessment.js';
 
 export const RETURN_REVIEW_AFTER_MS = 24 * 60 * 60 * 1000;
@@ -18,10 +19,11 @@ export function learningHasProgress(saved) {
 // Reuse real questions from the material already encountered. Never invent a
 // scored question for a legacy plan that has no assessment.
 export function learningReviewQuestions(saved) {
-  const completed = Math.max(0, Number(saved?.completed) || 0);
+  const finished = finishedSteps(saved?.completed, saved?.finished);
+  const current = saved?.plan?.steps ? learningStepIndex(saved) : null;
   return (Array.isArray(saved?.plan?.steps) ? saved.plan.steps : []).flatMap((step, index) => {
     if (!step || typeof step !== 'object') return [];
-    if (index > completed || (index === completed && !(saved.study?.[index]?.page > 0 || saved.study?.[index]?.checked))) return [];
+    if (!finished.includes(index) && !(index === current && (saved.study?.[index]?.page > 0 || saved.study?.[index]?.checked))) return [];
     const teaching = step.teaching;
     const checkpoint = teaching?.checkpoint;
     const assessment = normalizeAssessment(teaching?.assessment || (checkpoint && {

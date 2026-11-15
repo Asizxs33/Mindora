@@ -29,10 +29,10 @@
 .header-rewards { flex-shrink:0; }
 .header-rewards .roadmap-metrics.is-compact {
   display:flex; gap:4px; padding:3px; margin:0;
-  border:1px solid #eee2d6; border-radius:14px; background:#fffdfa;
+  border:0; background:transparent;
 }
 .header-rewards .roadmap-metrics.is-compact .roadmap-metric {
-  display:grid; grid-template-columns:34px auto; grid-template-rows:auto auto; min-height:44px;
+  display:flex; align-items:center; justify-content:center; min-height:44px;
   padding:4px 9px 4px 5px; column-gap:8px; row-gap:1px; border:0; border-radius:10px;
   background:transparent; color:#33271e;
 }

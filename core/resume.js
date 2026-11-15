@@ -1,3 +1,4 @@
+import { finishedSteps, nextOpenStep } from './progress.js';
 import { readBudgetQuiz } from './budget-session.js';
 // Additive browser progress. Existing stage completion and practice drafts stay intact.
 export const RECAP_AFTER_MS = 24 * 60 * 60 * 1000;
@@ -6,7 +7,8 @@ const bounded = (value, max) => Number.isInteger(value) && value >= 0 && value <
 export function resumeCursor(state, id) {
   const progress = Math.min(4, Math.max(0, Math.floor(Number(state.progress?.[id]) || 0)));
   const saved = state.sessions?.[id]?.cursor;
-  const step = saved && bounded(saved.step, Math.min(progress, 3)) ? saved.step : Math.min(progress, 3);
+  const finished = finishedSteps(progress, state.sessions?.[id]?.finished);
+  const step = saved && bounded(saved.step, 3) ? saved.step : Math.min(nextOpenStep(4, finished), 3);
   const sameDuration = (saved?.minutes ?? 10) === (state.minutes ?? 10);
   const budgetQuiz = id === 'budget' && step === 1 ? readBudgetQuiz(
     state.budgetQuiz?.[state.minutes] || (sameDuration ? { index: saved?.quizIndex, choice: saved?.quizChoice, feedback: saved?.quizFeedback } : null), state.minutes,

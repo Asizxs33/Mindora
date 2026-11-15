@@ -14,7 +14,7 @@ export function reportEntry(progress) {
   return `<button type="button" data-view="weekly-report" class="report-entry"><span class="report-symbol">${icon('sheet',24)}</span><span><strong>${reportTitle()}</strong><small>${subtitle}</small></span>${icon('arrow',18)}</button>`;
 }
 export function membershipView() {
-  return `<section class="report-page"><h1>Mindora Plus</h1><p>${priceLine()}</p><p>${t('Your saved courses and public practice examples stay available.', 'Сохранённые курсы и открытые примеры можно проходить дальше.', 'Сақталған курстарың мен ашық жаттығуларды жалғастыра аласың.')}</p><button class="primary" data-view="courses">${t('Open my courses','Открыть курсы','Курстарымды ашу')}</button>${reportEntry()}</section>`;
+  return `<section class="report-page"><h1>Mindora Plus</h1><p>${t('Your free course is ready to keep learning. Additional courses will cost $9.99/month when subscriptions open.', 'Бесплатный курс доступен. Новые курсы будут стоить $9.99 в месяц, когда откроется подписка.', 'Тегін курсың ашық. Жазылым іске қосылғанда, жаңа курстар айына $9.99 тұрады.')}</p><button class="primary" data-view="courses">${t('Open my courses','Открыть курсы','Курстарымды ашу')}</button></section>`;
 }
 
 export function weeklyReportView({ day, days }, checks) {

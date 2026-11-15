@@ -8,6 +8,9 @@ export function lessonTopic(topic) {
 }
 
 export function topicVisualSchema(topic) {
+  if (/\bsql\b|spreadsheet|excel|google sheets|электронн.{0,8}таблиц|электронды.{0,8}кесте/iu.test(topic)) {
+    return { type: 'table', label: 'Name of the worked dataset', columns: ['item', 'amount'], rows: [['First row', 20], ['Second row', 35]] };
+  }
   switch (lessonTopic(topic)) {
     case 'english': return { type: 'dialogue', label: 'Short real-life situation in the learner language', turns: [
       { speaker: 'Alex', text: "Hi, I’m Alex.", translation: 'Translation in the learner language' },
