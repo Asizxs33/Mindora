@@ -35,7 +35,7 @@ export function landingView({ canResume = false, signedIn = false } = {}) {
   return `<div class="mindora-landing" id="landing-top" data-guided-step="0">
     <header class="landing-header">
       <div class="landing-container landing-header-inner">
-        <a class="brand landing-brand" href="#landing-top" aria-label="Mindora"><img src="${brand}" width="42" height="42" alt=""><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
+        <a class="brand landing-brand" href="#landing-top" aria-label="Mindora"><img class="brand-mark" src="${brand}" width="40" height="40" alt=""><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
         <div class="landing-language">${languagePicker()}</div>
       </div>
     </header>
