@@ -1,4 +1,5 @@
-import { brandNav, courseHomeView, courseNames } from './dashboard.js';
+import { brandNav, courseNames } from './dashboard.js';
+import { mountLandingMotion } from './landing.js';
 import { icon } from './icons.js';
 import { mountCharacters } from './characters.js';
 import { mountPresentation } from './presentation.js';
@@ -11,7 +12,6 @@ import { mountCourseSearch, captureCourseSearch, syncCourseSearch } from './cour
 
 const $ = selector => document.querySelector(selector);
 let desktopLayout;
-let resizeGreeting;
 
 function openDesktopLibrary(panel = $('.course-home-library')) {
   if (panel) panel.open = desktopLayout.matches;
@@ -62,6 +62,8 @@ export function mountShell() {
   roadmapStyles.rel = 'stylesheet';
   roadmapStyles.href = new URL('./roadmap.css', import.meta.url).href;
   document.head.append(roadmapStyles);
+  const landingStyles = document.createElement('link'); landingStyles.rel = 'stylesheet';
+  landingStyles.href = new URL('./landing.css', import.meta.url).href; document.head.append(landingStyles);
   const courseHomeStyles = document.createElement('link');
   courseHomeStyles.rel = 'stylesheet';
   courseHomeStyles.href = new URL('./course-home.css', import.meta.url).href;
@@ -96,11 +98,9 @@ export function mountShell() {
   mountLessonFlow();
   mountAccount();
   mountLanguagePicker();
+  mountLandingMotion();
   desktopLayout = window.matchMedia('(min-width: 921px)');
-  desktopLayout.addEventListener('change', () => {
-    if (resizeGreeting) resizeGreeting();
-    else openDesktopLibrary();
-  });
+  desktopLayout.addEventListener('change', () => openDesktopLibrary());
   window.addEventListener('mindora:account-changed', updateAccountLinks);
 }
 
@@ -187,10 +187,6 @@ export function renderShell(view, state, stats, html, rewards) {
     ? disclosureSelectors.filter(selector => main.querySelector(`${selector}[open]`)) : [];
   const owner = getAccountState().user?.id || '';
   const signedIn = Boolean(owner);
-  const guestGreeting = !signedIn && html.includes('data-guided-step="0"');
-  const originalHtml = html;
-  resizeGreeting = guestGreeting ? () => renderShell(view, state, stats, originalHtml, rewards) : null;
-  if (guestGreeting && desktopLayout.matches) html = courseHomeView(state, { guest: true });
   const guided = html.includes('data-guided-step=');
   const studyLayout = Boolean(desktopLayout.matches && rewards && /class="(?:quiet-home|learning-path course-path|roadmap-layout)/.test(html));
   main.classList.toggle('has-desktop-study', studyLayout);

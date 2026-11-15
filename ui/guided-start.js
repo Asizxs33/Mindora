@@ -3,6 +3,7 @@ import { escapeHtml as esc } from '../core/engine.js';
 import { t, languagePicker } from './language.js';
 import { icon } from './icons.js';
 import { lessonNames } from './dashboard.js';
+import { landingView } from './landing.js';
 
 export const startTopics = () => [
   { id: 'design', label: t('Make a poster', 'Создать постер', 'Постер жасау'), goal: 'Design a clear poster', icon: 'palette' },
@@ -12,6 +13,7 @@ export const startTopics = () => [
 ];
 
 export function guidedStartView({ step = 0, name = '', topic = '', goal = '', minutes = 10, signedIn = false } = {}) {
+  if (step === 0 && !signedIn) return landingView();
   const prompts = [t('Hi, I’m Mino. Tell me what you’d like to learn.', 'Привет, я Мино. Чему хочешь научиться?', 'Сәлем, мен Миномын. Не үйренгің келеді?'),
     t('What should I call you?', 'Как тебя зовут?', 'Сені қалай атайын?'),
     name ? t(`Nice to meet you, ${name}. What interests you?`, `Рад знакомству, ${name}. Что тебе интересно?`, `Танысқаныма қуаныштымын, ${name}. Не қызықтырады?`) : t('What would you like to learn?', 'Чему хочешь научиться?', 'Не үйренгің келеді?'),
