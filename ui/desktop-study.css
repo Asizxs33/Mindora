@@ -45,8 +45,6 @@
    and its activity rail to use the available desktop space. */
 @media (min-width: 921px) {
   body.quiet-shell:has(#main.has-desktop-study) {
-    --sidebar: clamp(190px, 15vw, 252px);
-    --header: 78px;
     --study-ink: #322017;
     --study-muted: #654635;
     --study-line: #eddfd2;
@@ -56,43 +54,9 @@
     background: #fdfbf9;
   }
 
-  body.quiet-shell:has(#main.has-desktop-study) .topbar {
-    border-color: var(--study-line);
-    background: #fffdfb;
-  }
-
-  body.quiet-shell:has(#main.has-desktop-study) .sidebar {
-    padding: 32px clamp(12px, 1.2vw, 20px);
-    border-color: var(--study-line);
-    background: #fffdfa;
-  }
-
-  body.quiet-shell:has(#main.has-desktop-study) .sidebar .nav-item {
-    min-height: 64px;
-    padding: 10px clamp(8px, .72vw, 12px);
-    border: 1px solid transparent;
-    gap: clamp(8px, .84vw, 14px);
-    border-radius: 17px;
-    color: var(--study-muted);
-    font-size: clamp(15px, 1.2vw, 20px);
-    font-weight: 750;
-  }
-
-  body.quiet-shell:has(#main.has-desktop-study) .sidebar .nav-item.active {
-    border-color: #efb78b;
-    background: #ffead5;
-    color: #923600;
-    box-shadow: 0 3px 5px #ad62251c;
-  }
-
-  body.quiet-shell:has(#main.has-desktop-study) .sidebar .nav-symbol {
-    width: clamp(32px, 2.4vw, 40px);
-    height: clamp(32px, 2.4vw, 40px);
-    border-radius: 13px;
-  }
 
   body.quiet-shell:not(.is-guided) #main.has-desktop-study[data-page] {
-    max-width: 1500px;
+    max-width: 1240px;
     padding: 34px clamp(14px, 1.24vw, 22px) 64px clamp(20px, 2.5vw, 42px);
   }
 

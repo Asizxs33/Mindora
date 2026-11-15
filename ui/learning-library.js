@@ -1,5 +1,5 @@
 import { escapeHtml as esc } from '../core/engine.js';
-import { currentLanguage, t } from './language.js';
+import { currentLanguage, languageName, t } from './language.js';
 import { icon } from './icons.js';
 import { courseIllustration } from './course-cover.js';
 
@@ -14,7 +14,7 @@ function courseCard(course, loading, isRoadmap) {
     <div class="learning-library-card-heading">
       <span class="learning-library-course-icon" aria-hidden="true">${courseIllustration(course)}</span>
       <div><h3 lang="${esc(course.language || currentLanguage())}">${esc(course.title)}</h3>
-      ${Number.isFinite(course.minutes) ? `<p class="learning-library-duration">${course.minutes} ${isRoadmap ? t('min per lesson', 'мин на занятие', 'мин сабаққа') : t('min', 'мин', 'мин')}</p>` : ''}</div>
+      ${Number.isFinite(course.minutes) ? `<p class="learning-library-duration">${course.minutes} ${isRoadmap ? t('min per lesson', 'мин на занятие', 'мин сабаққа') : t('min', 'мин', 'мин')}${languageName(course.language) ? ` · <span lang="${esc(course.language)}">${languageName(course.language)}</span>` : ''}</p>` : ''}</div>
     </div>
     ${total ? `<div class="learning-library-progress"><progress max="${total}" value="${completed}" aria-label="${progressLabel}"></progress><span>${done ? t('Completed', 'Завершено', 'Аяқталды') : `${completed}/${total}`}</span></div>` : ''}</div>
     <button type="button" class="secondary" ${isRoadmap ? 'data-learning-roadmap' : 'data-learning-open'}="${esc(course.id)}"${loading ? ' disabled' : ''}>${pathLabel} ${icon('arrow', 18)}</button>

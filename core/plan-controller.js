@@ -276,7 +276,7 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
   document.addEventListener('submit', event => {
     if (event.target.id === 'learning-plan-form') {
       event.preventDefault();
-      void generate(event.target.elements.goal.value.trim(), Number(event.target.elements.minutes.value));
+      void generate(event.target.elements.goal.value.trim(), Number(event.target.elements.minutes.value), { language: event.target.elements.courseLanguage?.value || 'en' });
     }
     if (event.target.id === 'learning-step-form') {
       event.preventDefault();
@@ -365,5 +365,5 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
     }
   });
 
-  return { generate, reset, mountReader, screen: () => ({ goal, minutes, busy, error, reviewError: activeReviewError(), saved: state.learningPlan }) };
+  return { generate, reset, mountReader, screen: () => ({ goal, minutes, courseLanguage: state.courseDraftLanguage, busy, error, reviewError: activeReviewError(), saved: state.learningPlan }) };
 }

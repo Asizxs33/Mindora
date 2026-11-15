@@ -13,10 +13,34 @@ export function checkWeeklyReport(day, draft) {
   };
 }
 
+function calendarDay(value) {
+  const d = new Date(value);
+  return [d.getFullYear(), d.getMonth(), d.getDate()].join('-');
+}
+
+export function reportReturnDue(saved, now = Date.now()) {
+  const first = saved?.days?.[0], second = saved?.days?.[1];
+  return Boolean(first?.completed && first.completedAt > 0 && first.completedAt < now
+    && !second?.completed && calendarDay(first.completedAt) !== calendarDay(now));
+}
+
+export function submitReport(day, draft, now = Date.now()) {
+  const checks = checkWeeklyReport(day, draft);
+  draft.attempts = Math.min((draft.attempts || 0) + 1, 10000);
+  draft.completed = Object.values(checks).every(Boolean);
+  if (draft.completed) draft.completedAt = now;
+  return checks;
+}
+
 export function reportProgress(saved) {
   const days = REPORT_WEEKS.map((_, i) => {
     const draft = Object.fromEntries(['formula', 'total', 'decision'].map(field => [field, String(saved?.days?.[i]?.[field] ?? '').slice(0, 80)]));
-    return { ...draft, completed: Boolean(saved?.days?.[i]?.completed && Object.values(checkWeeklyReport(i, draft)).every(Boolean)) };
+    const entry = saved?.days?.[i];
+    const completed = Boolean(entry?.completed && Object.values(checkWeeklyReport(i, draft)).every(Boolean));
+    return { ...draft, completed,
+      ...(Number.isInteger(entry?.attempts) && entry.attempts > 0 ? { attempts: Math.min(entry.attempts, 10000) } : {}),
+      ...(completed && Number.isSafeInteger(entry.completedAt) && entry.completedAt > 0 ? { completedAt: entry.completedAt } : {}) };
+
   });
   return { day: days[0].completed && saved?.day === 1 ? 1 : 0, days };
 }

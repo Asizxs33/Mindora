@@ -3,7 +3,7 @@ import { lessonPages } from '../core/learning-plan.js';
 import { isAssessmentCorrect, isAssessmentReady, normalizeAssessmentResponse } from '../core/lesson-assessment.js';
 import { timeOptions } from './budget-session.js';
 import { icon } from './icons.js';
-import { currentLanguage, t } from './language.js';
+import { courseLanguageField, currentLanguage, languagePicker, t } from './language.js';
 import { message } from './messages.js';
 import { mentorForTopic, mentorScene, renderLessonTemplate } from './lesson-templates.js';
 import { sceneForTopic } from './learning-scenes.js';
@@ -224,13 +224,15 @@ function lessonView(saved, busy, reviewError, onRoadmap, nextStage) {
   return `<div class="reader-toolbar">
     <button type="button" class="icon-button ai-lesson-exit" data-view="${onRoadmap ? 'my-path' : 'course-path'}" aria-label="${t('Save and leave', 'Сохранить и выйти', 'Сақтап шығу')}">${icon('close', 21)}</button>
     <progress class="reader-progress" data-reader-base="${base}" max="${total}" value="${value}" aria-label="${t('Lesson progress', 'Прогресс занятия', 'Сабақ барысы')}"></progress>
+    ${languagePicker({ compact: true, id: 'reader-language' })}
   </div>
   ${completed === plan.steps.length ? resultView(saved, onRoadmap, nextStage) + historyView(saved) : screenView(saved, busy, reviewError)}`;
 }
 
-function goalForm({ goal, minutes, busy, error }) {
+function goalForm({ goal, minutes, busy, error, courseLanguage }) {
   return `<form id="learning-plan-form">
     <label class="field"><span>${t('What do you want to learn?', 'Чему хочешь научиться?', 'Не үйренгің келеді?')}</span><input name="goal" value="${esc(goal)}" placeholder="${t('For example, design my first poster', 'Например, создать свой первый плакат', 'Мысалы, алғашқы постерімді жасау')}" maxlength="180" minlength="3" required${busy ? ' disabled' : ''}></label>
+    ${courseLanguageField(courseLanguage, Boolean(busy))}
     <label class="field"><span>${t('Time for this lesson', 'Время на занятие', 'Сабақ уақыты')}</span><select name="minutes" class="profile-select"${busy ? ' disabled' : ''}>${timeOptions(minutes)}</select></label>
     <div class="lesson-actions">
       <button class="primary" type="submit"${busy ? ' disabled' : ''}>${busy === 'plan' ? t('Preparing your lesson…', 'Готовим занятие…', 'Сабақ дайындалып жатыр…') : t('Build my lesson', 'Построить занятие', 'Сабақ құру')} ${icon('arrow', 18)}</button>

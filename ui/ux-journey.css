@@ -29,3 +29,53 @@
   .course-library .ready-course-meta > svg { width:16px; height:16px; padding:2px; }
   .course-library .course-pace { margin-bottom:12px; }
 }
+
+/* Navigation and controls keep their dimensions across the learning workspace. */
+body.quiet-shell #main :is(.primary, .secondary):not(.icon-button),
+.guided-footer > .primary, .account-dialog .account-primary {
+  min-height: var(--action-height);
+  padding-block:10px;
+  font: 800 var(--action-type)/1.35 var(--font-display);
+  border-radius: var(--action-radius);
+}
+body.quiet-shell #main :is(.course-home-heading,.course-library-heading,.mobile-profile-header,.report-page,.page-heading,.page-banner,.roadmap-heading,.roadmap-wizard-intro,.learning-hub-heading,.course-path-header) h1,
+body.quiet-shell #main[data-page="profile"] h1, body.quiet-shell #main[data-page="work"] h1,
+body.quiet-shell #main[data-page="quests"] h1, body.quiet-shell #main[data-page="shop"] h1,
+.guided-start.guided-greeting .guided-content h1 {
+  font-family:var(--font-display); font-size:var(--page-title); line-height:1.18; font-weight:850;
+}
+body.quiet-shell #main .course-home .course-home-form-actions {
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;
+}
+.course-home-form-actions > button.primary { grid-column:1/-1; }
+.course-language-field, .course-home .course-home-time {
+  display:grid; align-content:start; gap:5px; min-width:0; margin:0; padding:0; border:0; background:none;
+}
+.course-language-field > span, .course-home .course-home-time > span { color:var(--muted); font:650 14px/1.35 var(--font-text); }
+.course-language-field select, .course-home .course-home-time select {
+  width:100%; min-height:44px; padding:7px 10px; margin:0; border:1px solid var(--line); border-radius:10px;
+  background:white; color:var(--ink); font:650 16px/1.35 var(--font-text);
+}
+.reader-toolbar .language-picker { z-index: 3; }
+.reader-toolbar .language-picker > summary { min-height:44px; }
+.guided-content > .course-language-field { width:min(100%,430px); }
+.roadmap-wizard .course-language-field { margin-top:14px; }
+body.quiet-shell #main .course-home-heading .course-home-mino,
+body.quiet-shell #main .page-character, body.quiet-shell #main .roadmap-tutor .roadmap-guide {
+  --character-size:var(--mentor-inline); --character-height:var(--mentor-inline);
+  width:var(--mentor-inline); height:var(--mentor-inline); flex:0 0 var(--mentor-inline);
+}
+body.quiet-shell #main .empty-character, body.quiet-shell #main .guided-content .guided-mino,
+body.quiet-shell #main .quiet-mentor { --character-size:var(--mentor-feature); --character-height:var(--mentor-feature); }
+@media(min-width:921px) {
+  body.quiet-shell:not(.is-guided):not(.is-learning) #main[data-page] {
+    max-width:1120px;
+    padding:32px clamp(24px, 2.6vw, 42px) 64px;
+  }
+  #main .simple-profile, #main .roadmap-rewards { max-width:800px; margin-inline:0 auto; }
+  .sidebar .nav-item {
+    width:100%; min-height:54px; gap:12px; padding:9px 12px;
+    font:700 16px/1.35 var(--font-text); border-radius:14px;
+  }
+  .sidebar .nav-symbol { width:36px; height:36px; }
+}

@@ -26,15 +26,21 @@ export function translateKnown(value, translations) {
   return Object.hasOwn(translations, value) ? t(...translations[value]) : value;
 }
 
-export function languagePicker({ compact = false } = {}) {
-  const label = t('Language', 'Язык', 'Тіл');
+export const languageName = code => languages.find(([value]) => value === code)?.[1] || '';
+
+export function courseLanguageField(value = 'en', disabled = false) {
+  return `<label class="course-language-field"><span>${t('Course language','Язык курса','Курс тілі')}</span><select name="courseLanguage"${disabled ? ' disabled' : ''}>${languages.map(([code, name]) => `<option value="${code}" lang="${code}"${code === languageCode(value) ? ' selected' : ''}>${name}</option>`).join('')}</select></label>`;
+}
+
+export function languagePicker({ compact = false, id = 'interface-language' } = {}) {
+  const label = t('Interface language', 'Язык интерфейса', 'Интерфейс тілі');
   const [, name, shortName] = languages.find(([code]) => code === current);
   return `<details class="language-picker${compact ? ' is-compact' : ''}">
     <summary aria-label="${label}. ${name}">${icon('globe', 17)}<span lang="${current}">${compact ? shortName : name}</span>${icon('chevron', 14)}</summary>
     <div class="language-picker-options" role="group" aria-label="${label}">
       ${languages.map(([code, name]) => `<button type="button" data-interface-language="${code}" aria-pressed="${current === code}"><span lang="${code}">${name}</span>${current === code ? icon('check', 16) : ''}</button>`).join('')}
     </div>
-    <select id="interface-language" aria-label="${label}" hidden>
+    <select id="${id}" data-interface-select aria-label="${label}" hidden>
       ${languages.map(([code, name]) => `<option value="${code}" lang="${code}"${current === code ? ' selected' : ''}>${name}</option>`).join('')}
     </select>
   </details>`;
@@ -47,13 +53,14 @@ export function mountLanguagePicker() {
     if (open && open !== picker) open.open = false;
     const option = event.target.closest('[data-interface-language]');
     if (!option || !picker) return;
-    const select = picker.querySelector('#interface-language');
+    const select = picker.querySelector('[data-interface-select]');
+    const id = select.id;
     picker.open = false;
     if (select.value !== option.dataset.interfaceLanguage) {
       select.value = option.dataset.interfaceLanguage;
       select.dispatchEvent(new Event('change', { bubbles: true }));
     }
-    document.querySelector('.language-picker > summary')?.focus();
+    document.getElementById(id)?.closest('.language-picker')?.querySelector('summary')?.focus();
   });
   document.addEventListener('keydown', event => {
     const picker = event.target.closest('.language-picker[open]');
