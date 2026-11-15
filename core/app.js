@@ -30,6 +30,7 @@ import { getAccountState, openAccount, closeAccount, expireAccountSession } from
 import { learningLibraryView, learningSyncView, loginRequiredView } from '../ui/learning-library.js';
 import { showWorkspaceConflict } from '../ui/workspace-conflict.js';
 import { guidedStartView, quietHomeView, startTopics } from '../ui/guided-start.js';
+import { landingView } from '../ui/landing.js';
 import { needsReturnReview, learningHasProgress, learningReviewQuestions, createReturnReview, restoreReturnReview } from './return-review.js';
 import { returnReviewView, mountReturnReview } from '../ui/return-review.js';
 import { getStarterCourse, starterCourses } from './starter-courses.js';
@@ -68,6 +69,7 @@ state.language = languageCode(deviceLanguage, languageCode(state.language));
 setLanguage(state.language);
 const resume = readBudgetResume(state);
 const phoneLayout = window.matchMedia?.('(max-width: 920px)');
+const welcomePath = /^\/welcome\/?$/.test(window.location?.pathname || '');
 let view = 'discover';
 let startingNew = false;
 let introduction = { step: 0, name: '', topic: '', goal: '', minutes: state.minutes };
@@ -450,13 +452,15 @@ function go(next, cursor = null, newCourse = false) {
   if (['path', 'builtin-path'].includes(next) && !Object.hasOwn(COURSES, state.active)) return go('courses');
   if (next === 'learning-plan' && !newCourse && view !== next && reviewLearningPlan()) return;
   if (view === 'learning-plan' && next !== view && next !== 'return-review') { rememberLearningVisit(); saveLocal(); }
-  if (next === 'weekly-report' || window.location?.hash === '#weekly-report') {
-    window.history.replaceState(null, '', window.location.pathname + window.location.search + (next === 'weekly-report' ? '#weekly-report' : ''));
-    reportChecks = null;
-    if (next === 'weekly-report' && reportReturnDue(state.weeklyReport) && state.weeklyReport.day === 0) {
-      state.weeklyReport.day = 1;
-      save();
-    }
+  const reportRoute = next === 'weekly-report' || window.location?.hash === '#weekly-report';
+  if (view === 'welcome' || reportRoute) {
+    const path = view === 'welcome' ? '/' : window.location.pathname;
+    window.history.replaceState(null, '', path + window.location.search + (next === 'weekly-report' ? '#weekly-report' : ''));
+  }
+  if (reportRoute) reportChecks = null;
+  if (next === 'weekly-report' && reportReturnDue(state.weeklyReport) && state.weeklyReport.day === 0) {
+    state.weeklyReport.day = 1;
+    save();
   }
   view = next;
   if (next !== 'discover') startingNew = false;
@@ -606,6 +610,7 @@ function render() {
     busy: roadmapOperation?.kind, error: roadmapError, rewards, quests: rewards?.quests ?? [], items: rewards?.items ?? [] };
   let html;
   switch (view) {
+    case 'welcome': html = landingView({ canResume: canStudy(), signedIn: Boolean(accountOwner) }); break;
     case 'discover':
       if (!canStudy() || startingNew) html = guidedStartView({ ...introduction, courseLanguage: state.courseDraftLanguage, signedIn: Boolean(accountOwner) });
       else html = phoneLayout?.matches || selectedHomeKind() ? phonePath(roadmapProps) : homeScreen();
@@ -1304,11 +1309,9 @@ document.addEventListener('click', event => {
     return;
   }
   if (button.matches('[data-home]')) {
-    event.preventDefault();
-    startingNew = false;
     captureRoadmapAnswers($('#roadmap-form'));
     rememberPosition();
-    return go('discover');
+    return;
   }
   if (destination || course) {
     captureRoadmapAnswers($('#roadmap-form'));
@@ -1437,7 +1440,7 @@ window.addEventListener('mindora:account-changed', event => {
     builtinSnapshot = JSON.stringify(builtinData(state));
     for (const field of ['sessions', 'certificates']) if (!state[field] || typeof state[field] !== 'object' || Array.isArray(state[field])) state[field] = {};
     plans.reset();
-    view = owner && ['courses', 'weekly-report'].includes(view) ? view : 'discover';
+    if (view !== 'welcome' && !(owner && ['courses', 'weekly-report'].includes(view))) view = 'discover';
     startingNew = false;
     if (!pendingLearning) introduction = { step: owner ? 2 : 0, name: account.profile?.name || '', topic: '', goal: '', minutes: state.minutes };
     checks = null;
@@ -1445,7 +1448,7 @@ window.addEventListener('mindora:account-changed', event => {
     saveWarning = false;
     render();
   }
-  if (owner && signupComplete && !pendingLearning) go('discover');
+  if (owner && (signupComplete || (view === 'welcome' && reason === 'signin')) && !pendingLearning) go('discover');
   void Promise.all([library.setUser(account.user || (state.guestLearning ? guestUser() : null)), builtins.setUser(account.user)]).then(() => {
     if (version !== accountEpoch || owner !== accountOwner) return;
     accountReady = Boolean(owner);
@@ -1486,7 +1489,8 @@ mountReturnReview({
 });
 
 $('#modal').addEventListener('click',e=>{if(e.target===$('#modal')){const r=$('#modal').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('#modal').close();}});
-if (window.location?.hash === '#weekly-report') go('weekly-report');
+if (welcomePath) { view = 'welcome'; render(); }
+else if (window.location?.hash === '#weekly-report') go('weekly-report');
 else if (window.location?.hash === '#courses') {
   window.history.replaceState(null, '', window.location.pathname + window.location.search);
   go('courses');

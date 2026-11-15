@@ -13,9 +13,6 @@ body.quiet-shell.is-guided .app-shell:has(.mindora-landing) { max-width: none; }
 .landing-container { width: min(100% - 56px, 1000px); margin-inline: auto; }
 .landing-header { position: relative; z-index: 10; background: #fff; }
 .landing-header-inner { display: flex; justify-content: space-between; align-items: center; gap: 20px; min-height: 64px; }
-.landing-brand { color: var(--landing-orange); }
-.landing-brand .brand-wordmark { font-size: 31px; }
-.landing-brand .brand-wordmark > span { color: #843610; }
 .landing-language .language-picker > summary { border: 0; padding: 0 5px; background: #fff; color: var(--landing-muted); }
 .landing-language .language-picker > summary > svg { color: var(--landing-muted); }
 .landing-language .language-picker > summary:hover, .landing-language .language-picker[open] > summary { background: #fff7f0; }
@@ -69,6 +66,7 @@ body.quiet-shell.is-guided .app-shell:has(.mindora-landing) { max-width: none; }
   text-wrap: balance;
 }
 .mindora-landing .landing-start { background: var(--landing-orange); color: #fff; box-shadow: 0 4px 0 #863208; }
+.mindora-landing a.landing-start { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .mindora-landing .landing-start:hover { background: #9f3a0d; }
 .mindora-landing .landing-start:active { transform: translateY(2px); box-shadow: 0 2px 0 #863208; }
 .mindora-landing .landing-signin { border: 2px solid #e8e0da; background: #fff; color: #933c16; box-shadow: 0 3px 0 #e8e0da; }
@@ -167,9 +165,7 @@ body.quiet-shell.is-guided .app-shell:has(.mindora-landing) { max-width: none; }
 @media (max-width: 700px) {
   .landing-container { width: min(100% - 36px, 480px); }
   .landing-header-inner { display: grid; grid-template-columns: 1fr auto 1fr; min-height: 60px; gap: 8px; }
-  .landing-brand { grid-column: 2; gap: 6px; }
-  .landing-brand .brand-wordmark { font-size: 26px; }
-  .landing-brand img { width: 34px; height: 34px; }
+  .landing-brand { grid-column: 2; }
   .landing-language { justify-self: end; }
   .landing-language .language-picker > summary { gap: 4px; font-size: 12px; min-height: 42px; }
   .landing-language .language-picker > summary > svg:first-child { display: none; }

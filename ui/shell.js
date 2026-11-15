@@ -77,7 +77,7 @@ export function mountShell() {
   journeyStyles.href = new URL('./ux-journey.css', import.meta.url).href; document.head.append(journeyStyles);
   document.querySelector('#app').innerHTML = `<a class="skip-link" href="#main">Skip to learning</a>
   <header class="topbar">
-    <a class="brand" data-home href="#discover" aria-label="Mindora home"><img class="brand-mark" src="ui/assets/brand-mark.svg" alt="" width="40" height="40"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
+    <a class="brand" data-home href="/welcome" aria-label="Mindora home"><img class="brand-mark" src="/ui/assets/brand-mark.svg" alt="" width="40" height="40"><span class="brand-wordmark">mindora<span aria-hidden="true">.</span></span></a>
     <nav id="top-navigation" aria-label="Main navigation"></nav>
     <div class="top-actions" id="top-actions"></div>
   </header>
