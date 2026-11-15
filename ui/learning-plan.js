@@ -97,7 +97,10 @@ function illustrationView(step) {
 }
 
 function exampleView(teaching, mentor, topic) {
-  return renderLessonVisual(teaching.example.visual) + renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output, explanation: teaching.example.explanation, sceneFrame: sceneForTopic(topic) }, {}, { external: true, mentor });
+  const codeExample = /\b(python|javascript|programming|coding|html|css|sql)\b|программ|бағдарлам/i.test(topic);
+  return renderLessonVisual(teaching.example.visual) + renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output, explanation: teaching.example.explanation, sceneFrame: sceneForTopic(topic), codeExample,
+    ...(codeExample ? { beforeLabel: t('Code', 'Код', 'Код'), afterLabel: t('Output', 'Результат', 'Нәтиже') } : {}),
+  }, {}, { external: true, mentor });
 }
 
 function checkpointView(teaching, study, busy, mentor) {
@@ -188,11 +191,13 @@ function screenView(saved, busy, reviewError) {
     case 'recap': content = recapView(teaching, mentor); break;
     default: content = practiceView(step, answers[completed], reviews[completed], busy, reviewError, last, mentor, plan.formatVersion === 3);
   }
-  return `<section class="ai-lesson-reader" aria-label="${t('Current lesson task', 'Текущее задание', 'Ағымдағы тапсырма')}" lang="${esc(plan.language)}" aria-busy="${Boolean(busy)}">
+  const phaseIcon = { explain: 'book', illustration: 'image', example: 'layers', check: 'target', recap: 'leaf', practice: 'edit' }[page];
+  return `<section class="ai-lesson-reader" data-lesson-phase="${page}" aria-label="${t('Current lesson task', 'Текущее задание', 'Ағымдағы тапсырма')}" lang="${esc(plan.language)}" aria-busy="${Boolean(busy)}">
     <div class="ai-lesson-task-meta" lang="${esc(currentLanguage())}"><span>${t(`Task ${completed + 1} of ${plan.steps.length}`, `Задание ${completed + 1} из ${plan.steps.length}`, `${plan.steps.length} тапсырманың ${completed + 1}-і`)}</span><span>${icon('clock', 16)} ${t(`${step.minutes} min`, `${step.minutes} мин`, `${step.minutes} мин`)}</span></div>
     <ol class="ai-lesson-stages${pages.length > 4 ? ' is-expanded' : ''}" aria-label="${t('Task screens', 'Экраны задания', 'Тапсырма экрандары')}" lang="${esc(currentLanguage())}">${pages.map((name, index) => `<li class="${index === pageIndex ? 'is-current' : index < pageIndex ? 'is-done' : ''}"${index === pageIndex ? ' aria-current="step"' : ''}><span class="ai-lesson-stage-dot" aria-hidden="true">${index < pageIndex ? icon('check', 12) : index + 1}</span><span>${pageName(name)}</span></li>`).join('')}</ol>
     <article class="ai-lesson-page">
       <header class="ai-lesson-page-heading">
+        <span class="ai-lesson-phase-symbol" aria-hidden="true">${icon(phaseIcon, 23)}</span>
         ${page === 'explain' ? '' : `<p class="ai-lesson-context">${esc(step.title)}</p>`}
         <h2 id="learning-page-title" tabindex="-1"${page === 'explain' ? '' : ` lang="${esc(currentLanguage())}"`}>${page === 'explain' ? esc(step.title) : last && page === 'practice' ? t('Independent task', 'Самостоятельная работа', 'Өздік жұмыс') : pageName(page)}</h2>
       </header>
@@ -200,7 +205,7 @@ function screenView(saved, busy, reviewError) {
     </article>
     <nav class="ai-lesson-page-navigation" aria-label="${t('Lesson navigation', 'Навигация по занятию', 'Сабақ бойынша навигация')}" lang="${esc(currentLanguage())}">
       <button class="secondary" type="button" data-learning-page="back"${busy || pageIndex === 0 ? ' disabled' : ''}>${icon('back', 18)} ${t('Back', 'Назад', 'Артқа')}</button>
-      <span class="ai-lesson-page-count">${t(`Screen ${pageIndex + 1} of ${pages.length}`, `Экран ${pageIndex + 1} из ${pages.length}`, `${pages.length} экранның ${pageIndex + 1}-і`)}</span>
+      <span class="ai-lesson-page-count">${t(`Screen ${pageIndex + 1} of ${pages.length}`, `Экран ${pageIndex + 1} из ${pages.length}`, `${pages.length} экранның ${pageIndex + 1}-і`)}${pages[pageIndex + 1] ? `<small>${t('Up next', 'Далее', 'Келесі')}: ${pageName(pages[pageIndex + 1])}</small>` : ''}</span>
       ${page === 'practice' ? '' : page === 'check' && !checkedCorrect ? `<button type="button" data-learning-page="next" disabled hidden aria-hidden="true" tabindex="-1">${t('Continue', 'Продолжить', 'Жалғастыру')}</button><button class="primary ai-lesson-check-button" type="button" data-learning-page="check"${busy || !canCheck ? ' disabled' : ''}>${study.checked && !assessment ? t('Check again', 'Проверить ещё раз', 'Қайта тексеру') : t('Check answer', 'Проверить ответ', 'Жауапты тексеру')}</button>` : `<button class="primary" type="button" data-learning-page="next"${busy ? ' disabled' : ''}>${page === 'recap' || (page === 'check' && !assessment) ? t('Try it yourself', 'Перейти к практике', 'Өзің орындау') : t('Next', 'Дальше', 'Әрі қарай')} ${icon('arrow', 18)}</button>`}
     </nav>
   </section>`;
@@ -215,7 +220,6 @@ function lessonView(saved, busy, reviewError, onRoadmap, rewards, nextStage) {
       ${rewards ? `<span class="ai-lesson-life-count">${icon('heart', 18)} ${t(`${rewards.hearts}/${rewards.maxHearts} lives`, `Жизни ${rewards.hearts}/${rewards.maxHearts}`, `Өмір ${rewards.hearts}/${rewards.maxHearts}`)}</span>` : ''}
     </div>
     <div class="ai-lesson-overall"><progress max="${plan.steps.length}" value="${completed}" aria-label="${t('Completed tasks', 'Выполненные задания', 'Орындалған тапсырмалар')}"></progress><span lang="${esc(currentLanguage())}">${t(`${completed} of ${plan.steps.length} tasks complete`, `Выполнено ${completed} из ${plan.steps.length} заданий`, `${plan.steps.length} тапсырманың ${completed} орындалды`)}</span></div>
-    ${onRoadmap ? `<button type="button" class="text-link" data-view="my-path">${icon('back', 16)} ${t('My learning path', 'Мой путь обучения', 'Оқу жолым')}</button>` : ''}
   </header>
   ${completed === plan.steps.length ? resultView(saved, onRoadmap, nextStage) : screenView(saved, busy, reviewError)}
   ${historyView(saved)}`;
