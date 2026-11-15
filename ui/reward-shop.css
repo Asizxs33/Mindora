@@ -19,8 +19,6 @@
   background-repeat: no-repeat;
 }
 .reward-illustration-trophy { grid-area: art; width: min(100%, 166px); justify-self: center; background-position: 0 0; }
-.reward-illustration-hearts { background-position: 100% 0; }
-.reward-illustration-freeze { background-position: 0 100%; }
 .rewards-hero-copy { grid-area: copy; align-self: end; }
 .rewards-hero-copy p { max-width: 45ch; margin-top: 5px; color: #675649; line-height: 1.45; }
 .rewards-hero .roadmap-metrics { grid-area: balance; align-self: start; margin: 0; gap: 8px; }
@@ -52,10 +50,8 @@
   border-radius: 15px;
   background: #fffdfa;
 }
-.reward-shop-art { color: #a34e2a; display: grid; place-items: center; min-height: 74px; border-radius: 10px; background: #f9eee9; }
-.reward-shop-art-freeze, .reward-shop-art-mistake-shield { background: #edf0e7; color: #527052; }
-.reward-shop-art-lesson-bonus { background: #f7eedf; color: #925629; }
-.reward-shop-art .reward-illustration { width: min(100%, 74px); }
+.reward-shop-icon { display: grid; place-items: center; min-height: 74px; border-radius: 10px; background: #f7ecdf; color: #9b4e23; }
+.reward-shop-icon .heart-outline { fill: none; stroke: currentColor; stroke-width: inherit; }
 .roadmap-rewards-list .reward-shop-copy h3 { color: var(--ink); font-size: 19px; }
 .roadmap-rewards-list .reward-shop-copy p { margin-top: 3px; color: #675649; font-size: 14px; line-height: 1.45; }
 .reward-shop-state { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 11px; margin-top: 8px; }
@@ -115,7 +111,7 @@
   .roadmap-rewards .rewards-hero .roadmap-metrics .roadmap-metric > strong { font-size: 17px; }
   .roadmap-rewards .rewards-hero .roadmap-metrics .roadmap-metric > span { font-size: 10px; overflow-wrap: anywhere; }
   .reward-shop-card { grid-template-columns: 52px minmax(0, 1fr) auto; gap: 9px; padding: 10px; }
-  .reward-shop-art { min-height: 54px; }
+  .reward-shop-icon { min-height: 54px; }
   .roadmap-rewards-list .reward-shop-copy h3 { font-size: 15px; }
   .roadmap-rewards-list .reward-shop-copy p { font-size: 12px; }
   .reward-shop-card .reward-cost { min-width: 55px; padding-inline: 5px; gap: 3px; font-size: 15px; }
