@@ -192,6 +192,10 @@ export function renderShell(view, state, stats, html, rewards) {
   const id = state.active;
   const main = $('#main');
   const sameView = main.dataset.page === view;
+  const openLanguagePicker = sameView ? document.querySelector('.language-picker[open]') : null;
+  const pickerId = openLanguagePicker?.querySelector('[data-interface-select]')?.id;
+  const pickerHadFocus = openLanguagePicker?.contains(document.activeElement);
+  const focusedLanguage = pickerHadFocus ? document.activeElement.dataset.interfaceLanguage : null;
   const wasStudyLayout = main.classList.contains('has-desktop-study');
   const hadPath = Boolean(main.querySelector('.learning-hub,.roadmap-layout,.course-path'));
   const quizFocus = rememberQuizFocus(main, view);
@@ -254,7 +258,17 @@ export function renderShell(view, state, stats, html, rewards) {
   expandedPanels.forEach(selector => { const panel = main.querySelector(selector); if (panel) panel.open = true; });
   syncLessonFlow(main);
   restoreQuizFocus(main, quizFocus);
-  const titles = { discover: t('Learn','Обучение','Оқу'), courses: t('My courses','Мои курсы','Курстарым'), practice: t('Practice','Практика','Жаттығу'), path: t('My learning path','Мой маршрут','Оқу жолым'), lesson: courseNames[id], 'learning-plan': t('My lesson','Моё занятие','Сабағым'), recap: t('A quick refresh','Повторение','Қайталау'), certificate: t('Your certificate','Твой сертификат','Сертификатың'), result: t('You did it','Готово','Дайын'), work: t('My projects','Мои проекты','Жобаларым'), achievements: t('Milestones','Достижения','Жетістіктер'), community: t('Community','Сообщество','Қауымдастық'), profile: t('Profile','Профиль','Профиль') };
+  if (pickerId) {
+    const picker = document.getElementById(pickerId)?.closest('.language-picker');
+    if (picker && picker.getClientRects().length) {
+      picker.open = true;
+      if (pickerHadFocus) {
+        const control = focusedLanguage ? picker.querySelector('[data-interface-language="' + focusedLanguage + '"]') : picker.querySelector('summary');
+        control?.focus({ preventScroll: true });
+      }
+    }
+  }
+  const titles = { welcome: t('Welcome','Добро пожаловать','Қош келдіңіз'), discover: t('Learn','Обучение','Оқу'), courses: t('My courses','Мои курсы','Курстарым'), practice: t('Practice','Практика','Жаттығу'), path: t('My learning path','Мой маршрут','Оқу жолым'), lesson: courseNames[id], 'learning-plan': t('My lesson','Моё занятие','Сабағым'), recap: t('A quick refresh','Повторение','Қайталау'), certificate: t('Your certificate','Твой сертификат','Сертификатың'), result: t('You did it','Готово','Дайын'), work: t('My projects','Мои проекты','Жобаларым'), achievements: t('Milestones','Достижения','Жетістіктер'), community: t('Community','Сообщество','Қауымдастық'), profile: t('Profile','Профиль','Профиль') };
   const roadmapTitles = { 'weekly-report': t('Weekly report','Еженедельный отчёт','Апталық есеп'), membership: 'Mindora Plus', 'new-course': t('Create a course','Создать курс','Курс жасау'), 'task-preview': t('Practice preview','Пробный режим','Сынап көру'), roadmap: t('My learning path','Мой путь обучения','Оқу жолым'), 'course-path': t('My learning path','Мой путь обучения','Оқу жолым'), 'builtin-path': t('My learning path','Мой путь обучения','Оқу жолым'), quests: t('Daily quests','Задания дня','Күндік тапсырмалар'), shop: t('Gem shop','Магазин алмазов','Алмас дүкені'), 'return-review': t('A quick refresh','Повторение','Қайталау') };
   document.title = `${titles[view] || roadmapTitles[view] || titles.discover} · Mindora`;
 }

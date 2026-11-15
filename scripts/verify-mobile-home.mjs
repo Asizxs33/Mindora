@@ -189,6 +189,17 @@ try {
   await page.locator('.phone-course-nav [data-view="new-course"]').click();
   await assertComposerSurvivesResponse(delayed, 'Late saved-course refresh');
 
+  await nav(page, 'courses').click();
+  const languageRefresh = delayed.holdNextLibrary();
+  await page.locator('[data-learning-refresh]').evaluate(button => button.click());
+  await languageRefresh;
+  await page.locator('.language-picker:visible summary').click();
+  const response = page.waitForResponse(r => r.url().includes('/api/learning-courses'));
+  delayed.releaseLibrary();
+  await response;
+  await page.locator('[data-interface-language="kk"]:visible').click();
+  assert.equal(await page.locator('html').getAttribute('lang'), 'kk');
+  checks.push('Language choice survives a background library refresh');
   await nav(page, 'profile').click();
   await page.locator('.profile-signout').click();
   await page.waitForSelector('.mindora-landing');
