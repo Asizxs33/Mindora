@@ -1,8 +1,10 @@
 import { paletteContrast, practiceAnswer } from './lesson-practice.js';
+import { mountLearningLabs } from './lab-controller.js';
 import { runPython } from './python-runner.js';
 import { t } from '../ui/language.js';
 
 export function createPracticeController({ document, getPractice, onAnswer, executePython = runPython }) {
+  const labs = mountLearningLabs({ document, getPractice });
   let running = null;
   const cancel = () => {
     if (!running) return;
@@ -82,5 +84,5 @@ export function createPracticeController({ document, getPractice, onAnswer, exec
       if (running === operation) { operation.cleanup(false); running = null; }
     }
   });
-  return { cancel };
+  return { cancel() { cancel(); labs.cancel(); } };
 }

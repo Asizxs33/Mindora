@@ -126,6 +126,8 @@ export function restoreRoadmap(raw) {
   if (!roadmap) return null;
   const id = roadmapCourseId(raw.id);
   if (raw.id !== undefined && !id) return null;
+  const opened = raw.opened ?? [];
+  if (!Array.isArray(opened) || opened.length > roadmap.stages.length || opened.some(i => !Number.isInteger(i) || i < 0 || i >= roadmap.stages.length) || new Set(opened).size !== opened.length) return null;
   const saved = raw.progress;
   const progress = [];
   const ids = new Set();
@@ -135,12 +137,12 @@ export function restoreRoadmap(raw) {
     const entry = saved === undefined ? { courseId: null, completed: false } : saved[index];
     const courseId = roadmapCourseId(entry?.courseId);
     if (typeof entry?.completed !== 'boolean' || (entry.courseId !== null && !courseId)
-      || (entry.completed && !courseId) || (locked && courseId) || (courseId && ids.has(courseId))) return null;
+      || (entry.completed && !courseId) || (locked && courseId && !opened.includes(index)) || (courseId && ids.has(courseId))) return null;
     if (courseId) ids.add(courseId);
     progress.push({ courseId, completed: entry.completed });
     if (!entry.completed) locked = true;
   }
-  return { ...roadmap, ...(id ? { id } : {}), progress };
+  return { ...roadmap, ...(id ? { id } : {}), ...(opened.length ? { opened: [...opened] } : {}), progress };
 }
 
 export function restoreRoadmapArchive(raw, active) {
@@ -167,7 +169,7 @@ export function roadmapStageStatuses(roadmap) {
   const next = progress.findIndex(stage => !stage.completed);
   return progress.map((stage, index) => ({
     courseId: stage.courseId,
-    status: stage.completed ? 'completed' : index !== next ? 'locked' : stage.courseId ? 'active' : 'ready',
+    status: stage.completed ? 'completed' : index !== next && !roadmap.opened?.includes(index) ? 'locked' : stage.courseId ? 'active' : 'ready',
   }));
 }
 
@@ -175,7 +177,7 @@ export function updateRoadmapStage(roadmap, index, value, completed = false) {
   const courseId = roadmapCourseId(value);
   const current = roadmap?.progress?.[index];
   if (!courseId || !Number.isInteger(index) || !current || current.completed
-    || roadmap.progress.findIndex(stage => !stage.completed) !== index
+    || (roadmap.progress.findIndex(stage => !stage.completed) !== index && !roadmap.opened?.includes(index))
     || roadmap.progress.some((stage, position) => position !== index && stage.courseId === courseId)
     || (current.courseId && current.courseId !== courseId)) return roadmap;
   const progress = roadmap.progress.map((stage, position) => position === index

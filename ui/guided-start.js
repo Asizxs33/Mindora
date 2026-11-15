@@ -1,3 +1,4 @@
+import { mentorForTopic } from '../core/subject-mentor.js';
 import { character } from './characters.js';
 import { escapeHtml as esc } from '../core/engine.js';
 import { t, languagePicker } from './language.js';
@@ -52,7 +53,7 @@ export function quietHomeView(state) {
       const passed = index < completed, current = index === completed;
       const final = index === steps.length - 1;
       return `<li class="${passed ? 'is-done' : current ? 'is-current' : 'is-locked'}">${final ? '' : '<span class="learning-hub-connector" aria-hidden="true"></span>'}<div class="learning-hub-stop">${current ? `<span class="learning-hub-start" aria-hidden="true">${currentLabel}</span>` : ''}<button type="button" class="learning-hub-node" ${current ? resumeAction : passed && !saved ? `data-step="${index}"` : 'disabled'} ${current ? 'aria-current="step"' : ''} aria-label="${current ? `${currentLabel} — ` : ''}${esc(label)}${passed ? ` — ${t('completed','пройдено','аяқталды')}` : current ? '' : ` — ${t('next','дальше','келесі')}`}">${icon(passed ? 'check' : current ? 'play' : final ? 'trophy' : 'book',32)}</button><span class="learning-hub-label"${saved ? ` lang="${esc(saved.plan.language)}"` : ''}>${esc(label)}</span></div></li>`;
-    }).join('')}</ol><aside class="learning-hub-guide"><div class="guided-dialogue"><p>${done ? t('You made it!', 'У тебя получилось!', 'Жарайсың, орындап шықтың!') : t('One small step. I’m with you.', 'Один маленький шаг. Я рядом.', 'Бір шағын қадам. Мен жаныңдамын.')}</p></div>${character('mino', done ? 'trophy' : saved ? 'map' : id === 'design' ? 'drawing' : 'chart', 'quiet-mentor')}</aside></div>
+    }).join('')}</ol><aside class="learning-hub-guide"><div class="guided-dialogue"><p>${done ? t('You made it!', 'У тебя получилось!', 'Жарайсың, орындап шықтың!') : t('One small step. I’m with you.', 'Один маленький шаг. Я рядом.', 'Бір шағын қадам. Мен жаныңдамын.')}</p></div>${character(saved ? mentorForTopic(`${saved.plan.goal} ${saved.plan.title}`) : id === 'design' ? 'mia' : 'sam', done ? 'celebrate' : 'explaining', 'quiet-mentor')}</aside></div>
     <div class="learning-hub-actions"><button type="button" class="primary" ${resumeAction}>${done ? t('See my result','Мой результат','Нәтижем') : hasStarted ? t('Continue learning','Продолжить','Жалғастыру') : t('Start lesson','Начать урок','Сабақты бастау')}${icon('arrow',20)}</button><button type="button" class="text-link" data-view="courses">${t('Ready mini-courses','Готовые мини-курсы','Дайын мини-курстар')}</button></div>
   </section>`;
 }

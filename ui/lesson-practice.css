@@ -16,3 +16,45 @@
 .practice-palette-preview .practice-palette-button { padding: 10px 18px; border-radius: 12px; border: 3px solid var(--practice-accent); font-weight: 700; }
 .practice-palette-preview .practice-palette-sample { font-size: 15px; }
 .ai-lesson-submission .practice-palette-preview { white-space: normal; }
+.capy-lab, .drawing-lab, .log-lab { padding: 18px; margin-block: 18px; border: 1px solid #e6dcd0; border-radius: 18px; background: #fffaf3; min-width: 0; }
+.lab-heading { display: flex; align-items: center; gap: 9px; color: #a34912; font-size: 16px; }
+.lab-instruction { font-size: 14px; line-height: 1.6; color: #655448; }
+.capy-board { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); width: min(100%, 320px); aspect-ratio: 1; margin: 18px auto; border: 2px solid #dbc8b4; border-radius: 13px; overflow: hidden; background: white; }
+.capy-cell { display: grid; place-items: center; min-width: 0; border: 1px solid #eee4d6; color: #a7460d; }
+.capy-cell.is-wall { background: repeating-linear-gradient(135deg,#d7d8c2,#d7d8c2 6px,#c6cbb3 6px,#c6cbb3 12px); }
+.capy-cell.is-visited:not(.is-wall) { background: #ffe5bc; }
+.capy-token { position: absolute; top: 0; left: 0; display: grid; place-items: center; width: 25%; height: 25%; transition: transform .16s ease-in-out; pointer-events: none; }
+.capy-token img { width: 85%; height: 85%; object-fit: contain; }
+.capy-token b { position: absolute; bottom: 1px; right: 1px; color: #a84308; background: #fff5e0; border-radius: 50%; width: 22px; height: 22px; text-align: center; line-height: 22px; font-size: 17px; }
+.lab-command-help { font-size: 12px; line-height: 2; color: #705d4b; }
+.lab-command-help code { color: #6c4930; background: #f7ebda; padding: 3px 5px; border-radius: 4px; }
+.drawing-tools { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin-block: 16px; }
+.drawing-tools label { display: grid; gap: 5px; font-size: 12px; }
+.drawing-tools input { width: 50px; height: 42px; padding: 2px; border: 1px solid #dfcebc; border-radius: 8px; background: white; }
+.drawing-tools select { max-width: 155px; min-height: 42px; border: 1px solid #dfcebc; border-radius: 8px; background: white; font: inherit; padding: 5px; }
+.drawing-tools button { min-height: 42px; font-size: 12px; padding: 6px 9px; }
+.drawing-surface { touch-action: none; aspect-ratio: 1; width: 100%; max-width: 420px; margin-inline: auto; border: 1px solid #d6cec3; background: white; border-radius: 10px; overflow: hidden; cursor: crosshair; user-select: none; }
+.drawing-surface svg, .drawing-result svg { display: block; width: 100%; height: 100%; }
+.drawing-result { max-width: 380px; aspect-ratio: 1; border: 1px solid #e6dcd0; border-radius: 12px; overflow: hidden; }
+.log-lab { background: #f3f7f3; border-color: #d9e4d9; }
+.log-lab .lab-heading { color: #3c6c52; }
+.log-lab svg { display: block; width: 100%; max-width: 480px; margin: auto; overflow: visible; }
+.log-lab svg text { font: 11px system-ui, sans-serif; fill: #6f7166; }
+.lab-axis { fill: none; stroke: #7f8878; stroke-width: 1.5; }
+.lab-grid { fill: none; stroke: #dce5d6; stroke-width: 1; }
+.lab-curve { fill: none; stroke: #46735b; stroke-width: 3; }
+.lab-guide { fill: none; stroke: #bc4b00; stroke-width: 1.5; stroke-dasharray: 4 3; }
+.lab-point { fill: #bc4b00; stroke: white; stroke-width: 2; }
+.log-equation { display: block; text-align: center; padding: 14px 8px; border-radius: 12px; background: white; color: #3b5d46; font-size: clamp(15px, 3.6vw, 22px); font-weight: 750; overflow-wrap: anywhere; }
+.log-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 17px; }
+.log-controls label { display: grid; gap: 8px; font-size: 13px; color: #4c6250; }
+.log-controls input { width: 100%; min-width: 0; min-height: 32px; accent-color: #bc4b00; }
+.lab-relation-label { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; font-size: 13px; color: #4c6250; }
+.lab-relation-label select { min-width: 0; max-width: 190px; min-height: 44px; padding: 8px; font: inherit; border: 1px solid #cbdcc8; border-radius: 9px; background: white; }
+.mindora-quote { margin: 20px 0; padding: 20px 0 20px 20px; border-left: 3px solid #c85b15; color: #60402a; font-size: clamp(20px,4vw,27px); font-weight: 750; line-height: 1.45; }
+.mindora-quote cite { display: block; margin-top: 10px; font-size: 13px; font-style: normal; color: #987153; }
+.lesson-projects { margin-block: 24px; }
+.project-answer { max-height: 360px; overflow-y: auto; margin-block: 18px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.project-download { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
+@media(max-width:600px) { .capy-lab,.drawing-lab,.log-lab { padding: 13px; } .lab-heading { font-size: 15px; } }
+@media(prefers-reduced-motion:reduce) { .capy-token { transition: none; } }

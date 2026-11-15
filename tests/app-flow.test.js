@@ -1,3 +1,4 @@
+import { mentorForTopic } from '../core/subject-mentor.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -120,7 +121,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
   }
   const screen = kind => (...args) => ({ kind, args: clone(args) });
   const context = vm.createContext({
-    ...engine, ...progress, ...budget, ...learningModel, ...assessments, ...returnReview, ...roadmapModel, ...rewardsModel,
+    mentorForTopic, ...engine, ...progress, ...budget, ...learningModel, ...assessments, ...returnReview, ...roadmapModel, ...rewardsModel,
     createGuestCourseRequest, BROWSER_GUEST, resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, startTopics, getStarterCourse, starterCourses, createPracticeController,
     needsReturnReview: (lastSeen, learned) => returnReview.needsReturnReview(lastSeen, learned, time),
     languageCode: value => value || 'en', setLanguage() {}, message: value => value, t: value => value,
@@ -518,8 +519,6 @@ test('an explicitly requested roadmap builds a personalized path and starts only
   assert.equal(run.current.html.args[0].roadmap.level, 'intermediate');
   assert.equal(run.current.html.args[0].roadmap.originalGoal, 'I want to learn spreadsheet formulas');
   assert.deepEqual(run.current.html.args[0].active.map(stage => stage.status), ['ready', 'locked', 'locked', 'locked']);
-  run.click({ roadmapAction: 'start', roadmapStage: '1' });
-  assert.deepEqual(run.generations, []);
   run.click({ roadmapAction: 'start', roadmapStage: '0' });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(run.generations[0].context.roadmapStage.level, 'intermediate');
@@ -749,8 +748,8 @@ test('a large course lazily generates a later module lesson and reopens each sav
     await new Promise(resolve => setImmediate(resolve));
     run.click({ view: 'my-path' });
     assert.deepEqual(run.generations, [], 'opening a syllabus does not generate all its lessons');
-    for (const blocked of [String(index + 1), '24', '99', '-1', '04']) run.click({ roadmapAction: 'start', roadmapStage: blocked });
-    assert.deepEqual(run.generations, [], 'locked or invalid stage indices cannot generate a lesson');
+    for (const blocked of ['24', '99', '-1', '04']) run.click({ roadmapAction: 'start', roadmapStage: blocked });
+    assert.deepEqual(run.generations, [], 'invalid stage indices cannot generate a lesson');
     run.click({ roadmapAction: 'start', roadmapStage: String(index) });
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(run.generations.length, 1);

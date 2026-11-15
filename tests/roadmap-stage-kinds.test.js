@@ -63,7 +63,7 @@ test('every path point retains its type icon while lock, play and completion are
     assert.equal(row.dataset.roadmapKind, saved.stages[index].kind);
     assert.equal(row.querySelector('.roadmap-stage-kind-icon svg').innerHTML, svgFor(kindIcon));
     assert.equal(row.querySelector('.roadmap-stage-status svg').innerHTML, svgFor(badge));
-    assert.equal(row.querySelector('button').hasAttribute('disabled'), disabled);
+    assert.equal(row.querySelector('button').hasAttribute('disabled'), false);
     assert.equal(row.querySelector('button').dataset.roadmapAction, 'start');
     assert.equal(Number(row.querySelector('button').dataset.roadmapStage), index);
     assert.equal(row.querySelector('.roadmap-stage-status').getAttribute('aria-hidden'), 'true');

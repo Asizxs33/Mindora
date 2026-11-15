@@ -28,7 +28,7 @@ function asksForPalette(task, context) {
 }
 
 function asksForCalculation(task, context) {
-  const subject = /\b(?:math(?:ematics)?|arithmetic|algebra|geometry|percent(?:age)?s?|fractions?|equations?)\b|математ|арифмет|алгебр|геометр|процент|пайыз|дроб|бөлшек|уравнен|теңдеу/iu;
+  const subject = /\b(?:math(?:ematics)?|arithmetic|algebra|geometry|percent(?:age)?s?|fractions?|equations?|logarithms?)\b|логар|логор|математ|арифмет|алгебр|геометр|процент|пайыз|дроб|бөлшек|уравнен|теңдеу/iu;
   const action = /\b(?:calculate|compute|solve|work out|find the (?:value|total|area|answer))\b|(?:вычисл|рассчита|посчита|сосчита|реши|найди\s+(?:значение|площадь|сумму|ответ))\p{L}*|есепте|теңдеуді\s+шеш/iu;
   const discount = /\bdiscounts?\b|скидк|жеңілдік/iu.test(`${context} ${task}`)
     && /\d+(?:[.,]\d+)?\s*(?:%|₽|\$|€|руб|usd|тенге)|[$€₽]\s*\d/iu.test(task);
@@ -48,8 +48,11 @@ export function selectLessonPractice(step, input = {}) {
   const context = [input.goal, stage?.originalGoal, stage?.goal, stage?.title, stage?.objective, step?.title].map(bounded).join(' ');
   const task = bounded(step?.task);
   const foreignStage = otherLanguage.test(focus) && !python.test(focus);
+  if (/capy|капибар|мино|миноны/i.test(context) && /forward|repeat|команд|басқар|instruction|move|движ/i.test(task)) return { type: 'code', language: 'capy' };
+  if (/\b(draw|sketch|paint|diagram|flowchart)\b|нарис|рисова|сурет.*сал|сызба.*сыз/i.test(task) && !/\b(graph|plot|function)\b|график|функци/i.test(task)) return { type: 'drawing' };
   if (python.test(context) && !foreignStage && !otherLanguage.test(task) && asksForCode(task)) return { type: 'code', language: 'python' };
   if (!python.test(context) && asksForPalette(task, context)) return { type: 'palette' };
-  if (asksForCalculation(task, context)) return { type: 'calculation' };
+  if (/linear|quadratic|exponential|logarith|линейн|квадрат|логар|сызық/i.test(context) && /plot|graph|график|сыз/i.test(task) && !/area|площад|аудан|integral|интеграл/i.test(task)) return { type: 'calculation', visual: 'graph' };
+  if (asksForCalculation(task, context)) return /logarith|логар|логор/i.test(context) ? { type: 'calculation', visual: 'logarithm' } : { type: 'calculation' };
   return { type: 'text' };
 }

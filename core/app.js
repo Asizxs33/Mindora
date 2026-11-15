@@ -13,6 +13,7 @@ import { dayKey, dailyCourse, learningStats } from './progress.js';
 import { posterLayout, posterSvg } from './poster.js';
 import { mountShell, renderShell } from '../ui/shell.js';
 import { phoneCourseNav, phoneCourseLibrary, courseHomeView, readyCoursesView, coursesPage, sidePage, courseNames, lessonNames } from '../ui/dashboard.js';
+import { mentorForTopic } from './subject-mentor.js';
 import { pathView, lesson, result, workView } from '../ui/views.js';
 import { dialogContent, resetWorkCheck, refreshPosterPreview, clearBudgetTotal } from '../ui/feedback.js';
 import { learningPlanView } from '../ui/learning-plan.js';
@@ -346,7 +347,7 @@ function reviewLearningPlan() {
     const lastSeen = state.learningVisits?.[key] || Date.parse(state.learningCourse?.updatedAt || '');
     if (!needsReturnReview(lastSeen, learningHasProgress(state.learningPlan))) return false;
     const saved = state.learningPlan;
-    state.returnReview = createReturnReview({ key, title: saved.plan.title,
+    state.returnReview = createReturnReview({ key, title: saved.plan.title, mentor: mentorForTopic(`${saved.plan.goal} ${saved.plan.title}`),
       questions: learningReviewQuestions(saved), reminder: saved.plan.steps[Math.min(saved.completed, saved.plan.steps.length - 1)]?.instruction || saved.plan.outcome });
   }
   go('return-review');
@@ -931,9 +932,9 @@ function submitRoadmap(form) {
 
 function startRoadmapStage(index) {
   if (roadmapWizard && view !== 'discover') return;
-  const roadmap = restoreRoadmap(state.learningRoadmap);
+  let roadmap = restoreRoadmap(state.learningRoadmap);
   const selected = roadmap && roadmapStageStatuses(roadmap)[index];
-  if (!selected || selected.status === 'locked') return;
+  if (!selected) return;
   const requestedOwner = learningOwner();
   const requestedView = view;
   const pathKey = path => path && (path.id || JSON.stringify([path.goal, path.title, path.stages]));
@@ -945,6 +946,11 @@ function startRoadmapStage(index) {
       && pathKey(restoreRoadmap(state.learningRoadmap)) === requestedPath) startRoadmapStage(index);
     else render();
   })) return;
+  if (selected.status === 'locked') {
+    roadmap = { ...roadmap, opened: [...new Set([...(roadmap.opened || []), index])] };
+    state.learningRoadmap = roadmap;
+    save();
+  }
   // The saved path also renders as home. Give its async operation the same
   // route/error handling as a path opened from navigation.
   if (view === 'discover') { roadmapWizard = null; go('roadmap'); }
@@ -955,7 +961,7 @@ function startRoadmapStage(index) {
       const { title, objective, kind } = roadmap.stages[index];
       const { goal, originalGoal, level, levelReason } = roadmap;
       const stageGoal = `${title} — ${goal}`.slice(0, 180);
-      const previousStages = roadmap.stages.slice(Math.max(0, index - 3), index).map(({ title, objective }) => ({ title, objective }));
+      const previousStages = roadmap.stages.slice(Math.max(0, index - 3), index).filter((_, offset) => roadmap.progress[Math.max(0, index - 3) + offset].completed).map(({ title, objective }) => ({ title, objective }));
       const generated = await plans.generate(stageGoal, roadmap.minutes, {
         language: roadmap.language, roadmapStage: { goal, ...(originalGoal ? { originalGoal } : {}), ...(kind ? { kind } : {}), title, objective, level, levelReason, previousStages },
       });

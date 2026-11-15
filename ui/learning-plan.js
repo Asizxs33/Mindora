@@ -8,6 +8,8 @@ import { message } from './messages.js';
 import { mentorForTopic, mentorScene, renderLessonTemplate } from './lesson-templates.js';
 import { sceneForTopic } from './learning-scenes.js';
 import { practiceEditor, practiceResult } from './lesson-practice.js';
+import { isLogarithmTopic } from '../core/subject-mentor.js';
+import { logExplorer } from './learning-labs.js';
 import { renderLessonVisual } from './lesson-visual.js';
 
 if (typeof document !== 'undefined' && !document.getElementById('mindora-template-styles')) {
@@ -54,7 +56,7 @@ function resultView({ plan, answers, reviews }, onRoadmap, nextStage) {
   const finalTask = plan.steps.at(-1);
   const review = reviews.at(-1);
   return `<section class="ai-lesson-result learning-result" lang="${esc(plan.language)}">
-    ${mentorView('mino', 'applause', `<span class="ai-lesson-result-icon" aria-hidden="true">${icon('check', 24)}</span><h2 id="learning-plan-complete" tabindex="-1" lang="${esc(currentLanguage())}">${t('Lesson complete', 'Занятие завершено', 'Сабақ аяқталды')}</h2><p lang="${esc(currentLanguage())}">${t('You put it into practice. Here is what you made.', 'Ты применил знания на практике. Вот твоя работа.', 'Біліміңді іс жүзінде қолдандың. Міне, жұмысың.')}</p>`, 'ai-lesson-mentor-result')}
+    ${mentorView(lessonMentor(plan), 'celebrate', `<span class="ai-lesson-result-icon" aria-hidden="true">${icon('check', 24)}</span><h2 id="learning-plan-complete" tabindex="-1" lang="${esc(currentLanguage())}">${t('Lesson complete', 'Занятие завершено', 'Сабақ аяқталды')}</h2><p lang="${esc(currentLanguage())}">${t('You put it into practice. Here is what you made.', 'Ты применил знания на практике. Вот твоя работа.', 'Біліміңді іс жүзінде қолдандың. Міне, жұмысың.')}</p>`, 'ai-lesson-mentor-result')}
     <h3 lang="${esc(currentLanguage())}">${t('Your independent work', 'Твоя самостоятельная работа', 'Өздік жұмысың')}</h3>
     <p>${esc(finalTask.task)}</p>
     <div class="ai-lesson-submission learning-answer">${practiceResult(finalTask.practice, answers.at(-1))}</div>
@@ -98,7 +100,7 @@ function illustrationView(step) {
 
 function exampleView(teaching, mentor, topic) {
   const codeExample = /\b(python|javascript|programming|coding|html|css|sql)\b|программ|бағдарлам/i.test(topic);
-  return renderLessonVisual(teaching.example.visual) + renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output, explanation: teaching.example.explanation, sceneFrame: sceneForTopic(topic), codeExample,
+  return (isLogarithmTopic(topic) ? logExplorer() : '') + renderLessonVisual(teaching.example.visual) + renderLessonTemplate({ type: 'comparison', prompt: t('Why it works', 'Почему это работает', 'Неліктен бұл жұмыс істейді'), intro: teaching.example.explanation, before: teaching.example.input, after: teaching.example.output, explanation: teaching.example.explanation, sceneFrame: sceneForTopic(topic), codeExample,
     ...(codeExample ? { beforeLabel: t('Code', 'Код', 'Код'), afterLabel: t('Output', 'Результат', 'Нәтиже') } : {}),
   }, {}, { external: true, mentor });
 }
