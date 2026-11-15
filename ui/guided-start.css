@@ -1,12 +1,12 @@
 /* One question, one action. Small-height screens and zoom can still scroll. */
 .profile-signout{width:100%;min-height:46px;color:#9e3434;border-color:#ead1cb;margin-top:6px}.profile-signout[hidden]{display:none}
 .guided-header-actions{display:flex;align-items:center;gap:8px;flex:none}.guided-account{display:grid;place-items:center;min-width:44px;min-height:44px;border:1px solid #ead6c5;border-radius:12px;background:#fff7ef;color:#a34408;cursor:pointer}
-@media(max-width:360px){.guided-header{gap:8px}.guided-header .guided-brand{font-size:25px}.guided-header-actions select{max-width:85px}}
+@media(max-width:360px){.guided-header{gap:8px}.guided-header .guided-brand{font-size:25px}}
 @keyframes guided-arrive{from{opacity:.55;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:no-preference){html:not([data-character-animations=off]) .guided-dialogue{animation:guided-arrive .3s ease-out both}}
 body.is-guided{background:#fff}body.is-guided .topbar,body.is-guided .sidebar,body.is-guided .mobile-navigation{display:none}body.is-guided .app-shell{margin:0;padding:0}body.is-guided #main{max-width:none;padding:0;min-height:100svh}
 .guided-start{min-height:100svh;max-width:680px;margin:auto;display:flex;flex-direction:column;padding:20px 28px 24px;box-sizing:border-box;color:#302723}
-.guided-header{display:flex;justify-content:space-between;align-items:center;gap:16px}.guided-brand{text-decoration:none;font-size:29px;font-weight:900;letter-spacing:-1px;color:#33271e}.guided-brand span{color:#c24b00}.guided-header .language-picker{margin:0}.guided-header select{max-width:100px;min-height:40px}
+.guided-header{display:flex;justify-content:space-between;align-items:center;gap:16px}.guided-brand{text-decoration:none;font-family:var(--font-display);font-size:29px;font-weight:950;letter-spacing:-1px;color:#33271e}.guided-brand span{color:#c24b00}
 .guided-progress{display:flex;align-items:center;gap:16px;margin:20px 0 0}.guided-back{display:grid;place-items:center;width:44px;height:44px;border:0;background:transparent;color:#65564b;cursor:pointer}.guided-progress>span{font-size:13px;color:#807063}
 .guided-start progress,.quiet-home progress{appearance:none;height:8px;background:#f2e4d8;border:0;border-radius:9px;overflow:hidden;flex:1;accent-color:#bc4b00}.guided-start progress::-webkit-progress-bar,.quiet-home progress::-webkit-progress-bar{background:#f2e4d8}.guided-start progress::-webkit-progress-value,.quiet-home progress::-webkit-progress-value{background:#bc4b00;border-radius:9px}
 .guided-content{display:flex;flex:1;min-height:0;flex-direction:column;align-items:center;justify-content:center;padding:20px 0;gap:16px}.guided-dialogue{position:relative;width:fit-content;max-width:390px;border:2px solid #ead6c5;border-radius:20px;padding:15px 22px;text-align:center;background:white;box-sizing:border-box}.guided-dialogue:after{content:'';position:absolute;width:14px;height:14px;bottom:-9px;left:calc(50% - 7px);background:white;border-right:2px solid #ead6c5;border-bottom:2px solid #ead6c5;transform:rotate(45deg)}.guided-dialogue p{margin:0;color:#42362b;font-size:18px;line-height:1.5}
@@ -33,7 +33,19 @@ body.quiet-shell .sidebar{display:none}body.quiet-shell .app-shell{margin-left:0
 .learning-hub.quiet-home{max-width:720px;width:100%;gap:18px;padding:12px 0;justify-content:flex-start}
 .learning-hub-heading{display:flex;align-items:center;gap:12px;background:#bd4a00;color:white;border-radius:22px;padding:20px 24px;width:100%;box-sizing:border-box}
 .learning-hub-heading>div{flex:1;min-width:0}.learning-hub-heading span{font-size:13px;color:#ffdfc4}.learning-hub-heading h1{font-size:24px;text-align:left;margin:5px 0 0;color:white}.learning-hub-heading .icon-button{color:white;background:#ffffff18;border:1px solid #ffffff44;flex:none}
-.learning-hub-progress{display:flex;align-items:center;gap:12px;width:100%;color:#786556;font-size:13px}.learning-hub-progress>span{white-space:nowrap}.learning-hub-progress progress{flex:1;width:auto;min-width:0;height:8px}.learning-hub-progress strong{color:#a33e00}
+.learning-hub-progress {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px 12px;
+  width: 100%;
+  padding: 1px 2px 0;
+  color: #6b5141;
+  font-size: 13px;
+}
+.learning-hub-progress strong { color: #4b3225; font-weight: 750; font-variant-numeric: tabular-nums; }
+.learning-hub-progress progress { grid-column: 1 / -1; width: 100%; height: 6px; background: #eee3d7; }
+.learning-hub-progress progress::-webkit-progress-bar { background: #eee3d7; }
 .learning-hub-journey{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:28px;align-items:start;width:100%;max-width:660px;margin:10px auto 0}
 .learning-hub-path{--route-row:166px;--route-node:88px;list-style:none;margin:0;padding:52px 0 4px;display:grid;width:100%;isolation:isolate}
 .learning-hub-path li{position:relative;min-height:var(--route-row);display:grid;grid-template-columns:1fr 1fr;align-items:start;padding-bottom:18px;box-sizing:border-box}
@@ -50,7 +62,7 @@ body.quiet-shell .sidebar{display:none}body.quiet-shell .app-shell{margin-left:0
 .learning-hub-node>.icon{width:34px;height:34px}.learning-hub-node:not(:disabled):hover{transform:translateY(-2px)}.learning-hub-node:not(:disabled):active{transform:translateY(3px)}.learning-hub-node:focus-visible{outline:3px solid #75401d;outline-offset:7px}
 .learning-hub-path .is-current .learning-hub-node{background:#c34b00;border-color:#c34b00;border-bottom-color:#8c3500;color:white;box-shadow:0 0 0 6px #fff1e4,0 0 0 8px #f5d0ad}
 .learning-hub-path .is-done .learning-hub-node{background:#fff0db;color:#a54c00;border-color:#e4ba87;border-bottom-color:#cf9a61}
-.learning-hub-label{font-size:14px;font-weight:650;line-height:1.45;max-width:180px;color:#776456;overflow-wrap:anywhere;background:var(--paper,#fffdf9);border-radius:5px;padding:0 3px}
+.learning-hub-label{font-family:var(--font-display);font-size:14px;font-weight:750;line-height:1.4;max-width:180px;color:#776456;overflow-wrap:anywhere;background:var(--paper,#fffdf9);border-radius:5px;padding:0 3px}
 .learning-hub-path .is-current .learning-hub-label{font-weight:800;color:#913900}.learning-hub-node:disabled{cursor:default;opacity:1}
 .learning-hub-start{position:absolute;bottom:calc(100% + 15px);left:50%;transform:translateX(-50%);z-index:2;border:2px solid #c34b00;border-radius:13px;padding:8px 14px;background:#fff;color:#a33e00;font-size:14px;font-weight:850;line-height:1.2;white-space:nowrap;box-shadow:0 3px 0 #f4dfcd}
 .learning-hub-start:after{content:'';position:absolute;bottom:-7px;left:calc(50% - 5px);width:10px;height:10px;background:#fff;border-right:2px solid #c34b00;border-bottom:2px solid #c34b00;transform:rotate(45deg)}
@@ -67,3 +79,21 @@ body.quiet-shell .sidebar{display:none}body.quiet-shell .app-shell{margin-left:0
 body.quiet-shell:not(.is-guided) #main[data-page=discover]{padding:20px 24px;min-height:0}.learning-hub.quiet-home{min-height:calc(100svh - var(--header) - 40px)}
 @media(max-width:920px){body.quiet-shell:not(.is-guided) #main[data-page=discover]{padding:14px 22px calc(84px + env(safe-area-inset-bottom))}.learning-hub.quiet-home{min-height:calc(100svh - var(--header) - 98px - env(safe-area-inset-bottom))}}
 @media(max-height:680px) and (max-width:920px){body.quiet-shell:not(.is-guided) #main[data-page=discover]{padding-top:6px}.learning-hub.quiet-home{min-height:calc(100svh - var(--header) - 90px - env(safe-area-inset-bottom));padding:3px 0;gap:8px}.learning-hub-actions .primary{min-height:44px}.learning-hub-heading h1{font-size:17px}}
+.learning-hub-guide .guided-dialogue {
+  border: 1px solid #e9d7c5;
+  border-radius: 12px;
+  background: #fffdfa;
+  text-align: left;
+  box-shadow: 0 2px 0 #e9d7c54f;
+}
+.learning-hub-guide .guided-dialogue::after {
+  background: #fffdfa;
+  border-width: 1px;
+  border-color: #e9d7c5;
+  width: 10px;
+  height: 10px;
+  bottom: -6px;
+  left: calc(50% - 5px);
+}
+.learning-hub-guide .guided-dialogue strong { display: block; margin-bottom: 3px; font-size: 12px; color: #9a4213; }
+.learning-hub .learning-hub-guide .guided-dialogue p { color: #523c30; font-size: 13px; line-height: 1.45; }
