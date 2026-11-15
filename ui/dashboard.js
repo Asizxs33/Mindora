@@ -1,3 +1,4 @@
+import { priceLine, reportEntry, workAudience, workHeadline } from './work-skills.js';
 import { mobileProfileView } from './mobile-profile.js';
 import { COURSES, escapeHtml } from '../core/engine.js';
 import { resumeCursor } from '../core/resume.js';
@@ -68,6 +69,7 @@ export function phoneCourseLibrary(libraryHtml, readyHtml) {
     <div class="course-library-search"><label class="visually-hidden" for="course-search">${t('Find a course', 'Найти курс', 'Курс іздеу')}</label>${icon('search',20)}<input id="course-search" type="search" data-course-search placeholder="${t('Find a course', 'Найти курс', 'Курс іздеу')}" autocomplete="off"><button type="button" class="icon-button" data-course-search-clear aria-label="${t('Clear search', 'Очистить поиск', 'Іздеуді тазалау')}" hidden>${icon('close',18)}</button></div>
     <p class="course-search-status" role="status" data-course-search-status></p>
     <section class="course-saved-section"><h2 class="course-section-title">${t('Continue learning', 'Продолжить обучение', 'Оқуды жалғастыру')}</h2><div data-course-library>${libraryHtml}</div></section>
+    ${reportEntry()}
     <section class="phone-catalog" aria-labelledby="course-catalog-title"><h2 class="course-section-title" id="course-catalog-title">${t('Explore mini-courses', 'Готовые мини-курсы', 'Дайын шағын курстар')}</h2>${readyHtml}</section>
   </section>`;
 }
@@ -76,25 +78,27 @@ export function courseHomeView(state, { current = null, libraryHtml = '', readyH
   const total = Math.max(1, Number(current?.total) || 1);
   const completed = Math.min(total, Math.max(0, Number(current?.completed) || 0));
   const percent = Math.round(completed / total * 100);
-  return `<section class="course-home" data-language="${currentLanguage()}" aria-labelledby="course-home-title">
+  return `<section class="course-home" data-guest-welcome="${guest}" data-language="${currentLanguage()}" aria-labelledby="course-home-title">
     <header class="course-home-heading" data-mentor-scene>
       <div class="course-home-copy">
         <p class="course-home-greeting" data-mentor-message>${guest ? t('Hi! I’m Mino.', 'Привет! Я Мино.', 'Сәлем! Мен Миномын.') : completed === total ? t('You did it!', 'У тебя получилось!', 'Жарайсың!') : t('Tell me your goal.', 'Расскажи о своей цели.', 'Мақсатыңды айтшы.')}</p>
-        <h1 id="course-home-title"><span class="course-home-mobile-title">${t('What will you learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</span><span class="course-home-desktop-title">${t('What do you want to learn?', 'Чему ты хочешь научиться?', 'Не үйренгің келеді?')}</span></h1>
-        <p class="course-home-desktop-intro">${t('Choose a goal and tell us how much time you have.', 'Выбери цель и укажи, сколько времени у тебя есть.', 'Мақсатыңды таңдап, қанша уақытың барын көрсет.')}</p>
+        <h1 id="course-home-title"><span class="course-home-mobile-title">${t('What will you learn today?', 'Чему научимся сегодня?', 'Бүгін не үйренеміз?')}</span><span class="course-home-desktop-title">${guest ? workHeadline() : t('What do you want to learn?', 'Чему ты хочешь научиться?', 'Не үйренгің келеді?')}</span></h1>
+        <p class="course-home-desktop-intro">${guest ? workAudience() : t('Choose a goal and tell us how much time you have.', 'Выбери цель и укажи, сколько времени у тебя есть.', 'Мақсатыңды таңдап, қанша уақытың барын көрсет.')}</p>
       </div>
       ${character('mino', completed === total ? 'trophy' : 'idea', 'course-home-mino')}
     </header>
     <form id="goal-form" class="course-home-composer">
       <label class="visually-hidden" for="goal-input">${t('What do you want to learn?', 'Чему хочешь научиться?', 'Не үйренгің келеді?')}</label>
-      <input id="goal-input" name="goal" value="${escapeHtml(state.homeGoal || '')}" placeholder="${t('For example, make my first video', 'Например, сделать первое видео', 'Мысалы, алғашқы видеомды жасау')}" minlength="3" maxlength="180" required autocomplete="off" enterkeyhint="go">
+      <input id="goal-input" name="goal" value="${escapeHtml(state.homeGoal || '')}" placeholder="${t('For example, use AI to draft a Friday update', 'Например, подготовить отчёт за неделю с ИИ', 'Мысалы, ЖИ көмегімен апталық есеп жазу')}" minlength="3" maxlength="180" required autocomplete="off" enterkeyhint="go">
       <div class="course-home-form-actions"><label class="course-home-time" for="time-select"><span>${t('Per lesson', 'На занятие', 'Бір сабаққа')}</span><select id="time-select" name="minutes">${[5, 10, 20].map(value => `<option value="${value}"${value === state.minutes ? ' selected' : ''}>${value} ${t('min', 'мин', 'мин')}</option>`).join('')}</select></label><button type="submit" class="primary">${t('Create a path', 'Создать путь', 'Оқу жолын құру')}${icon('arrow', 18)}</button></div>
     </form>
+    <p class="course-price-note">${priceLine()}</p>
     <ol class="course-home-method" aria-label="${t('How your lessons work', 'Как устроены занятия', 'Сабақтар қалай өтеді')}">
       <li>${icon('book', 18)}<span>${t('Short explanations', 'Короткие объяснения', 'Қысқа түсіндірмелер')}</span></li>
       <li>${icon('target', 18)}<span>${t('Examples & practice', 'Примеры и практика', 'Мысал мен жаттығу')}</span></li>
       <li>${icon('path', 18)}<span>${t('Resume anytime', 'Продолжай в удобное время', 'Кез келген уақытта жалғастыр')}</span></li>
     </ol>
+    ${composerOnly ? '' : reportEntry()}
     ${composerOnly ? '' : `<div class="course-home-shortcuts topic-shortcuts">
       <button type="button" class="topic-shortcut" data-course="design" data-course-path>${icon('palette', 18)} ${t('Make a poster', 'Сделать постер', 'Постер жасау')}</button>
       <button type="button" class="topic-shortcut" data-course="budget" data-course-path>${icon('sheet', 18)} ${t('Learn spreadsheets', 'Изучить таблицы', 'Кестелерді үйрену')}</button>

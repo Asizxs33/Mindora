@@ -29,7 +29,7 @@ test('guest plan generation returns a real generated lesson without an account o
 
 test('guest roadmap creation and feedback run the provider with validated inputs', async () => {
   const roadmap = await roadmapApi(makeRequest('learning-roadmap',{...input,experience:'new',motivation:'work'}),{
-    apiKey:'fixture', settings:null,session, generate:async()=>({
+    quota: () => ({ run: async (_owner, _input, build) => ({ roadmap: await build() }) }), apiKey:'fixture', settings:null,session, generate:async()=>({
       title:'Useful formulas', outcome:'Build a budget sheet.',level:'beginner',levelReason:'Start with cells.',
       stages:['Name cells','Add numbers','Use SUM','Build a budget'].map(title=>({title,objective:'Create and check a small example.'})),
     }),

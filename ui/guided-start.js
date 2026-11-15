@@ -1,3 +1,4 @@
+import { workHeadline, workAudience, priceLine, reportEntry } from './work-skills.js';
 import { mentorForTopic } from '../core/subject-mentor.js';
 import { character } from './characters.js';
 import { escapeHtml as esc } from '../core/engine.js';
@@ -23,14 +24,15 @@ export function guidedStartView({ step = 0, name = '', topic = '', goal = '', mi
     <header class="guided-header"><a class="guided-brand" href="#discover" data-home aria-label="Mindora">mindora<span>.</span></a><div class="guided-header-actions">${languagePicker()}${signedIn ? `<button type="button" class="guided-account" data-account-open="profile" aria-label="${t('My account','Мой аккаунт','Аккаунтым')}">${icon('user',21)}</button>` : greeting ? `<button type="button" class="guided-signin" data-account-open="signin">${t('Sign in','Войти','Кіру')}</button>` : ''}</div></header>
     ${greeting ? '' : `<div class="guided-progress"><button type="button" class="guided-back" data-intro-action="back" aria-label="${t('Back','Назад','Артқа')}">${icon('back',22)}</button><progress max="3" value="${step}" aria-label="${t('Getting started','Знакомство','Танысу')}"></progress><span>${step}/3</span></div>`}
     <div class="guided-content">
-      <div class="guided-dialogue"><p id="guided-prompt" tabindex="-1">${esc(prompts[step])}</p></div>
+      ${greeting ? '' : `<div class="guided-dialogue"><p id="guided-prompt" tabindex="-1">${esc(prompts[step])}</p></div>`}
       ${character('mino', ['map', 'listening', 'idea', 'break'][step] || 'listening', 'guided-mino')}
-      ${greeting ? `<h1>${t('Your goal, one short lesson at a time.', 'К твоей цели — короткими уроками.', 'Мақсатыңа шағын сабақтармен жет.')}</h1>` : ''}
+      ${greeting ? `<h1 id="guided-prompt" tabindex="-1">${workHeadline()}</h1><p class="guided-work-copy">${workAudience()}</p>` : ''}
       ${step === 1 ? `<form id="intro-name-form" class="guided-field"><label for="intro-name">${t('Your name','Твоё имя','Атың')}</label><input id="intro-name" name="name" value="${esc(name)}" maxlength="80" autocomplete="given-name" required placeholder="${t('Your name','Твоё имя','Атың')}"></form>` : ''}
       ${step === 2 ? `<div class="guided-topics" role="group" aria-labelledby="guided-prompt">${startTopics().map(item => `<button type="button" class="guided-option" data-intro-topic="${item.id}" aria-pressed="${topic === item.id}">${icon(item.icon,23)}<span>${item.label}</span>${topic === item.id ? icon('check',19) : ''}</button>`).join('')}</div>${topic === 'custom' ? `<label class="guided-field" for="intro-goal"><span>${t('What do you want to do?','Что хочешь научиться делать?','Не істеуді үйренгің келеді?')}</span><input id="intro-goal" value="${esc(goal)}" minlength="3" maxlength="180" placeholder="${t('For example, edit my first video','Например, смонтировать первое видео','Мысалы, алғашқы видеомды өңдеу')}"></label>` : ''}` : ''}
       ${step === 3 ? `<div class="guided-pace" role="group" aria-labelledby="guided-prompt">${[5,10,20].map(value => `<button type="button" class="guided-option" data-intro-minutes="${value}" aria-pressed="${minutes === value}"><strong>${value}</strong><span>${t('minutes','минут','минут')}</span>${minutes === value ? icon('check',18) : ''}</button>`).join('')}</div><p class="guided-small">${t('You can pause whenever you need.', 'Можно остановиться в любой момент.', 'Кез келген уақытта үзіліс жасай аласың.')}</p>` : ''}
     </div>
     <footer class="guided-footer"><button type="button" class="primary" ${greeting ? 'data-view="new-course"' : `data-intro-action="${step === 3 ? 'start' : 'next'}"`} ${valid ? '' : 'disabled'}>${greeting ? t('Let’s begin','Начнём','Бастайық') : step === 3 ? t('Start learning','Начать обучение','Оқуды бастау') : t('Continue','Продолжить','Жалғастыру')}${icon('arrow',20)}</button>${greeting && !signedIn ? `<button type="button" class="secondary" data-view="courses">${icon('book',18)} ${t('Explore courses','Открыть курсы','Курстарды көру')}</button>` : ''}</footer>
+    ${greeting ? `<div class="guided-offer">${reportEntry()}<p class="course-price-note">${priceLine()}</p></div>` : ''}
   </section>`;
 }
 
