@@ -6,6 +6,8 @@ import { COURSES, DESIGN_QUIZ, evaluatePoster } from './engine.js';
 import { budgetCsv, budgetSession, budgetDraftKey, createBudgetDraft, evaluateBudgetSession, normalizeMinutes, readBudgetQuiz, readBudgetResume } from './budget-session.js';
 import { createCloudDrafts } from './cloud-drafts.js';
 import { createPlanController } from './plan-controller.js';
+import { completedLessonFocus } from './practice-focus.js';
+import { createStagePreparation, readyPracticeForStage, requestLesson, roadmapLessonInput } from './roadmap-preparation.js';
 import { createGuestCourseRequest, BROWSER_GUEST } from './guest-courses.js';
 import { apiRequest, createLearningLibrary } from './learning-library.js';
 import { createBuiltinSync } from './builtin-sync.js';
@@ -92,6 +94,8 @@ let library;
 let builtins;
 let roadmapWizard = null;
 let roadmapOperation = null;
+const stagePreparation = createStagePreparation();
+let roadmapRecovery = null;
 let reportChecks = null;
 let shopTab = 'gems';
 let demoCheckout = {};
@@ -231,7 +235,15 @@ function applyLessonReward(event, courseId) {
     state.learningRewards = recordCheckReward(state.learningRewards, courseId, event.index, event.correct);
   } else {
     state.learningRewards = recordLessonReward(state.learningRewards, courseId);
-    reconcileRoadmapCompletion(courseId, new Date().toISOString());
+    const next = reconcileRoadmapCompletion(courseId, new Date().toISOString());
+    if (next && !stagePreparation.busy) {
+      const index = next.progress.findIndex(stage => stage.courseId === courseId) + 1;
+      if (next.progress[index] && !next.progress[index].courseId) {
+        void prepareRoadmapStage(next.id, index).then(() => {
+          if (view === 'roadmap' && !roadmapOperation) render();
+        }).catch(() => { /* Opening the stage can retry preparation. */ });
+      }
+    }
   }
   save();
 }
@@ -240,12 +252,14 @@ function reconcileRoadmapCompletion(courseId, completedAt = null) {
   const ownerPath = pathForLesson(courseId);
   if (!ownerPath) return;
   const index = ownerPath.progress.findIndex(stage => stage.courseId === courseId);
-  const next = updateRoadmapStage(ownerPath, index, courseId, true);
+  const focus = courseId === state.learningCourse?.id ? completedLessonFocus(state.learningPlan) : null;
+  const next = updateRoadmapStage(ownerPath, index, courseId, true, focus);
   if (next === ownerPath) return;
   if (roadmapComplete(next)) next.certificate = newCertificate(completedAt);
   if (ownerPath.id === state.learningRoadmap?.id) state.learningRoadmap = next;
   else state.learningRoadmaps = state.learningRoadmaps.map(path => path.id === ownerPath.id ? next : path);
   save();
+  return next;
 }
 
 function savedRoadmaps() {
@@ -694,7 +708,8 @@ function render() {
   const rewards = canStudy() ? rewardScreen(state.learningRewards) : null;
   const roadmap = canStudy() ? restoreRoadmap(state.learningRoadmap) : null;
   const roadmapProps = { roadmap, wizard: roadmapWizard, active: roadmap ? roadmapStageStatuses(roadmap) : [],
-    busy: roadmapOperation?.kind, error: roadmapError, rewards, quests: rewards?.quests ?? [], items: rewards?.items ?? [] };
+    busy: roadmapOperation?.kind, error: roadmapError, practiceFallback: roadmap?.id === roadmapRecovery?.pathId ? roadmapRecovery?.practice : null,
+    rewards, quests: rewards?.quests ?? [], items: rewards?.items ?? [] };
   let html;
   switch (view) {
     case 'welcome': html = landingView({ canResume: canStudy(), signedIn: Boolean(accountOwner), plusPlan: state.demoPlusPlan }); break;
@@ -958,6 +973,7 @@ function runRoadmapOperation(kind, work) {
   const isCurrent = () => roadmapOperation === operation && learningOwner() === operation.owner;
   roadmapOperation = operation;
   roadmapError = '';
+  roadmapRecovery = null;
   render();
   void (async () => {
     try { await work(isCurrent, operation.owner); }
@@ -1094,6 +1110,28 @@ function submitRoadmap(form) {
   });
 }
 
+function prepareRoadmapStage(pathId, index) {
+  const owner = learningOwner();
+  const version = accountEpoch;
+  const path = savedRoadmaps().find(item => item.id === pathId);
+  if (!owner || !pathId || !path?.progress[index] || workspaceStorage.conflicted) return Promise.resolve(null);
+  if (path.progress[index].courseId) return Promise.resolve(path.progress[index].courseId);
+  return stagePreparation.run(`${owner}:${pathId}:${index}`, async signal => {
+    const { course } = await requestLesson(roadmapLessonInput(path, index), learningHeaders(owner), signal);
+    if (signal.aborted || version !== accountEpoch || owner !== learningOwner() || workspaceStorage.conflicted) return null;
+    const current = savedRoadmaps().find(item => item.id === pathId);
+    if (!current) return null;
+    if (current.progress[index].courseId) return current.progress[index].courseId;
+    if (!restorePlan(course?.saved)) return null;
+    const updated = updateRoadmapStage(current, index, course.id);
+    if (updated === current || (owner === BROWSER_GUEST && !guestRequest.remember(course))) return null;
+    if (state.learningRoadmap?.id === pathId) state.learningRoadmap = updated;
+    else state.learningRoadmaps = state.learningRoadmaps.map(item => item.id === pathId ? updated : item);
+    save();
+    return course.id;
+  });
+}
+
 function startRoadmapStage(index) {
   if (roadmapWizard && view !== 'discover') return;
   let roadmap = restoreRoadmap(state.learningRoadmap);
@@ -1110,6 +1148,11 @@ function startRoadmapStage(index) {
       && pathKey(restoreRoadmap(state.learningRoadmap)) === requestedPath) startRoadmapStage(index);
     else render();
   })) return;
+  if (!roadmap.id) {
+    roadmap = { ...roadmap, id: crypto.randomUUID() };
+    state.learningRoadmap = roadmap;
+    save();
+  }
   if (!roadmap.opened?.length || roadmap.opened.at(-1) !== index) {
     roadmap = { ...roadmap, opened: [...(roadmap.opened || []).filter(i => i !== index), index] };
     state.learningRoadmap = roadmap;
@@ -1119,23 +1162,21 @@ function startRoadmapStage(index) {
   // route/error handling as a path opened from navigation.
   if (view === 'discover') { roadmapWizard = null; go('roadmap'); }
   runRoadmapOperation('stage', async isCurrent => {
-    if (selected.courseId) {
-      if (!await library.load(selected.courseId)) throw new Error(roadmapErrorText('stage'));
-    } else {
-      const { title, objective, kind } = roadmap.stages[index];
-      const { goal, originalGoal, level, levelReason } = roadmap;
-      const stageGoal = `${title} — ${goal}`.slice(0, 180);
-      const previousStages = roadmap.stages.slice(Math.max(0, index - 3), index).filter((_, offset) => roadmap.progress[Math.max(0, index - 3) + offset].completed).map(({ title, objective }) => ({ title, objective }));
-      const generated = await plans.generate(stageGoal, roadmap.minutes, {
-        language: roadmap.language, roadmapStage: { goal, ...(originalGoal ? { originalGoal } : {}), ...(kind ? { kind } : {}), title, objective, level, levelReason, previousStages },
-      });
+    const recover = () => {
+      roadmapRecovery = { pathId: roadmap.id, practice: readyPracticeForStage(roadmap, index) };
+      throw new Error(roadmapErrorText('stage'));
+    };
+    let courseId;
+    try {
+      courseId = selected.courseId || await prepareRoadmapStage(roadmap.id, index);
+    } catch (failure) {
       if (!isCurrent()) return;
-      if (!generated || !state.learningCourse?.id) {
-        throw new Error(roadmapErrorText('stage'));
-      }
-      state.learningRoadmap = updateRoadmapStage(roadmap, index, state.learningCourse.id);
-      save();
+      if (failure.status === 401) { expiredSession(); return; }
+      return recover();
     }
+    if (!isCurrent() || view !== 'roadmap' || state.learningRoadmap?.id !== roadmap.id) return;
+    if (!courseId) return recover();
+    if (!await library.load(courseId)) throw new Error(roadmapErrorText('stage'));
     if (isCurrent() && view === 'roadmap') go('learning-plan');
   });
 }
@@ -1198,10 +1239,10 @@ function beginIntroductionCourse() {
   if (ensureLearning(start)) start();
 }
 
-async function startReadyCourse(id, minutes = state.minutes) {
+async function startReadyCourse(id, minutes = state.minutes, language = state.language) {
   const duration = normalizeMinutes(minutes);
-  if (!ensureLearning(() => { void startReadyCourse(id, duration); }) || openingStarter) return;
-  const saved = getStarterCourse(id, state.language, duration);
+  if (!ensureLearning(() => { void startReadyCourse(id, duration, language); }) || openingStarter) return;
+  const saved = getStarterCourse(id, language, duration);
   if (!saved) return;
   openingStarter = true;
   const owner = accountOwner;
@@ -1243,6 +1284,7 @@ function openRoadmap(id) {
   }
   roadmapWizard = null;
   roadmapError = '';
+  roadmapRecovery = null;
   go('roadmap');
 }
 
@@ -1372,7 +1414,7 @@ document.addEventListener('click', event => {
   if (button.dataset.introTopic) { introduction.topic = button.dataset.introTopic; render(); document.querySelector(`[data-intro-topic="${introduction.topic}"]`)?.focus({ preventScroll: true }); return; }
   if (button.dataset.introMinutes) { introduction.minutes = normalizeMinutes(button.dataset.introMinutes); render(); document.querySelector(`[data-intro-minutes="${introduction.minutes}"]`)?.focus({ preventScroll: true }); return; }
   if (button.dataset.courseMinutes) { changeMinutes(button.dataset.courseMinutes); document.querySelector(`[data-course-minutes="${state.minutes}"]`)?.focus({ preventScroll: true }); return; }
-  if (button.dataset.starterCourse) { void startReadyCourse(button.dataset.starterCourse, button.dataset.starterMinutes); return; }
+  if (button.dataset.starterCourse) { void startReadyCourse(button.dataset.starterCourse, button.dataset.starterMinutes, button.dataset.starterLanguage); return; }
   const { roadmapAction, roadmapStage, roadmapBuy, roadmapClaim } = button.dataset;
   if (roadmapAction || roadmapBuy || roadmapClaim) {
     if (roadmapOperation || (roadmapAction !== 'start' && !ensureLearning())) return;
@@ -1597,6 +1639,8 @@ window.addEventListener('mindora:account-changed', event => {
     accountOwner = owner;
     roadmapWizard = null;
     roadmapOperation = null;
+    stagePreparation.cancel();
+    roadmapRecovery = null;
     roadmapError = '';
     KEY = owner ? `${LEGACY_KEY}.${encodeURIComponent(owner)}` : `${LEGACY_KEY}.guest`;
     workspaceStorage = makeWorkspaceStorage();

@@ -4,6 +4,7 @@ import { ROADMAP_LEVELS, ROADMAP_LIMITS } from '../core/roadmap-model.js';
 import { accountSession, allowedOrigin, isGuestLearningRequest, cloudSettings, json, matchesLearningAccount, readBody } from './cloud-api.js';
 import { generateDeepSeekPlan } from './deepseek-plan.js';
 import { learningCourseStore } from './learning-course-store.js';
+import { practiceFocus } from '../core/practice-focus.js';
 
 function roadmapStageInput(raw) {
   if (!raw || !ROADMAP_LEVELS.includes(raw.level)) return null;
@@ -34,6 +35,11 @@ function roadmapStageInput(raw) {
     });
     if (previousStages.some(previous => !previous)) return null;
     stage.previousStages = previousStages;
+  }
+  if (raw.reviewFocus !== undefined) {
+    const focus = practiceFocus(raw.reviewFocus);
+    if (!focus || !stage.previousStages?.length) return null;
+    stage.reviewFocus = focus;
   }
   return stage;
 }

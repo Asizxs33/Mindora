@@ -69,6 +69,21 @@ function finishedReport() {
   return progress;
 }
 
+test('a corrected range error remains a focus when the new report opens after reload', () => {
+  const saved = reportProgress();
+  const first = saved.days[0];
+  Object.assign(first, { formula: '=SUM(B2:B3)', total: '62', decision: 'within' });
+  const bad = submitReport(0, first);
+  assert.match(weeklyReportView(saved, bad), /Missing cells: B4\. Your result is 18 lower\./);
+  Object.assign(first, { formula: '=SUM(B2:B4)', total: '80' });
+  submitReport(0, first);
+  saved.day = 1;
+  const restored = validateBuiltinWorkspace(JSON.parse(JSON.stringify({ weeklyReport: saved }))).weeklyReport;
+  assert.equal(restored.days[0].focus, 'sheet-range');
+  assert.match(weeklyReportView(restored), /data-report-focus.*find the last expense row/);
+  assert.equal(restored.days[1].completed, false);
+});
+
 test('the completed report exports actual expenses, checked totals and attempt evidence after sync', () => {
   const progress = finishedReport();
   progress.note = '=HYPERLINK("https://example.com", "my note")\nInclude every expense.';

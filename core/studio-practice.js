@@ -86,20 +86,51 @@ export function queryTable(practice, expression) {
   return { columns: projection.map(({ label }) => label), rows: rows.map(row => projection.map(({ index }) => row[index])) };
 }
 
-export function sheetValue(practice, expression) {
+function sheetRange(practice, expression) {
   const m = /^=\s*(SUM|AVERAGE|MIN|MAX)\s*\(\s*([A-D])([2-7])\s*:\s*([A-D])([2-7])\s*\)$/i.exec(expression.trim());
   if (!m) return null;
   const col = s => s.toUpperCase().charCodeAt(0) - 65;
   const left = col(m[2]), right = col(m[4]), top = Number(m[3])-2, bottom = Number(m[5])-2;
   if (top > bottom || left > right || bottom >= practice.rows.length || right >= practice.columns.length) return null;
-  const values = practice.rows.slice(top, bottom+1).flatMap(row => row.slice(left, right+1)).filter(v => typeof v === 'number');
+  const cells = [];
+  for (let row = top; row <= bottom; row++) {
+    for (let column = left; column <= right; column++) {
+      cells.push({ address: String.fromCharCode(65 + column) + (row + 2), value: practice.rows[row][column] });
+    }
+  }
+  return { operation: m[1].toUpperCase(), cells };
+}
+
+export function sheetValue(practice, expression) {
+  const range = sheetRange(practice, expression);
+  if (!range) return null;
+  const values = range.cells.map(cell => cell.value).filter(value => typeof value === 'number');
   if (!values.length) return null;
-  switch (m[1].toUpperCase()) {
+  switch (range.operation) {
     case 'MAX': return Math.max(...values);
     case 'MIN': return Math.min(...values);
     case 'SUM': return values.reduce((a,b) => a+b, 0);
     case 'AVERAGE': return values.reduce((a,b) => a+b, 0) / values.length;
   }
+}
+
+export function sheetDiagnosis(practice, expression) {
+  if (!practice.target || !expression.trim()) return null;
+  const expected = sheetRange(practice, practice.target);
+  const actual = sheetRange(practice, expression);
+  if (!expected || !actual || sheetValue(practice, expression) === null) return null;
+  const expectedAddresses = new Set(expected.cells.map(cell => cell.address));
+  const actualAddresses = new Set(actual.cells.map(cell => cell.address));
+  const missing = expected.cells.filter(cell => !actualAddresses.has(cell.address)).map(cell => cell.address);
+  const extra = actual.cells.filter(cell => !expectedAddresses.has(cell.address)).map(cell => cell.address);
+  if (missing.length || extra.length) {
+    const sameOperation = actual.operation === expected.operation;
+    return {
+      kind: 'sheet-range', missing, extra,
+      difference: sameOperation ? sheetValue(practice, expression) - sheetValue(practice, practice.target) : null,
+    };
+  }
+  return actual.operation !== expected.operation ? { kind: 'sheet-operation', expected: expected.operation } : null;
 }
 
 export function studioCheck(practice, expression) {
@@ -108,6 +139,7 @@ export function studioCheck(practice, expression) {
   const actual = evaluate(practice, expression);
   if (actual === null) return 'invalid';
   if (!practice.target) return 'ready';
+  if (practice.type === 'sheet') return sheetDiagnosis(practice, expression) ? 'different' : 'correct';
   const expected = evaluate(practice, practice.target);
   return JSON.stringify(actual) === JSON.stringify(expected) ? 'correct' : 'different';
 }

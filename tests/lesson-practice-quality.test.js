@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { generateDeepSeekPlan } from '../backend/deepseek-plan.js';
-import { isSpreadsheetLesson, lessonPracticeIssues } from '../backend/lesson-practice-quality.js';
+import { isSpreadsheetLesson, lessonPracticeIssues, repeatsPracticeDataset } from '../backend/lesson-practice-quality.js';
 import { normalizePractice } from '../core/lesson-practice.js';
 import { getStarterCourse } from '../core/starter-courses.js';
 
@@ -36,7 +36,7 @@ test('spreadsheet intent uses the original request and supports all interface la
   assert.equal(isSpreadsheetLesson({ goal: 'Interpret a range', roadmapStage: { goal: 'Learn Google Sheets', title: 'B2:B5', objective: 'Read a range' } }), true);
   assert.equal(isSpreadsheetLesson({ goal: 'SQL queries for an Excel user' }), false);
   assert.equal(isSpreadsheetLesson({ goal: 'Learn Excel and SQL', roadmapStage: { title: 'SQL SELECT', objective: 'Select rows from a database' } }), false);
-  assert.deepEqual(lessonPracticeIssues(captured.guided[0], { goal: 'Learn SQL column projection' }), []);
+  assert.deepEqual(lessonPracticeIssues(captured.guided[0], { goal: 'Learn SQL column projection' }), ['missing-practice-target']);
 });
 
 test('unsupported raw targets are rejected before normalizers can discard them', () => {
@@ -50,6 +50,16 @@ test('unsupported raw targets are rejected before normalizers can discard them',
   const step = structuredClone(captured.guided[0]);
   step.practice.target = 'SELECT amount AS quantity FROM weekly_expenses WHERE amount > 100';
   assert.deepEqual(lessonPracticeIssues(step, { goal: 'Learn SQL' }), []);
+});
+
+test('new spreadsheet practice requires a computable target and fresh independent data', () => {
+  const { guided: [step], final } = corrected();
+  step.criterion = 'Use =SUM(B2:B4) for the total.';
+  assert.deepEqual(lessonPracticeIssues(step, input), ['practice-target-mismatch']);
+  delete step.practice.target;
+  assert.deepEqual(lessonPracticeIssues(step, input), ['missing-practice-target']);
+  assert.equal(repeatsPracticeDataset([step], final), false);
+  assert.equal(repeatsPracticeDataset([step], { ...final, practice: { ...final.practice, rows: step.practice.rows } }), true);
 });
 
 function fixture(outputs, request = input) {
@@ -81,7 +91,7 @@ test('live incompatible response triggers one complete regeneration using the sa
   assert.equal(run.calls.searches, 2);
   assert.equal(new Set(run.calls.signals).size, 1);
   assert.match(run.calls.content[0].messages[0].content, /NOT SQL/);
-  assert.match(run.calls.content[1].messages.at(-1).content, /workspace does not support/);
+  assert.match(run.calls.content[1].messages.at(-1).content, /include a supported target matching the criterion and fresh rows/);
 });
 
 test('repeated incompatible output fails closed rather than publishing an impossible course', async () => {

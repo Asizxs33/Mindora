@@ -1,3 +1,5 @@
+import { sheetDiagnosis } from './studio-practice.js';
+
 export const REPORT_WEEKS = [
   { amounts: [24, 38, 18], budget: 100 },
   { amounts: [16, 42, 27, 18], budget: 100 },
@@ -11,6 +13,17 @@ export function checkWeeklyReport(day, draft) {
     total: String(draft.total).trim() !== '' && Number(draft.total) === total,
     decision: draft.decision === (total > budget ? 'over' : 'within'),
   };
+}
+
+const REPORT_FOCUS = ['sheet-range', 'sheet-operation', 'report-total', 'report-budget'];
+
+export function weeklyFormulaDiagnosis(day, expression) {
+  const amounts = REPORT_WEEKS[day].amounts;
+  return sheetDiagnosis({
+    columns: ['Expense', 'Amount'],
+    rows: amounts.map(amount => ['Expense', amount]),
+    target: `=SUM(B2:B${amounts.length + 1})`,
+  }, expression);
 }
 
 function calendarDay(value) {
@@ -29,6 +42,9 @@ export function submitReport(day, draft, now = Date.now()) {
   draft.attempts = Math.min((draft.attempts || 0) + 1, 10000);
   draft.completed = Object.values(checks).every(Boolean);
   if (draft.completed) draft.completedAt = now;
+  else if (!checks.formula) draft.focus = weeklyFormulaDiagnosis(day, String(draft.formula))?.kind || 'sheet-range';
+  else if (!checks.total) draft.focus = 'report-total';
+  else if (!checks.decision) draft.focus = 'report-budget';
   return checks;
 }
 
@@ -38,6 +54,7 @@ export function reportProgress(saved) {
     const entry = saved?.days?.[i];
     const completed = Boolean(entry?.completed && Object.values(checkWeeklyReport(i, draft)).every(Boolean));
     return { ...draft, completed,
+      ...(REPORT_FOCUS.includes(entry?.focus) ? { focus: entry.focus } : {}),
       ...(Number.isInteger(entry?.attempts) && entry.attempts > 0 ? { attempts: Math.min(entry.attempts, 10000) } : {}),
       ...(completed && Number.isSafeInteger(entry.completedAt) && entry.completedAt > 0 ? { completedAt: entry.completedAt } : {}) };
 

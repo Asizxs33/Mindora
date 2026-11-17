@@ -1,5 +1,6 @@
 import { cleanStrokes, RELATIONS } from './lab-models.js';
 import { normalizeStudio, STUDIO_TYPES, studioAnswer } from './studio-practice.js';
+import { normalizePythonChecks } from './python-practice.js';
 export const PRACTICE_TYPES = Object.freeze(['text', 'code', 'palette', 'calculation', 'drawing', ...STUDIO_TYPES]);
 const color = value => typeof value === 'string' && /^#[a-f0-9]{6}$/i.test(value) ? value.toLowerCase() : null;
 const field = (value, max) => typeof value === 'string' ? value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').slice(0, max) : '';
@@ -11,6 +12,11 @@ export function normalizePractice(raw) {
   if (raw.type === 'code') {
     if (typeof raw.language !== 'string' || !/^[a-z0-9+# .-]{1,30}$/i.test(raw.language)) return null;
     result.language = raw.language.toLowerCase();
+    if (raw.pythonChecks !== undefined) {
+      const checks = result.language === 'python' && normalizePythonChecks(raw.pythonChecks);
+      if (!checks) return null;
+      result.pythonChecks = checks;
+    }
     if (result.language === 'capy') result.challenge = raw.challenge === 'north' ? 'north' : 'path';
     if (raw.starter !== undefined) {
       if (typeof raw.starter !== 'string' || raw.starter.length > 500) return null;

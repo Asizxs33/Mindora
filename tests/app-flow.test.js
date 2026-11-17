@@ -20,6 +20,8 @@ import { recapQuestion, builtinReviewContent } from '../ui/recap.js';
 import { startTopics } from '../ui/guided-start.js';
 import { getStarterCourse, splitLibraryCourses, starterCourses } from '../core/starter-courses.js';
 import { createPracticeController } from '../core/practice-controller.js';
+import * as preparation from '../core/roadmap-preparation.js';
+import * as focus from '../core/practice-focus.js';
 
 // Run the real controller and its registered event handlers. Only DOM/rendering,
 // file download and account identity are ports; curriculum and resume rules stay real.
@@ -109,6 +111,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
     history: { replaceState(_data, _title, url) { window.location.hash = new URL(url, 'https://example.test').hash; } } };
   const downloads = [];
   const generations = [];
+  const generatedCourses = new Map();
   const copiedCourses = [], loadedCourses = [], roadmapRequests = [], clarificationRequests = [];
   const storePort = map => ({
     getItem: key => map.get(key) ?? null,
@@ -126,17 +129,12 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
   const context = vm.createContext({
     mentorForTopic, ...engine, ...progress, ...budget, ...learningModel, ...assessments, ...returnReview, ...roadmapModel, ...rewardsModel, ...weeklyReportModel,
     createGuestCourseRequest, BROWSER_GUEST, resumeCursor, certificateEligible, recapQuestion, builtinReviewContent, startTopics, getStarterCourse, splitLibraryCourses, starterCourses, createPracticeController,
+    ...focus, ...preparation,
+    requestLesson: (input, headers, signal) => preparation.requestLesson(input, headers, signal, context.fetch),
     needsReturnReview: (lastSeen, learned) => returnReview.needsReturnReview(lastSeen, learned, time),
     languageCode, setLanguage() {}, message: value => value, t: value => value,
     createCloudDrafts: () => ({ render() {}, async init() {} }),
-    createPlanController: () => ({ screen: () => ({}), reset() {}, async generate(goal, minutes, details) {
-      generations.push(clone({ goal, minutes, ...(details ? { context: details } : {}) }));
-      if (details?.roadmapStage) {
-        if (!await stageGeneration) return false;
-        vm.runInContext("state.learningCourse = { id: '12345678-1234-4000-8000-123456789012' }", context);
-        return true;
-      }
-    } }),
+    createPlanController: () => ({ screen: () => ({}), reset() {} }),
     createLearningLibrary: hooks => ({
       screen: () => ({ user: account.user, courses: libraryCourses }),
       async setUser() { await reconcile; return true; }, changed() {}, async flush() { return starterFlush; },
@@ -150,7 +148,7 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
       },
       async load(id) {
         loadedCourses.push(id);
-        const course = libraryCourses.find(item => item.id === id);
+        const course = generatedCourses.get(id) || libraryCourses.find(item => item.id === id);
         if (!course?.saved) return false;
         hooks.setCurrent(course, account.user?.id || BROWSER_GUEST);
         return true;
@@ -167,6 +165,16 @@ function app(initial, { now = NOW, account = { user: { id: 'test-user' }, profil
     AbortSignal: { timeout: () => undefined },
     FormData: class { constructor(form) { this.fields = form.fields; } get(name) { return this.fields[name] ?? null; } },
     fetch: async (url, options) => {
+      if (url === '/api/learning-plan') {
+        const { goal, minutes, ...details } = JSON.parse(options.body);
+        generations.push({ goal, minutes, context: details });
+        if (!await stageGeneration) return { ok: false, status: 502, json: async () => ({ error: 'Test lesson preparation failed.' }) };
+        const id = context.crypto.randomUUID();
+        const saved = learningModel.restorePlan({ plan: savedAiCourse().plan });
+        const course = { id, saved, revision: 1, updatedAt: new Date(time).toISOString() };
+        generatedCourses.set(id, course);
+        return { ok: true, json: async () => ({ plan: saved.plan, course }) };
+      }
       if (url === '/api/learning-roadmap') {
         const body = JSON.parse(options.body);
         if (body.action === 'clarify') {
@@ -896,6 +904,53 @@ test('finishing a roadmap lesson unlocks its next stage and persists one claimab
   const reloaded = app(null, { storage: run.storage, realPlans: true });
   assert.equal(reloaded.current.state.learningRewards.gems, 10);
   assert.equal(reloaded.current.state.learningRoadmap.progress[0].completed, true);
+});
+
+test('background preparation uses the learner mistake and joins a tap on the same next lesson', async () => {
+  const id = '12345678-1234-4000-8000-123456789012';
+  const pathId = '12345678-0000-4000-8000-000000000000';
+  const roadmap = { ...savedRoadmap(id), id: pathId, opened: [0] };
+  const saved = getStarterCourse('python-basics', 'en', 5);
+  saved.completed = 1;
+  saved.answers = ['print("Hello")', 'print("Hello, Ada")'];
+  saved.reviews[1] = { answer: saved.answers[1], observation: 'Your greeting is clear.', nextAction: 'Try a different name.' };
+  saved.study[1].practiceFocus = 'python-output';
+  let release;
+  const pending = new Promise(resolve => { release = resolve; });
+  const run = app(seed({ learningPlan: saved, learningCourse: { id, ownerId: 'test-user' }, learningRoadmap: roadmap }), { realPlans: true, stageGeneration: pending });
+  await new Promise(resolve => setImmediate(resolve));
+  run.click({ view: 'learning-plan' });
+  run.click({ learningStep: 'continue' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'learning-plan');
+  assert.equal(run.saved().learningCourse.id, id);
+  assert.equal(run.saved().learningRoadmap.progress[0].reviewFocus, 'python-output');
+  assert.equal(run.generations[0].context.roadmapStage.reviewFocus, 'python-output');
+  run.click({ action: 'next-path-lesson' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.generations.length, 1);
+  release(true);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.view, 'learning-plan');
+  const next = run.saved().learningRoadmap.progress[1];
+  assert.ok(next.courseId);
+  assert.equal(next.completed, false);
+  assert.equal(next.courseId, run.saved().learningCourse.id);
+  assert.equal(run.saved().learningPlan.completed, 0);
+});
+
+test('failed preparation offers the matching ready report without awarding or replacing a course step', async () => {
+  const roadmap = { ...savedRoadmap(), id: '12345678-0000-4000-8000-000000000000', goal: 'Check reports in Google Sheets' };
+  roadmap.stages[0] = { title: 'Check the range', objective: 'Use SUM on all rows of a weekly report.' };
+  const run = app(seed({ learningRoadmap: roadmap }), { stageGeneration: false });
+  await new Promise(resolve => setImmediate(resolve));
+  run.click({ view: 'roadmap' });
+  run.click({ roadmapAction: 'start', roadmapStage: '0' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run.current.html.kind, 'roadmap');
+  assert.ok(run.current.html.args[0].error);
+  assert.equal(run.current.html.args[0].practiceFallback, 'weekly-report');
+  assert.deepEqual(run.saved().learningRoadmap.progress[0], { courseId: null, completed: false });
 });
 
 test('switching accounts selects separate local workspaces and signout hides learning', async () => {

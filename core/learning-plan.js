@@ -3,6 +3,7 @@ import { restoreCertificateRecord } from './certificate.js';
 import { normalizePractice } from './lesson-practice.js';
 import { normalizeLessonVisual } from './lesson-visual.js';
 import { isAssessmentCorrect, isAssessmentReady, normalizeAssessment, normalizeAssessmentResponse } from './lesson-assessment.js';
+import { practiceFocus } from './practice-focus.js';
 
 export const PLAN_DURATIONS = Object.freeze({
   5: Object.freeze([2, 3]),
@@ -147,17 +148,19 @@ function restoreStudy(step, entry, pages) {
   let page = Number.isInteger(entry?.page) ? Math.max(0, Math.min(entry.page, pages.length - 1)) : 0;
   const assessment = step.teaching?.assessment;
   const checkPage = pages.indexOf('check');
+  const focus = practiceFocus(entry?.practiceFocus);
+  const evidence = focus ? { practiceFocus: focus } : {};
   if (assessment) {
     const response = normalizeAssessmentResponse(assessment, entry?.response);
     const checked = entry?.checked === true && isAssessmentReady(assessment, entry.response);
     if (page > checkPage && (!checked || !isAssessmentCorrect(assessment, response))) page = checkPage;
-    return { page, choice: null, checked, response };
+    return { page, choice: null, checked, response, ...evidence };
   }
   const checkpoint = step.teaching?.checkpoint;
   const choice = checkpoint && Number.isInteger(entry?.choice) && entry.choice >= 0 && entry.choice <= 2 ? entry.choice : null;
   const checked = choice !== null && entry?.checked === true;
   if (checkpoint && page > checkPage && (!checked || choice !== checkpoint.correctIndex)) page = checkPage;
-  return { page, choice, checked };
+  return { page, choice, checked, ...evidence };
 }
 
 export function restorePlan(saved) {

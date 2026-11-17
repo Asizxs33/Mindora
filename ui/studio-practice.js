@@ -1,5 +1,6 @@
 import { escapeHtml as esc } from '../core/engine.js';
-import { normalizeStudio, queryTable, sheetValue, studioCheck } from '../core/studio-practice.js';
+import { normalizeStudio, queryTable, sheetDiagnosis, sheetValue, studioCheck } from '../core/studio-practice.js';
+import { sheetFeedback } from './practice-feedback.js';
 import { t } from './language.js';
 
 export function studioTable({ columns, rows }, sheet = false) {
@@ -16,7 +17,8 @@ const replyLabel = () => t('Your reply', 'Твоя реплика', 'Сенің 
 export function expressionIssue(practice, value) {
   const check = studioCheck(practice, value);
   if (check === 'invalid') return practice.type === 'sql' ? queryHint() : formulaHint();
-  if (check === 'different') return t('Compare your result with the task and try again.', 'Сверь результат с заданием и попробуй ещё раз.', 'Нәтижені тапсырмамен салыстырып, қайта көр.');
+  if (check === 'different') return (practice.type === 'sheet' && sheetFeedback(sheetDiagnosis(practice, value)))
+    || t('Compare your result with the task and try again.', 'Сверь результат с заданием и попробуй ещё раз.', 'Нәтижені тапсырмамен салыстырып, қайта көр.');
   return '';
 }
 
@@ -25,7 +27,7 @@ function expressionPreview(practice, answer) {
   const result = practice.type === 'sql' ? queryTable(practice, answer.expression) : sheetValue(practice, answer.expression);
   if (result === null) return '<span class="studio-hint">' + (practice.type === 'sql' ? queryHint() : formulaHint()) + '</span>';
   const issue = expressionIssue(practice, answer.expression);
-  const feedback = issue ? '<p class="studio-hint">' + issue + '</p>' : practice.target ? '<p>' + t('Matches the task.', 'Соответствует заданию.', 'Тапсырмаға сәйкес.') + '</p>' : '';
+  const feedback = issue ? '<p class="studio-hint">' + esc(issue) + '</p>' : practice.target ? '<p>' + t('Matches the task.', 'Соответствует заданию.', 'Тапсырмаға сәйкес.') + '</p>' : '';
   if (practice.type === 'sheet') return '<output class="studio-number">' + esc(String(Number(result.toPrecision(12)))) + '</output>' + feedback;
   return studioTable(result) + (result.rows.length ? '' : '<p>' + t('No matching rows.', 'Подходящих строк нет.', 'Сәйкес жолдар табылмады.') + '</p>') + feedback;
 }

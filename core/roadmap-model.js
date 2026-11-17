@@ -1,5 +1,6 @@
 import { planInput, sourceUrl } from './learning-plan.js';
 import { restoreCertificateRecord } from './certificate.js';
+import { practiceFocus } from './practice-focus.js';
 
 export const ROADMAP_STAGE_COUNT = 4;
 export const ROADMAP_CURRICULUM_LIMITS = Object.freeze({
@@ -139,7 +140,8 @@ export function restoreRoadmap(raw) {
     if (typeof entry?.completed !== 'boolean' || (entry.courseId !== null && !courseId)
       || (entry.completed && !courseId) || (courseId && ids.has(courseId))) return null;
     if (courseId) ids.add(courseId);
-    progress.push({ courseId, completed: entry.completed });
+    const focus = entry.completed ? practiceFocus(entry.reviewFocus) : null;
+    progress.push({ courseId, completed: entry.completed, ...(focus ? { reviewFocus: focus } : {}) });
   }
   const certificate = roadmapComplete({ progress }) ? restoreCertificateRecord(raw.certificate) : null;
   return { ...roadmap, ...(id ? { id } : {}), ...(opened.length ? { opened: [...opened] } : {}), progress,
@@ -173,19 +175,20 @@ export function roadmapStageStatuses(roadmap) {
   const progress = roadmap?.progress ?? [];
   const lastVisited = roadmap?.opened?.findLast(index => progress[index]?.courseId && !progress[index].completed);
   const next = lastVisited ?? progress.findIndex(stage => !stage.completed);
-  return progress.map((stage, index) => ({
-    courseId: stage.courseId,
-    status: stage.completed ? 'completed' : index !== next ? 'available' : stage.courseId ? 'active' : 'ready',
-  }));
+  return progress.map((stage, index) => {
+    const started = stage.courseId && (!roadmap.opened?.length || roadmap.opened.includes(index));
+    return { courseId: stage.courseId, status: stage.completed ? 'completed' : index !== next ? 'available' : started ? 'active' : 'ready' };
+  });
 }
 
-export function updateRoadmapStage(roadmap, index, value, completed = false) {
+export function updateRoadmapStage(roadmap, index, value, completed = false, focus = null) {
   const courseId = roadmapCourseId(value);
   const current = roadmap?.progress?.[index];
   if (!courseId || !Number.isInteger(index) || !current || current.completed
     || roadmap.progress.some((stage, position) => position !== index && stage.courseId === courseId)
     || (current.courseId && current.courseId !== courseId)) return roadmap;
+  const reviewFocus = completed ? practiceFocus(focus) : null;
   const progress = roadmap.progress.map((stage, position) => position === index
-    ? { courseId, completed: completed === true } : stage);
+    ? { courseId, completed: completed === true, ...(reviewFocus ? { reviewFocus } : {}) } : stage);
   return { ...roadmap, progress };
 }

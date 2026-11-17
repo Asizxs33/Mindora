@@ -240,7 +240,7 @@ function syllabusView(roadmap, active, busy) {
   return `<ol class="roadmap-stages${roadmap.curriculumVersion === 2 ? ' roadmap-continuous' : ''}" aria-label="${t('Lessons in order', 'Порядок занятий', 'Сабақтар реті')}">${stageRows(roadmap, active, busy)}</ol>`;
 }
 
-export function roadmapView({ roadmap, wizard, active = [], busy = false, error = '', notice = '', rewards, quests = rewards?.quests ?? [] } = {}) {
+export function roadmapView({ roadmap, wizard, active = [], busy = false, error = '', notice = '', practiceFallback = null, rewards, quests = rewards?.quests ?? [] } = {}) {
   if (wizard) return busy ? roadmapWait(busy) : wizardView(wizard, error);
   if (!roadmap) return `<section class="roadmap-empty" aria-labelledby="roadmap-title">
     ${character('mino', 'map', 'roadmap-guide')}
@@ -265,12 +265,15 @@ export function roadmapView({ roadmap, wizard, active = [], busy = false, error 
         <div><h1 id="roadmap-title" tabindex="-1" lang="${escape(roadmap.language)}">${escape(roadmap.title)}</h1></div>
         <div class="roadmap-heading-progress"><span aria-hidden="true">${finished}/${all}</span><progress value="${finished}" max="${Math.max(1, all)}" aria-label="${progressLabel}"></progress></div>
       </header>
+      <p class="roadmap-course-outcome"><strong>${t('By the end of this course', 'Что сможешь делать после курса', 'Курс соңында меңгеретін дағдың')}</strong><br><span lang="${escape(roadmap.language)}">${escape(roadmap.outcome)}</span></p>
       <div class="roadmap-intro">
         ${character(mentorForTopic(`${roadmap.originalGoal || ''} ${roadmap.goal} ${roadmap.title}`), busy ? 'thinking' : complete ? 'celebrate' : 'explaining', 'roadmap-guide')}
         ${complete ? courseCertificateButton('roadmap') : resumeStage && roadmap.curriculumVersion === 2 ? `<div class="roadmap-resume"><span lang="${escape(roadmap.language)}">${escape(resumeStage.title)}</span><button type="button" class="primary" data-roadmap-action="start" data-roadmap-stage="${resumeIndex}" aria-label="${escape(`${resumeLabel}: ${resumeStage.title}`)}"${busy ? ' disabled' : ''}>${icon('play', 17)} ${resumeLabel}</button></div>` : ''}
       </div>
-      <details class="roadmap-about"><summary>${icon('book', 17)} ${t('Course details', 'О курсе', 'Курс туралы')}</summary><div><p lang="${escape(roadmap.language)}">${escape(roadmap.outcome)}</p><p>${levelName(roadmap.level)} · ${roadmap.minutes} ${t('min per lesson','мин на занятие','мин / сабақ')}</p>${syllabusSources(roadmap)}</div></details>
+      <details class="roadmap-about"><summary>${icon('book', 17)} ${t('Course details', 'О курсе', 'Курс туралы')}</summary><div><p>${levelName(roadmap.level)} · ${roadmap.minutes} ${t('min per lesson','мин на занятие','мин / сабақ')}</p>${syllabusSources(roadmap)}</div></details>
       ${feedback(error, notice)}
+      ${error && practiceFallback ? `<div class="roadmap-about"><p>${t('Try a ready-made exercise on this skill while the lesson is unavailable. You can retry this lesson from your course.', 'Пока урок недоступен, попробуй готовое упражнение на этот навык. К уроку можно вернуться из курса.', 'Сабақ қолжетімсіз болса, осы дағдыға арналған дайын жаттығуды көр. Сабаққа курстан қайта орала аласың.')}</p>
+        <button type="button" class="secondary" ${practiceFallback === 'weekly-report' ? 'data-view="weekly-report"' : `data-starter-course="${escape(practiceFallback)}" data-starter-minutes="${roadmap.minutes}" data-starter-language="${escape(roadmap.language)}"`}>${t('Open ready-made practice', 'Открыть готовую практику', 'Дайын жаттығуды ашу')}</button></div>` : ''}
       ${syllabusView(roadmap, active, busy)}
       <button type="button" class="text-link roadmap-new-goal" data-roadmap-action="setup">${icon('plus', 17)} ${t('Set another goal', 'Выбрать другую цель', 'Басқа мақсат таңдау')}</button>
     </div>
