@@ -13,7 +13,7 @@ const captured = {
   instruction: 'Row 1 holds the headers. A cell address combines its column letter and row number.',
   task: 'Use =SUM(B2:B6) to total Reported in the workspace table.',
   criterion: '=SUM(B2:B6) returns 485.',
-  sourceId: 0, imageIds: [], practice: { type: 'sheet', ...structuredClone(table) },
+  sourceId: 0, imageIds: [], practice: { type: 'sheet', ...structuredClone(table), target: '=SUM(B2:B6)' },
   teaching: {
     why: 'Point at exact data and total a column without retyping numbers.',
     example: {
@@ -159,7 +159,7 @@ function rawLesson(step) {
     final: {
       title: 'Total fresh expenses', task: 'Write =SUM(B2:B3) for the new table and explain the result.',
       criterion: '=SUM(B2:B3) returns 70.',
-      practice: { type: 'sheet', columns: ['Item', 'Reported'], rows: [['Taxi', 30], ['Supplies', 40]] },
+      practice: { type: 'sheet', columns: ['Item', 'Reported'], rows: [['Taxi', 30], ['Supplies', 40]], target: '=SUM(B2:B3)' },
     },
   };
 }

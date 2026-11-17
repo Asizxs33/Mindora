@@ -6,6 +6,8 @@ import { finishedSteps, learningStepIndex } from '../core/progress.js';
 import * as model from '../core/learning-plan.js';
 import * as assessmentModel from '../core/lesson-assessment.js';
 import { createPracticeController } from '../core/practice-controller.js';
+import { requestLesson } from '../core/roadmap-preparation.js';
+import { practiceFocus } from '../core/practice-focus.js';
 
 // Exercise the real controller and event handlers with DOM/network ports only.
 const source = readFileSync(new URL('../core/plan-controller.js', import.meta.url), 'utf8')
@@ -48,7 +50,8 @@ function controller(initial = { plan: plan() }, { confirm = true, fetch: fetchPo
     querySelector: element,
   };
   const context = vm.createContext({
-    ...model, ...assessmentModel, finishedSteps, learningStepIndex, createPracticeController, document, message: value => value,
+    ...model, ...assessmentModel, finishedSteps, learningStepIndex, createPracticeController, practiceFocus, document, message: value => value,
+    requestLesson: (input, headers, signal) => requestLesson(input, headers, signal, context.fetch),
     window: { confirm: message => { confirmations.push(message); return confirm; } },
     AbortSignal: { timeout: () => undefined },
     fetch: async (url, options) => {
@@ -166,7 +169,7 @@ test('reload restores local checkpoint feedback, draft, and the first unfinished
   first.click({ learningChoice: '2' });
   first.click({ learningPage: 'check' });
   const second = controller(first.persisted);
-  assert.deepEqual(clone(second.saved.study[0]), { page: 2, choice: 2, checked: true });
+  assert.deepEqual(clone(second.saved.study[0]), { page: 2, choice: 2, checked: true, practiceFocus: 'assessment' });
   second.click({ learningPage: 'next' });
   assert.equal(second.saved.study[0].page, 2);
   second.click({ learningChoice: '1' });

@@ -3,6 +3,8 @@ import { lessonPages, normalizeTaskReview, planInput, restorePlan, taskReviewInp
 import { isAssessmentCorrect, isAssessmentReady, normalizeAssessmentResponse } from './lesson-assessment.js';
 import { message } from '../ui/messages.js';
 import { createPracticeController } from './practice-controller.js';
+import { practiceFocus } from './practice-focus.js';
+import { requestLesson } from './roadmap-preparation.js';
 
 export function createPlanController({ state, save, render, isOpen, canLearn = () => true, beforeGenerate, onGenerated, onUnauthorized = () => {}, accountId = () => null, guestMode = () => false }) {
   state.learningPlan = restorePlan(state.learningPlan);
@@ -22,6 +24,12 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
       const lesson = currentLesson();
       if (!lesson) return;
       lesson.saved.answers[lesson.index] = answer;
+      save();
+    },
+    onMistake: focus => {
+      const study = currentLesson()?.study;
+      if (!study || !practiceFocus(focus) || study.practiceFocus === focus) return;
+      study.practiceFocus = focus;
       save();
     },
   });
@@ -167,16 +175,9 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
         return;
       }
       if (version !== epoch) return;
-      const response = await fetch('/api/learning-plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(accountId() ? { 'X-Mindora-Account': accountId() } : guestMode() ? { 'X-Mindora-Guest': '1' } : {}) },
-        body: JSON.stringify(roadmapStage ? { ...input, roadmapStage } : input),
-        signal: AbortSignal.timeout(57000),
-      });
-      const result = await response.json();
+      const result = await requestLesson(roadmapStage ? { ...input, roadmapStage } : input,
+        accountId() ? { 'X-Mindora-Account': accountId() } : guestMode() ? { 'X-Mindora-Guest': '1' } : {});
       if (version !== epoch || state.learningPlan !== previous) return;
-      if (response.status === 401) onUnauthorized();
-      if (!response.ok) throw new Error(result.error || 'Не удалось построить маршрут.');
       const saved = restorePlan({ plan: result.plan, answers: [], completed: 0 });
       if (!saved) throw new Error('Не удалось прочитать маршрут. Попробуй ещё раз.');
       if (onGenerated) {
@@ -188,6 +189,7 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
       return true;
     } catch (failure) {
       if (version !== epoch || state.learningPlan !== previous) return;
+      if (failure.status === 401) onUnauthorized();
       error = failure.name === 'TimeoutError' ? 'Поиск занял слишком много времени. Попробуй ещё раз.'
         : failure instanceof TypeError || failure instanceof SyntaxError ? 'Не удалось связаться с сервисом. Попробуй ещё раз.'
         : failure.message;
@@ -332,6 +334,7 @@ export function createPlanController({ state, save, render, isOpen, canLearn = (
         && !study.checked && (assessment ? isAssessmentReady(assessment, study.response) : study.choice !== null)) {
         study.checked = true;
         rewardEvent = { type: 'check', index, correct: passedCheckpoint(lesson) };
+        if (!rewardEvent.correct && !study.practiceFocus) study.practiceFocus = 'assessment';
       } else if (learningPage === 'back' && study.page > 0) {
         study.page -= 1;
       } else if (learningPage === 'next' && study.page < pages.length - 1

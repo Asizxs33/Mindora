@@ -4,7 +4,7 @@ import { parseHTML } from 'linkedom';
 import { getStarterCourse } from '../core/starter-courses.js';
 import { restorePlan, taskReviewInput } from '../core/learning-plan.js';
 import { normalizePractice, practiceAnswer } from '../core/lesson-practice.js';
-import { normalizeStudio, queryTable, sheetValue, studioCheck } from '../core/studio-practice.js';
+import { normalizeStudio, queryTable, sheetDiagnosis, sheetValue, studioCheck } from '../core/studio-practice.js';
 import { practiceEditor, practiceResult } from '../ui/lesson-practice.js';
 import { workedStudio } from '../ui/studio-practice.js';
 import { normalizeLessonVisual } from '../core/lesson-visual.js';
@@ -43,6 +43,14 @@ test('sheet formulas compute a bounded range on actual cells and reject invalid 
   assert.equal(sheetValue(sheet,'=average(B2:B4)'), 43/3);
   assert.equal(sheetValue(sheet,'=MAX(A2:B4)'), 24);
   for (const bad of ['=SUM(B3:B2)','=MIN(A2:A3)','=SUM(B2:B6)','=SUM(B1:B4)','=IMPORTXML(A2)']) assert.equal(sheetValue(sheet,bad),null);
+});
+test('a sheet check catches a dropped row even when omitting it keeps the same result', () => {
+  const report = { ...sheet, rows: [['Taxi', 38], ['Lunch', 24], ['Packing', 0]] };
+  assert.equal(sheetValue(report, '=SUM(B2:B3)'), sheetValue(report, report.target));
+  assert.equal(studioCheck(report, '=SUM(B2:B3)'), 'different');
+  assert.deepEqual(sheetDiagnosis(report, '=SUM(B2:B3)'), { kind: 'sheet-range', missing: ['B4'], extra: [], difference: 0 });
+  assert.deepEqual(sheetDiagnosis(sheet, '=SUM(B2:B3)'), { kind: 'sheet-range', missing: ['B4'], extra: [], difference: -24 });
+  assert.deepEqual(sheetDiagnosis(sheet, '=AVERAGE(B2:B4)'), { kind: 'sheet-operation', expected: 'SUM' });
 });
 test('five studio submissions survive save, reload and review, including arbitrary punctuation', () => {
   for (const [practice, fields] of [[sql,{expression:'SELECT * FROM sales'}],[sheet,{expression:'=SUM(B2:B3)'}],

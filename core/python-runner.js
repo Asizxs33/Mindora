@@ -11,6 +11,24 @@ export function pythonSandboxDocument(channel) {
         const { loadPyodide } = await import(${JSON.stringify(`${PYODIDE_BASE}pyodide.mjs`)});
         const pyodide = await loadPyodide({ indexURL: ${JSON.stringify(PYODIDE_BASE)}, stdout: write, stderr: write });
         self.postMessage({ type: 'running' });
+        if (Array.isArray(data)) {
+          const cases = [];
+          for (const program of data) {
+            output = '';
+            const globals = pyodide.runPython('dict()');
+            try {
+              const value = await pyodide.runPythonAsync(program, { globals });
+              value?.destroy?.();
+              cases.push({ output, error: '' });
+            } catch (error) {
+              cases.push({ output, error: String(error).slice(-1500) });
+            } finally {
+              globals.destroy();
+            }
+          }
+          self.postMessage({ type: 'done', cases });
+          return;
+        }
         const value = await pyodide.runPythonAsync(data);
         if (value !== undefined) write(String(value));
         value?.destroy?.();
@@ -64,7 +82,10 @@ export function runPython(code, { signal, onRunning = () => {}, document = globa
         timer = setTimeout(() => finish('timeout'), runTimeout);
         onRunning();
       }
-      if (data.type === 'done' || data.type === 'failed') finish(null, { output: String(data.output || '').slice(0, 2000), error: String(data.error || '').slice(0, 1500) });
+      if (data.type === 'done' || data.type === 'failed') {
+        const clean = item => ({ output: String(item?.output || '').slice(0, 2000), error: String(item?.error || '').slice(0, 1500) });
+        finish(null, { ...clean(data), ...(Array.isArray(data.cases) ? { cases: data.cases.slice(0, 2).map(clean) } : {}) });
+      }
       if (data.type === 'unavailable') finish('unavailable');
     }
     if (signal?.aborted) { abort(); return; }
